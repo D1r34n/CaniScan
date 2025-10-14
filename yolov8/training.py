@@ -27,12 +27,12 @@ def main():
     # Now what is the best number of epoch for training data? (we need research or reference)
     # for this one.
     results = model.train(
-        data="config.yaml",
+        data=r"C:\Users\Edrian\Documents\VSCodeProjects\CaniScan\yolov8\config.yaml",
         epochs=30,
         imgsz=640,          # Reduce image size if needed (e.g., 512)
         batch=-1,            # This will trigger the autobatch feature, which calculates the maximum batch size that can run on your device.
         device=device,
-        workers=4           # Avoid multiprocessing memory overhead
+        workers=4
     )
 
 # Required for Windows multiprocessing

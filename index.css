@@ -2,7 +2,7 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  background-color: black !important;
+  background-color: #121212 !important;
 }
 
 /* Navbar styling */
@@ -85,6 +85,7 @@ html, body {
 
 .recommendations-box {
   background-color: #e8e8f0;
+  color: black;
   border-radius: 15px;
   padding: 1.5rem;
 }

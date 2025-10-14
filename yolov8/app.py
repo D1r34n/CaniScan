@@ -8,7 +8,7 @@ import numpy as np
 app = Flask(__name__)
 CORS(app)
 
-model = YOLO(r"C:\Users\Edrian\Documents\VSCodeProjects\Dog Skin Disease Desktop App\YOLOv8 Image Processing\runs\detect\train3\weights\best.pt")
+model = YOLO(r"C:\Users\Edrian\Documents\VSCodeProjects\CaniScan\runs\detect\train2\weights\best.pt")
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
