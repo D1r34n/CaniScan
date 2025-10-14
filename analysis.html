@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Screen</title>
+    <link rel="stylesheet" href="index.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar px-5 py-3 mb-5">
+  <div class="container-fluid d-flex flex-column align-items-start">
+    <h4 class="mb-1 fs-3">
+        <i class="bi bi-camera"></i>
+        AI Analysis Results
+    </h4>
+  </div>
+</nav>
+
+<!-- Body -->
+<div class="container-fluid px-5 d-flex flex-column">
+
+    <!-- Upload Section -->
+    <div>
+        Upload Dog Photo *
+    </div>
+
+    <!--Box -->
+    <div class="connect-box d-flex flex-column align-items-center p-3 my-3">
+        <!-- Live video preview -->
+        <video id="phoneVideo" autoplay playsinline class="w-100 mb-3 border rounded"></video>
+        
+        <!-- Placeholder icon / text (optional overlay) -->
+        <div class="fs-1 text-center connectPhoneNote py-4">
+            <i class="bi bi-phone"></i> <br>
+            Please connect your phone
+            <div class="fs-6 text-center mb-3">
+                Connect your phone to capture images
+            </div>
+        </div>
+
+        <button id="connectPhoneButton" type="button" class="btn btn-primary px-5 m-3">
+            <i class="bi bi-phone-fill me-2"></i>
+            Connect Phone
+        </button>
+    </div>
+
+
+    <!-- Dog Breed Section -->
+    <div>
+        Dog Breed *
+    </div>
+
+    <select id="dogBreed" class="form-select my-2">
+        <option selected>Select Dog Breed</option>
+    </select>
+
+    <!-- Analyze Image -->
+    <button id ="analyzeButton" type="button" class="btn btn-primary my-3" disabled>
+        Analyze Image
+    </button>
+
+
+</div>
+
+</body>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
+<script src="functions.js"></script>
+</html>

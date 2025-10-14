@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dog Skin Disease</title>
+    <link rel="stylesheet" href="index.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+</head>
+<body class="d-flex flex-column vh-100 overflow-hidden">
+  <!-- Navbar -->
+  <nav id="navigationBar" class="navbar px-5 py-3">
+    <div class="container-fluid d-flex flex-column align-items-start">
+      <h4 id="navbarTitle" class="mb-1 fs-3">
+        <i class="bi bi-camera"></i>
+        Dog Skin Disease Analyzer
+      </h4>
+      <p id="navbarSubtitle" class="mb-0 fs-6">
+        Upload a photo and provide details for diagnosis
+      </p>
+    </div>
+  </nav>
+
+  <!-- Main container fills remaining space -->
+  <div class="container-fluid main-container flex-fill d-flex align-items-stretch p-0 overflow-hidden">
+    <div class="row w-100 h-100 g-0 flex-fill">
+
+      <!-- PAGE 1: CAPTURE PAGE -->
+      <div id="capturePage" class="col-12 row g-0 flex-fill h-100">
+        <!-- Left box -->
+        <div class="col-6 d-flex flex-column align-items-center justify-content-center text-white p-4 h-100">
+          <!-- Dashed box container -->
+          <div class="dashed-box position-relative overflow-hidden text-center mb-4">
+            <video id="phoneVideo" autoplay playsinline muted class="video-bg w-100 h-100 object-fit-cover"></video>
+
+            <div class="overlay-content position-absolute top-50 start-50 translate-middle">
+              <div class="fs-5 text-center connectPhoneNote">
+                <i class="bi bi-phone fs-1 d-block mb-3"></i>
+                <strong class="d-block mb-2">Please connect your phone</strong>
+                <div class="fs-6">Connect your phone to capture images</div>
+              </div>
+            </div>
+          </div>
+
+          <button id="connectPhoneButton" type="button" class="btn btn-primary px-5">
+            <i class="bi bi-phone-fill me-2"></i>
+            Connect Phone Camera
+          </button>
+        </div>
+
+        <!-- Right box -->
+        <div class="col-6 d-flex flex-column text-white p-5 h-100">
+          <div class="flex-grow-1 d-flex flex-column justify-content-start">
+            <label for="dogBreed" class="form-label small text-start w-100">Dog Breed *</label>
+            <select id="dogBreed" class="form-select w-100">
+              <option selected>Select Dog Breed</option>
+            </select>
+          </div>
+
+          <div class="mt-auto">
+            <button id="captureButton" type="button" class="btn btn-success w-100 mb-3" disabled>
+              <i class="bi bi-camera-fill me-2"></i>
+              Capture Image (Single Frame)
+            </button>
+            <button id="analyzeButton" type="button" class="btn btn-primary w-100" disabled>
+              Real-Time Detection
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE 2: ANALYSIS PAGE -->
+      <div id="analysisPage" class="col-12 row g-0 flex-fill h-100" style="display: none;">
+        <div class="col-6 d-flex flex-column align-items-center justify-content-center text-white p-4 h-100">
+          <div class="dashed-box position-relative overflow-hidden text-center mb-4">
+            <video id="analysisVideo" autoplay playsinline muted class="video-bg w-100 h-100 object-fit-cover"></video>
+          </div>
+
+          <button id="disconnectPhoneButton" type="button" class="btn btn-danger px-5">
+            <i class="bi bi-phone-fill me-2"></i>
+            Disconnect Phone Camera
+          </button>
+        </div>
+
+        
+
+        <div class="col-6 d-flex flex-column text-white p-5 h-100">
+          <div class="diagnosis-box mb-4">
+            <div class="d-flex align-items-start mb-3">
+              <i class="bi bi-check-circle-fill text-success fs-3 me-3"></i>
+              <div>
+                <h6 id="diseaseDetected" class="mb-1 diagnosis-label">Diagnosis</h6>
+                <h4 class="mb-0 diagnosis-disease fw-bold">Fungal Infection</h4>
+              </div>
+            </div>
+            <div class="d-flex align-items-center">
+              <span class="confidence-label me-3">Confidence:</span>
+              <div class="confidence-badge">87%</div>
+            </div>
+          </div>
+
+          <h5 class="text-white mb-3">Recommendations:</h5>
+          <div class="recommendations-box flex-grow-1"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
+<script src="functions.js"></script>
+</html>
