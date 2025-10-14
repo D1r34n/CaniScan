@@ -1,0 +1,13 @@
+# Using absolute path to the dataset
+path: C:/Users/Edrian/Documents/VSCodeProjects/YOLOv8 Image Processing/dataset/dog_skin_diseases
+
+# The annotated images we are going to train
+train: C:/Users/Edrian/Documents/VSCodeProjects/YOLOv8 Image Processing/dataset/dog_skin_diseases/train/test_train
+
+# Validation images (can be same as train for now)
+val: C:/Users/Edrian/Documents/VSCodeProjects/YOLOv8 Image Processing/dataset/dog_skin_diseases/train/test_train
+
+# Classes (currently only dermatitis)
+names: 
+ 0: dermatitis
+ 1: ringworm

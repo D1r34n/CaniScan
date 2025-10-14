@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['pyoderma']
+
+roboflow:
+  workspace: wingpedia
+  project: pyoderma-dogs-b0g3u
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/wingpedia/pyoderma-dogs-b0g3u/dataset/1
