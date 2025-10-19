@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="authentication.css">
+    
+    <!-- Google Font: Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+</head>
+
+<body class="d-flex flex-column vh-100 overflow-hidden">
+<!-- Window Controls -->
+    <div class="window-controls">
+        <button id="minimize"><i class="bi bi-dash"></i></button>
+        <button id="close"><i class="bi bi-x"></i></button>
+    </div>
+
+  <div class="container-fluid main-container p-0">
+    <div class="row g-0 h-100">
+
+      <!-- Left side (Login form) -->
+      <div class="col-12 col-md-6 login-section d-flex flex-column justify-content-center align-items-center">
+        <div class="w-75">
+            <h2 id="form-title" class="text-center">Login</h2>
+
+            <!-- Error Message Box -->
+            <div id="error-box" class="alert alert-danger text-center py-2 mb-3">
+                Invalid email or password.
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Email</label>
+                    <input type="text" id="username" class="form-control" placeholder="email.example@gmail.com">
+                </div>
+                
+                <div class="mb-4 password-wrapper">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="position-relative">
+                        <input type="password" id="password" class="form-control" placeholder="Enter password">
+                        <i id="togglePassword" class="bi bi-eye-slash toggle-eye"></i>
+                    </div>
+                </div>
+
+                <a class="form-links" href="#">Forgot password?</a>
+                <button type="submit" class="btn btn-login w-100">Login</button>
+                <div class="subtext">
+                    Don't have an account?
+                    <a href="#" class="form-links ms-1" id="to-register">Register here</a>
+                </div>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" style="display: none;">
+                <div class="mb-3 row">
+                    <div class="col-md-6">
+                        <label for="first-name" class="form-label">First Name</label>
+                        <input type="text" id="first-name" name="first_name" class="form-control" placeholder="First Name" autocomplete="given-name">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="last-name" class="form-label">Last Name</label>
+                        <input type="text" id="last-name" name="last_name" class="form-control" placeholder="Last Name" autocomplete="family-name">
+                    </div>
+                </div>
+
+                
+                <div class="mb-3">
+                    <label for="reg-email" class="form-label">Email</label>
+                    <input type="email" id="reg-email" class="form-control" placeholder="email.example@gmail.com">
+                </div>
+
+                <div class="mb-3">
+                    <label for="reg-password" class="form-label">Password</label>
+                    <input type="password" id="reg-password" class="form-control" placeholder="Enter password">
+                </div>
+
+                <div class="mb-2">
+                    <label for="reg-confirm" class="form-label">Confirm Password</label>
+                    <input type="password" id="reg-confirm" class="form-control" placeholder="Confirm password">
+                </div>
+
+                <button type="submit" class="btn btn-login w-100">Register</button>
+
+                <div class="subtext">
+                    Already have an account?
+                    <a href="#" class="form-links ms-1" id="to-login">Login here</a>
+                </div>
+
+            </form>
+        </div>
+
+      </div>
+
+      <!-- Right side (Branding with responsive image) -->
+      <div class="col-12 col-md-6 brand-section">
+        <!-- <img class="login_icon" src="images/logo_only.svg" alt="Dogs"> -->
+        <!-- <h1>CANISCAN</h1> -->
+        <!-- <img src="images/login_dogs.png" alt="Dogs"> -->
+      </div>
+
+    </div>
+  </div>
+</body>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
+<script src="functions.js"></script>
+</html>
