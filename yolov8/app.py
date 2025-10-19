@@ -11,7 +11,13 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-model = YOLO(r"C:\Users\Edrian\Documents\VSCodeProjects\CaniScan\runs\detect\train2\weights\best.pt")
+# Get the directory of the current script
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Relative path to the model
+model_path = os.path.join(BASE_DIR, "runs", "detect", "train2", "weights", "best.pt")
+
+model = YOLO(model_path)
 USERS_CSV = "users.csv"
 
 # Ensure CSV exists
