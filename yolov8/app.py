@@ -7,6 +7,7 @@ import numpy as np
 import re
 import csv
 import os
+import bcrypt
 
 app = Flask(__name__)
 CORS(app)
@@ -21,20 +22,54 @@ if not os.path.exists(USERS_CSV):
         writer.writerow(["first_name", "last_name", "email", "password"])  # header
 
 
+def hash_data(data):
+    """Hash any data using bcrypt"""
+    # Convert data to bytes and hash it
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(data.encode('utf-8'), salt)
+    return hashed.decode('utf-8')  # Store as string in CSV
+
+
+def verify_data(plain_data, hashed_data):
+    """Verify plain data against its hash"""
+    return bcrypt.checkpw(plain_data.encode('utf-8'), hashed_data.encode('utf-8'))
+
+
 def save_user_to_csv(first_name, last_name, email, password):
+    # Hash ALL fields before saving
+    hashed_first_name = hash_data(first_name)
+    hashed_last_name = hash_data(last_name)
+    hashed_email = hash_data(email)
+    hashed_password = hash_data(password)
+    
     with open(USERS_CSV, mode="a", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow([first_name, last_name, email, password])
+        writer.writerow([hashed_first_name, hashed_last_name, hashed_email, hashed_password])
 
 
 def load_users_from_csv():
-    users = {}
+    """Load all users from CSV - returns list of user dictionaries with hashed data"""
+    users = []
     if os.path.exists(USERS_CSV):
         with open(USERS_CSV, mode="r") as file:
             reader = csv.DictReader(file)
             for row in reader:
-                users[row["email"]] = row["password"]
+                users.append({
+                    "first_name": row["first_name"],
+                    "last_name": row["last_name"],
+                    "email": row["email"],
+                    "password": row["password"]
+                })
     return users
+
+
+def find_user_by_email(email):
+    """Find a user by checking the plain email against all hashed emails"""
+    users = load_users_from_csv()
+    for user in users:
+        if verify_data(email, user["email"]):
+            return user
+    return None
 
 
 @app.route('/register', methods=['POST'])
@@ -62,8 +97,8 @@ def register():
             "message": "Password must be at least 8 characters long, include uppercase, lowercase, and a number."
         }), 400
 
-    users = load_users_from_csv()
-    if email in users:
+    # Check if email already exists (must check against all hashed emails)
+    if find_user_by_email(email) is not None:
         return jsonify({"success": False, "message": "Email is already registered."}), 400
 
     save_user_to_csv(first_name, last_name, email, password)
@@ -76,8 +111,10 @@ def login():
     email = data.get("email")
     password = data.get("password")
 
-    users = load_users_from_csv()
-    if email in users and users[email] == password:
+    # Find user by email
+    user = find_user_by_email(email)
+    
+    if user and verify_data(password, user["password"]):
         return jsonify({"success": True, "message": "Login successful"})
     else:
         return jsonify({"success": False, "message": "Invalid credentials"}), 401
