@@ -303,65 +303,223 @@ fetch('fci-breeds.csv')
   })
 .catch(err => console.error('Error loading CSV:', err));
 
+// Navigation elements
+const homeBtn = document.getElementById('homeBtn');
+const galleryBtn = document.getElementById('galleryBtn');
+const analysisBtn = document.getElementById('analysisBtn');
+const homePage = document.getElementById('homePage');
+const galleryPage = document.getElementById('galleryPage');
+const analysisPage = document.getElementById('analysisPage');
+
+// Phone connection elements
 const connectBtn = document.getElementById('connectPhoneButton');
 const disconnectBtn = document.getElementById('disconnectPhoneButton');
 const video = document.getElementById('phoneVideo');
 const placeholder = document.querySelector('.connectPhoneNote');
 const analyzeBtn = document.getElementById('analyzeButton');
-const dogBreedSelect = document.getElementById('dogBreed');
-const navbar = document.getElementById('navigationBar');
-const navbarTitle = document.getElementById('navbarTitle');
-const navbarSubtitle = document.getElementById('navbarSubtitle');
-
-// Page elements
-const capturePage = document.getElementById('capturePage');
-const analysisPage = document.getElementById('analysisPage');
 const analysisVideo = document.getElementById('analysisVideo');
 
+// Status indicators
+const phoneStatus = document.getElementById('phoneStatus');
+const statusIndicator = document.querySelector('.status-indicator');
+const serverStatus = document.getElementById('serverStatus');
+const serverStatusText = document.getElementById('serverStatusText');
+
+// Gallery elements
+const createFolderBtn = document.getElementById('createFolderBtn');
+const galleryGrid = document.getElementById('galleryGrid');
+
+// Server configuration
+const SERVER_URL = 'http://localhost:5000';
 let stream = null;
 let connected = false;
+let serverConnected = false;
+let currentPage = 'home';
+let serverCheckInterval = null;
 
-connectBtn.addEventListener('click', async () => {
-    if (!connected) {
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            video.srcObject = stream;
-            await video.play();
+// Server connection functions
+async function checkServerStatus() {
+  try {
+    const response = await fetch(`${SERVER_URL}/health`);
+    const data = await response.json();
+    return data.status === 'healthy';
+  } catch (error) {
+    console.error('Server check failed:', error);
+    return false;
+  }
+}
 
-            video.style.display = "block";
-            placeholder.style.display = 'none';
+async function loadServerImages() {
+  try {
+    const response = await fetch(`${SERVER_URL}/images`);
+    const data = await response.json();
+    return data.success ? data.images : [];
+  } catch (error) {
+    console.error('Failed to load images:', error);
+    return [];
+  }
+}
 
-            connectBtn.innerHTML = '<i class="bi bi-phone-fill me-2"></i>Disconnect Phone Camera';
-            connectBtn.classList.remove('btn-primary');
-            connectBtn.classList.add('btn-danger');
 
-            connected = true;
-            analyzeBtn.disabled = !(connected && dogBreedSelect.value !== "Select Dog Breed");
+function updateServerStatus(isConnected) {
+  serverConnected = isConnected;
+  
+  if (isConnected) {
+    serverStatusText.textContent = 'Desktop server connected';
+    serverStatus.className = 'mt-3 text-center connected';
+    serverStatusText.innerHTML = '<i class="bi bi-check-circle me-1"></i>Desktop server connected';
+  } else {
+    serverStatusText.textContent = 'Desktop server disconnected';
+    serverStatus.className = 'mt-3 text-center disconnected';
+    serverStatusText.innerHTML = '<i class="bi bi-x-circle me-1"></i>Desktop server disconnected';
+  }
+}
 
-        } catch (err) {
-            console.error("Error accessing webcam:", err);
-            alert("Could not access the camera.");
+// Start server monitoring
+async function startServerMonitoring() {
+  const isConnected = await checkServerStatus();
+  updateServerStatus(isConnected);
+  
+  // Check server status every 5 seconds
+  serverCheckInterval = setInterval(async () => {
+    const isConnected = await checkServerStatus();
+    updateServerStatus(isConnected);
+    
+    // If server is connected and we have images, refresh gallery
+    if (isConnected && currentPage === 'gallery') {
+      await renderGallery();
+    }
+  }, 5000);
+}
+
+// Navigation functionality
+function switchPage(page) {
+  // Hide all pages first
+  homePage.style.display = 'none';
+  galleryPage.style.display = 'none';
+  analysisPage.style.display = 'none';
+  
+  // Remove the 'active' class from all navigation buttons
+  homeBtn.classList.remove('active');
+  galleryBtn.classList.remove('active');
+  analysisBtn.classList.remove('active');
+  
+  // Show the selected page and set its button to 'active'
+  switch(page) {
+    case 'home':
+      homePage.style.display = 'block';
+      homeBtn.classList.add('active');
+      break;
+    case 'gallery':
+      galleryPage.style.display = 'block';
+      galleryBtn.classList.add('active');
+      break;
+    case 'analysis':
+      analysisPage.style.display = 'block';
+      analysisBtn.classList.add('active');
+      break;
+  }
+  
+  currentPage = page;
+}
+
+// Navigation event listeners
+homeBtn.addEventListener('click', () => switchPage('home'));
+
+galleryBtn.addEventListener('click', () => {
+  /*if (connected && serverConnected) {
+    switchPage('gallery');
+  } else {
+    const issues = [];
+    if (!connected) issues.push('device');
+    if (!serverConnected) issues.push('desktop server');
+    alert(`Please connect your ${issues.join(' and ')} first to access the gallery.`);
+  }*/ 
+  switchPage('galleryPage');
+});
+
+analysisBtn.addEventListener('click', () => {
+  /*if (connected && serverConnected) {
+    switchPage('analysis');
+  } else {
+    const issues = [];
+    if (!connected) issues.push('device');
+    if (!serverConnected) issues.push('desktop server');
+    alert(`Please connect your ${issues.join(' and ')} first to access analysis.`);
+  }*/
+  switchPage('analysisPage');
+});
+
+// Update phone connection status
+function updatePhoneStatus(isConnected) {
+  connected = isConnected;
+  
+  if (isConnected) {
+    statusIndicator.innerHTML = '<i class="bi bi-phone text-success"></i><span>Device Connected</span>';
+    statusIndicator.classList.add('connected');
+    
+    // Enable navigation buttons only if server is also connected
+    if (serverConnected) {
+      galleryBtn.disabled = false; 
+      analysisBtn.disabled = false; 
+    }
+  } else {
+    statusIndicator.innerHTML = '<i class="bi bi-phone-x text-danger"></i><span>Device Disconnected</span>';
+    statusIndicator.classList.remove('connected');
+    
+    // Disable navigation buttons
+    galleryBtn.disabled = true;
+    analysisBtn.disabled = true;
+    
+    // Switch back to home page if on other pages
+    if (currentPage !== 'home') {
+      switchPage('home');
+    }
+  }
+} 
+
+// Update navigation button states based on both device and server connection
+/*function updateNavigationButtons() {
+  const canNavigate = connected && serverConnected;
+  galleryBtn.disabled = !canNavigate;
+  analysisBtn.disabled = !canNavigate; 
+}*/
+
+connectBtn.addEventListener('click', () => {
+    if (!connected) { // If we are currently disconnected...
+        
+        // First, check if the server is actually running.
+        // The 'serverConnected' variable is already kept up-to-date by your app.
+        if (!serverConnected) {
+            alert('Cannot connect. The desktop server is not running. Please start the server first.');
+            return; // Stop here if the server is offline
         }
-    } else {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            video.srcObject = null;
-        }
 
-        video.style.display = "none";
-        placeholder.style.display = 'block';
+        // If the server is online, proceed to "connect"
+        console.log("Server connection confirmed. Unlocking features.");
 
-        connectBtn.innerHTML = '<i class="bi bi-phone-fill me-2"></i>Connect Phone';
+        // Update the button to show a "Disconnect" state
+        connectBtn.innerHTML = '<i class="bi bi-box-arrow-right me-2"></i>Disconnect';
+        connectBtn.classList.remove('btn-primary');
+        connectBtn.classList.add('btn-danger');
+
+        // Update the UI to show a connected status and enable other buttons
+        updatePhoneStatus(true); // This will update the "Device Connected/Disconnected" text
+        updateNavigationButtons(); // This will enable the Gallery and Analysis buttons
+
+    } else { // If we are currently connected and want to disconnect...
+        
+        console.log("Disconnecting and locking features.");
+
+        // Revert the button to its original "Connect" state
+        connectBtn.innerHTML = '<i class="bi bi-phone-fill me-2"></i>Connect to Server';
         connectBtn.classList.remove('btn-danger');
         connectBtn.classList.add('btn-primary');
 
-        connected = false;
-        analyzeBtn.disabled = true;
+        // Update the UI to show a disconnected status and disable features
+        updatePhoneStatus(false);
+        updateNavigationButtons();
     }
-});
-
-dogBreedSelect.addEventListener('change', () => {
-    analyzeBtn.disabled = !(connected && dogBreedSelect.value !== "Select Dog Breed");
 });
 
 disconnectBtn.addEventListener('click', () => {
@@ -370,34 +528,21 @@ disconnectBtn.addEventListener('click', () => {
         video.srcObject = null;
     }
 
-    // Change navbar
-    navbar.style.backgroundColor = "#004aad";
-    navbarTitle.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Dog Skin Disease Analyzer';
-    navbarSubtitle.textContent = "Upload a photo and provide details for diagnosis";
-
-    // Hide capture page, show analysis page
-    capturePage.style.display = "flex";
-    analysisPage.style.display = "none";
+    // Switch back to home page
+    switchPage('home');
 
     // Disconnect video
     video.style.display = "none";
     placeholder.style.display = 'block';
 
     // Reset phone button
-    connectBtn.innerHTML = '<i class="bi bi-phone-fill me-2"></i>Connect Phone';
+    connectBtn.innerHTML = '<i class="bi bi-phone-fill me-2"></i>Connect Device';
     connectBtn.classList.remove('btn-danger');
     connectBtn.classList.add('btn-primary');
 
-    // Reset dog select breed
-    dogBreedSelect.value = "Select Dog Breed";
-    
-    connected = false;
-    analyzeBtn.disabled = true;
+    updatePhoneStatus(false);
+    updateNavigationButtons();
     analyzing = false;
-});
-
-dogBreedSelect.addEventListener('change', () => {
-    analyzeBtn.disabled = !(connected && dogBreedSelect.value !== "Select Dog Breed");
 });
 
 analyzing = false;
@@ -426,20 +571,13 @@ analyzeBtn.addEventListener('click', async () => {
   if (analyzing) return; // prevent overlap
   analyzing = true;
 
-  // 1️⃣ Switch UI only the first time
-  if (capturePage.style.display !== "none") {
-    navbar.style.backgroundColor = "#00bf63";
-    navbarTitle.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>AI Analysis Results';
-    navbarSubtitle.textContent = "";
+  // Switch to analysis page
+  switchPage('analysis');
 
-    capturePage.style.display = "none";
-    analysisPage.style.display = "flex";
-
-    if (stream) {
-      analysisVideo.srcObject = stream;
-      analysisVideo.play();
-      analysisVideo.style.display = "block";
-    }
+  if (stream) {
+    analysisVideo.srcObject = stream;
+    analysisVideo.play();
+    analysisVideo.style.display = "block";
   }
 
   // 2️⃣ Capture frame from live video
@@ -490,7 +628,172 @@ analyzeBtn.addEventListener('click', async () => {
 });
 
 setInterval(() => {
-  if (connected && !analyzing && analysisPage.style.display === "flex") {
+  if (connected && !analyzing && currentPage === 'analysis') {
     analyzeBtn.click();
   }
-}, 1000); // analyze every 5 seconds
+}, 1000); // analyze every 1 second
+
+// Gallery functionality
+let galleryFolders = [];
+let serverImages = [];
+
+// Create folder functionality
+createFolderBtn.addEventListener('click', () => {
+  const folderName = prompt('Enter folder name (e.g., "Golden Retriever"):');
+  if (folderName && folderName.trim()) {
+    createFolder(folderName.trim());
+  }
+});
+
+function createFolder(name) {
+  const folder = {
+    id: Date.now(),
+    name: name,
+    type: 'species',
+    subfolders: [],
+    images: []
+  };
+  
+  galleryFolders.push(folder);
+  renderGallery();
+}
+
+function createSubfolder(parentId, name) {
+  const parentFolder = galleryFolders.find(f => f.id === parentId);
+  if (parentFolder) {
+    const subfolder = {
+      id: Date.now(),
+      name: name,
+      type: 'disease',
+      parentId: parentId,
+      images: []
+    };
+    
+    parentFolder.subfolders.push(subfolder);
+    renderGallery();
+  }
+}
+
+async function renderGallery() {
+  galleryGrid.innerHTML = '';
+  
+  // Load server images
+  serverImages = await loadServerImages();
+  
+  // Add create folder button
+  const createBtn = document.createElement('div');
+  createBtn.className = 'gallery-item';
+  createBtn.innerHTML = `
+    <i class="bi bi-folder-plus"></i>
+    <h6>Create New Folder</h6>
+  `;
+  createBtn.addEventListener('click', () => createFolderBtn.click());
+  galleryGrid.appendChild(createBtn);
+  
+  // Add server images section
+  if (serverImages.length > 0) {
+    const serverSection = document.createElement('div');
+    serverSection.className = 'gallery-item server-images';
+    serverSection.innerHTML = `
+      <i class="bi bi-cloud-upload"></i>
+      <h6>Uploaded Images</h6>
+      <small class="text-muted">${serverImages.length} images from server</small>
+    `;
+    serverSection.addEventListener('click', () => showServerImages());
+    galleryGrid.appendChild(serverSection);
+  }
+  
+  // Render folders
+  galleryFolders.forEach(folder => {
+    const folderElement = document.createElement('div');
+    folderElement.className = 'gallery-item';
+    folderElement.innerHTML = `
+      <i class="bi bi-folder-fill"></i>
+      <h6>${folder.name}</h6>
+      <small class="text-muted">${folder.subfolders.length} subfolders</small>
+    `;
+    
+    folderElement.addEventListener('click', () => {
+      if (folder.type === 'species') {
+        const subfolderName = prompt(`Enter disease name for ${folder.name} (e.g., "Fungal Infection"):`);
+        if (subfolderName && subfolderName.trim()) {
+          createSubfolder(folder.id, subfolderName.trim());
+        }
+      }
+    });
+    
+    galleryGrid.appendChild(folderElement);
+    
+    // Render subfolders
+    folder.subfolders.forEach(subfolder => {
+      const subfolderElement = document.createElement('div');
+      subfolderElement.className = 'gallery-item';
+      subfolderElement.style.marginLeft = '20px';
+      subfolderElement.innerHTML = `
+        <i class="bi bi-folder2"></i>
+        <h6>${subfolder.name}</h6>
+        <small class="text-muted">${subfolder.images.length} images</small>
+      `;
+      
+      subfolderElement.addEventListener('click', () => {
+        // TODO: Show images in this subfolder
+        alert(`Viewing images in ${folder.name} > ${subfolder.name}`);
+      });
+      
+      galleryGrid.appendChild(subfolderElement);
+    });
+  });
+}
+
+function showServerImages() {
+  // Create a modal or overlay to show server images
+  const modal = document.createElement('div');
+  modal.className = 'server-images-modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5>Uploaded Images from Server</h5>
+        <button class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="images-grid">
+          ${serverImages.map(img => `
+            <div class="image-item">
+              <img src="${SERVER_URL}/images/${img.filename}" alt="${img.filename}">
+              <div class="image-info">
+                <small>${img.filename}</small>
+                <small>${(img.size / 1024).toFixed(1)} KB</small>
+                <small>${new Date(img.uploaded_at).toLocaleDateString()}</small>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Close modal functionality
+  modal.querySelector('.close-btn').addEventListener('click', () => {
+    document.body.removeChild(modal);
+  });
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  });
+}
+
+// Initialize gallery
+renderGallery();
+
+initializeIPAddress();
+
+// Update server status monitoring to also update navigation buttons
+const originalUpdateServerStatus = updateServerStatus;
+updateServerStatus = function(isConnected) {
+  originalUpdateServerStatus(isConnected);
+  updateNavigationButtons();
+};
