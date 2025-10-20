@@ -128,6 +128,7 @@ loginForm.addEventListener("submit", async (e) => {
       
       ipcRenderer.send("login-success", data);
     } else {
+      console.log(email);
       showMessage(data.message || "Invalid email or password.", "error");
     }
   } catch (err) {
@@ -154,6 +155,16 @@ registerForm.addEventListener("submit", async (e) => {
   // Basic validation
   if (!firstName || !lastName || !email || !password || !confirmPassword) {
     showMessage("Please fill in all fields.", "error");
+    return;
+  }
+
+  // Name format validation
+  const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$/; 
+  if (!namePattern.test(firstName)) {
+    showMessage("Invalid first name.", "error");
+    return;
+  } else if (!namePattern.test(lastName)) {
+    showMessage("Invalid last name.", "error");
     return;
   }
 
