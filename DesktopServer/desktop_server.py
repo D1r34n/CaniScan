@@ -357,10 +357,10 @@ def dashboard():
     return dashboard_html
 
 if __name__ == '__main__':
-    print("🚀 Starting Caniscan Desktop Server...")
-    print("📱 Ready to receive images from Android app")
-    print("🌐 Web dashboard available at: http://localhost:5000")
-    print("📡 API endpoints:")
+    print("Starting Caniscan Desktop Server...")
+    print("Ready to receive images from Android app")
+    print("Web dashboard available at: http://localhost:5000")
+    print("API endpoints:")
     print("   - POST /upload - Upload images")
     print("   - GET /images - List all images")
     print("   - GET /images/<filename> - View specific image")
@@ -371,12 +371,12 @@ if __name__ == '__main__':
     # Display detected IP address on startup
     try:
         detected_ip = get_local_ip()
-        print(f"📍 Detected local IP address: {detected_ip}")
-        print(f"📱 Use this IP address in your phone app: http://{detected_ip}:5000")
+        print(f"Detected local IP address: {detected_ip}")
+        print(f"Use this IP address in your phone app: http://{detected_ip}:5001")
     except Exception as e:
-        print(f"⚠️  Could not detect IP address: {e}")
-        print("📱 Default IP address: 192.168.1.100")
+        print(f"Could not detect IP address: {e}")
+        print("Default IP address: 192.168.1.100")
     
     print("=" * 50)
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)

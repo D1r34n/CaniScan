@@ -2,7 +2,8 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 
-let flaskProcess;
+let yoloProcess;
+let desktopServerProcess;
 let loginWindow;
 let mainWindow;
 
@@ -43,24 +44,29 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
-  // Start Flask backend
-  const scriptPath = path.join(__dirname, 'yolov8', 'app.py');
-  flaskProcess = spawn('python', [scriptPath]);
+  // --- Start YOLOv8 App ---
+  const yoloScriptPath = path.join(__dirname, 'yolov8', 'app.py');
+  yoloProcess = spawn('python', [yoloScriptPath]);
 
-  flaskProcess.stdout.on('data', data => {
-    console.log(`[Flask] ${data}`);
-    console.log("Running Flask from:", scriptPath);
+  yoloProcess.stdout.on('data', data => {
+    console.log(`[YOLOv8] ${data}`);
+  });
+  yoloProcess.stderr.on('data', data => {
+    console.error(`[YOLOv8 Error] ${data}`);
   });
 
-  flaskProcess.stderr.on('data', data => {
-    console.error(`[Flask Error] ${data}`);
+  // --- Start Desktop Server ---
+  const desktopServerPath = path.join(__dirname, 'DesktopServer', 'desktop_server.py');
+  desktopServerProcess = spawn('python', [desktopServerPath]);
+
+  desktopServerProcess.stdout.on('data', data => {
+    console.log(`[Desktop Server] ${data}`);
+  });
+  desktopServerProcess.stderr.on('data', data => {
+    console.error(`[Desktop Server Error] ${data}`);
   });
 
-  flaskProcess.on('close', code => {
-    console.log(`Flask exited with code ${code}`);
-  });
-
-  // Show login first (✅ only here!)
+  // Show login window
   createLoginWindow();
 });
 
@@ -87,16 +93,24 @@ ipcMain.on('close-window', () => {
 });
 
 app.on('window-all-closed', () => {
-  if (flaskProcess && !flaskProcess.killed) {
-    flaskProcess.kill('SIGINT'); // or 'SIGTERM' for a clean stop
-    console.log('Flask process terminated');
+  if (yoloProcess && !yoloProcess.killed) {
+    yoloProcess.kill('SIGINT');
+    console.log('YOLOv8 process terminated');
+  }
+  if (desktopServerProcess && !desktopServerProcess.killed) {
+    desktopServerProcess.kill('SIGINT');
+    console.log('Desktop server process terminated');
   }
   app.quit();
 });
 
 app.on('quit', () => {
-  if (flaskProcess && !flaskProcess.killed) {
-    flaskProcess.kill('SIGINT');
-    console.log('Flask terminated on app quit');
+  if (yoloProcess && !yoloProcess.killed) {
+    yoloProcess.kill('SIGINT');
+    console.log('YOLOv8 terminated on app quit');
+  }
+  if (desktopServerProcess && !desktopServerProcess.killed) {
+    desktopServerProcess.kill('SIGINT');
+    console.log('Desktop server terminated on app quit');
   }
 });

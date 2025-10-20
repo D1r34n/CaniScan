@@ -287,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const createFolderBtn = document.getElementById('createFolderBtn');
 
         // Server Configuration
-        const SERVER_URL = 'http://localhost:5000';
+        const SERVER_URL = 'http://localhost:5001';
         let stream = null;
         let connected = false; // This is the user-facing "connected" state
         let serverConnected = false; // This is the actual server health
@@ -351,17 +351,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async function startServerMonitoring() {
-            serverConnected = await checkServerStatus();
-            updatePhoneStatus(serverConnected); // Update UI on load
-            
-            serverCheckInterval = setInterval(async () => {
-                serverConnected = await checkServerStatus();
-                // If not manually "connected", follow server status
-                if (!connected) {
-                    updatePhoneStatus(serverConnected);
-                }
-            }, 5000);
+        // On startup, just get the server status and store it. Don't change the UI.
+        serverConnected = await checkServerStatus();
+
+        // Set an interval to keep checking the server's real status
+        serverCheckInterval = setInterval(async () => {
+        serverConnected = await checkServerStatus();
+
+        // ADDED FEATURE: If the server goes down *after* you've connected,
+        // this will automatically disconnect the app for you.
+        if (connected && !serverConnected) {
+            console.log("Server connection lost. Forcing disconnect.");
+            // Manually trigger the disconnect logic
+            connectBtn.innerHTML = '<i class="bi bi-phone-fill me-2"></i>Connect to Server';
+            connectBtn.classList.remove('btn-danger');
+            connectBtn.classList.add('btn-primary');
+            updatePhoneStatus(false);
         }
+      }, 5000);
+    }
 
         // --- Gallery Functions ---
         async function loadServerImages() {
@@ -450,10 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // --- Analysis Logic ---
         // NOTE: Your index.html is missing the camera elements (`phoneVideo`) and
-        // the `dogBreed` select. This analysis logic (from orig_funcs.js)
-        // will not work without them. I have left it out.
-        // If you add those elements back to index.html, you can move
-        // the analysis logic from orig_funcs.js inside this 'if (homeBtn)' block.
+        // the `dogBreed` select.
         
         // --- Initializations ---
         startServerMonitoring(); // Start checking for the server
