@@ -383,15 +383,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 return [];
             }
         }
+        
+        // This is the restored function
+        function createFolder(name) {
+            const folder = { id: Date.now(), name: name, type: 'species', subfolders: [], images: [] };
+            galleryFolders.push(folder);
+            renderGallery();
+        }
+
+        // This is the restored function
+        function showServerImages() {
+            const modal = document.createElement('div');
+            modal.className = 'server-images-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5>Uploaded Images from Server</h5>
+                        <button class="close-btn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="images-grid">
+                            ${serverImages.map(img => `
+                                <div class="image-item">
+                                    <img src="${SERVER_URL}/images/${img.filename}" alt="${img.filename}">
+                                    <div class="image-info">
+                                        <small>${img.filename}</small>
+                                        <small>${(img.size / 1024).toFixed(1)} KB</small>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.querySelector('.close-btn').addEventListener('click', () => document.body.removeChild(modal));
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) document.body.removeChild(modal);
+            });
+        }
 
         async function renderGallery() {
             if (!connected) {
-                 galleryGrid.innerHTML = '<p class="text-center text-muted">Please connect to the server on the Home page to view the gallery.</p>';
-                 return;
+                galleryGrid.innerHTML = '<p class="text-center text-muted">Please connect to the server on the Home page to view the gallery.</p>';
+                return;
             }
             galleryGrid.innerHTML = '<p class="text-center text-muted">Loading images...</p>';
             serverImages = await loadServerImages();
-            galleryGrid.innerHTML = ''; // Clear grid
+            galleryGrid.innerHTML = '';
 
             if (createFolderBtn) {
                 const createBtn = document.createElement('div');
@@ -405,36 +444,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const serverSection = document.createElement('div');
                 serverSection.className = 'gallery-item server-images';
                 serverSection.innerHTML = `
-                <i class="bi bi-cloud-upload"></i>
-                <h6>Uploaded Images</h6>
-                <small class="text-muted">${serverImages.length} images</small>
+                    <i class="bi bi-cloud-upload"></i>
+                    <h6>Uploaded Images</h6>
+                    <small class="text-muted">${serverImages.length} images</small>
                 `;
-                serverSection.addEventListener('click', () => showServerImages(serverImages));
+                serverSection.addEventListener('click', () => showServerImages());
                 galleryGrid.appendChild(serverSection);
             }
         }
-        
-        if (createFolderBtn) {
-            createFolderBtn.addEventListener('click', () => {
-                const folderName = prompt('Enter folder name:');
-                if (folderName) createFolder(folderName);
-            });
-        }
 
-        function createFolder(name) {
-            // (Your createFolder logic from orig_funcs.js)
-            renderGallery();
-        }
-        
-        function showServerImages(images) {
-            // (Your showServerImages modal logic from orig_funcs.js)
-            alert(`Showing ${images.length} server images.`);
-        }
-        
         // --- Event Listeners ---
         homeBtn.addEventListener('click', () => switchPage('home'));
         galleryBtn.addEventListener('click', () => switchPage('gallery'));
         analysisBtn.addEventListener('click', () => switchPage('analysis'));
+
+        createFolderBtn.addEventListener('click', () => {
+            const folderName = prompt('Enter folder name:');
+            if (folderName && folderName.trim()) {
+                createFolder(folderName.trim());
+            }
+        });
 
         connectBtn.addEventListener('click', () => {
             if (!connected) {
@@ -442,27 +471,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert('Cannot connect. The desktop server is not running. Please start the server first.');
                     return;
                 }
-                console.log("Server connection confirmed.");
                 connectBtn.innerHTML = '<i class="bi bi-box-arrow-right me-2"></i>Disconnect';
                 connectBtn.classList.remove('btn-primary');
                 connectBtn.classList.add('btn-danger');
                 updatePhoneStatus(true);
             } else {
-                console.log("Disconnecting.");
                 connectBtn.innerHTML = '<i class="bi bi-phone-fill me-2"></i>Connect to Server';
                 connectBtn.classList.remove('btn-danger');
                 connectBtn.classList.add('btn-primary');
                 updatePhoneStatus(false);
             }
         });
-        
-        // --- Analysis Logic ---
-        // NOTE: Your index.html is missing the camera elements (`phoneVideo`) and
-        // the `dogBreed` select.
-        
-        // --- Initializations ---
-        startServerMonitoring(); // Start checking for the server
-        
-    } // End of index.html logic
 
+        startServerMonitoring();
+    }
 });
