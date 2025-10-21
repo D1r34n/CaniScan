@@ -9,134 +9,160 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="d-flex flex-column vh-100 overflow-hidden">
-  <!-- White Navbar -->
-  <nav id="navigationBar" class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
-    <div class="container-fluid px-4">
-      <!-- Logo -->
-      <div class="navbar-brand d-flex align-items-center">
-        <img src="images/logo_only.svg" alt="CaniScan Logo" class="logo-img me-2">
-        <span class="brand-text">CaniScan</span>
-      </div>
-      
-      <!-- Navigation Buttons -->
-      <div class="navbar-nav mx-auto">
-        <button class="nav-btn active" id="homeBtn" data-page="home">
-          <i class="bi bi-house-fill"></i>
-          <span>Home</span>
-        </button>
-        <button class="nav-btn" id="galleryBtn" data-page="gallery">
-          <i class="bi bi-images"></i>
-          <span>Gallery</span>
-        </button>
-        <button class="nav-btn" id="analysisBtn" data-page="analysis">
-          <i class="bi bi-search"></i>
-          <span>Analysis</span>
-        </button>
-      </div>
-      
-      <!-- User Greeting -->
-      <div class="user-greeting">
-        <span id="userName">Welcome, User</span>
-        <i class="bi bi-person-circle ms-2"></i>
-      </div>
-    </div>
-  </nav>
-
-  <!-- Main container fills remaining space -->
-  <div class="container-fluid main-container flex-fill d-flex align-items-stretch p-0 overflow-hidden">
-    
-    <!-- Phone Connection Status -->
-    <div id="phoneStatus" class="phone-status">
-      <div class="status-indicator">
-        <i class="bi bi-phone-x text-danger"></i>
-        <span>Phone Disconnected</span>
-      </div>
+<body class="app-body">
+    <!-- Window Controls -->
+    <div class="window-controls">
+        <button id="minimize"><i class="bi bi-dash"></i></button>
+        <button id="close"><i class="bi bi-x"></i></button>
     </div>
 
-    <!-- HOME PAGE -->
-    <div id="homePage" class="page-content">
-      <div class="row g-0 h-100">
-        <!-- Centered Connect Device Section -->
-        <div class="col-12 d-flex flex-column align-items-center justify-content-center p-5">
-          <div class="connection-card">
-            <div class="connection-icon mb-4">
-              <i class="bi bi-phone fs-1"></i>
+    <!-- Navbar -->
+    <nav id="navigationBar" class="navbar navbar-expand-lg navbar-light shadow-sm">
+        <div class="container-fluid navbar-container">
+            <!-- Logo -->
+            <div class="navbar-brand logo-wrapper">
+                <img src="images/logo_only_dark.svg" alt="CaniScan Logo" class="logo-img">
+                <span class="brand-text">CaniScan</span>
             </div>
-            <h3 class="text-center mb-3">Connect The Server</h3>
-            <p class="text-center mb-4">Connect to the desktop server to unlock the gallery and analysis features.</p>
-            
 
-            <button id="connectPhoneButton" type="button" class="btn btn-primary w-100">
-              <i class="bi bi-phone-fill me-2"></i>
-              Connect To Server
-            </button>
-            
-          </div>
-        </div>
-      </div>
-    </div>
+            <!-- Navigation Buttons -->
+            <div class="navbar-nav nav-buttons">
+                <button class="nav-btn active" id="homeBtn" data-page="home">
+                    <i class="bi bi-house-fill"></i> <span>Home</span>
+                </button>
+                <button class="nav-btn" id="galleryBtn" data-page="gallery">
+                    <i class="bi bi-images"></i> <span>Gallery</span>
+                </button>
+                <button class="nav-btn" id="analysisBtn" data-page="analysis">
+                    <i class="bi bi-search"></i> <span>Analysis</span>
+                </button>
+            </div>
 
-    <!-- GALLERY PAGE -->
-    <div id="galleryPage" class="page-content" style="display: none;">
-      <div class="gallery-container p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <div class="d-flex align-items-center">
-            <button id="backToGalleryBtn" class="btn btn-outline-secondary me-3" style="display: none;">
-              <i class="bi bi-arrow-left me-2"></i>
-              Back
-            </button>
-            <h3 id="galleryTitle">Gallery</h3>
-          </div>
-          <button class="btn btn-primary" id="createFolderBtn">
-            <i class="bi bi-folder-plus me-2"></i>
-            Create Folder
-          </button>
+            <!-- User Greeting -->
+            <div class="user-greeting">
+                <i class="user-icon bi bi-person-circle"></i>
+                <span id="userName">Greetings, User!</span>
+            </div>
         </div>
-        
-        <div class="gallery-grid" id="galleryGrid">
-          <!-- Gallery content will be populated here -->
-        </div>
-      </div>
-    </div>
+    </nav>
 
-    <!-- ANALYSIS PAGE -->
-    <div id="analysisPage" class="page-content" style="display: none;">
-      <div class="row g-0 h-100">
-        <div class="col-6 d-flex flex-column align-items-center justify-content-center p-4">
-          <div class="analysis-video-container">
-            <video id="analysisVideo" autoplay playsinline muted class="analysis-video"></video>
-          </div>
-          <button id="disconnectPhoneButton" type="button" class="btn btn-danger mt-3">
-            <i class="bi bi-image me-2"></i>
-            Select Photo
-          </button>
-        </div>
+    <!-- Main container -->
+    <div class="main-container">
 
-        <div class="col-6 d-flex flex-column p-5">
-          <div class="diagnosis-card mb-4">
-            <div class="d-flex align-items-start mb-3">
-              <i class="bi bi-check-circle-fill text-success fs-3 me-3"></i>
-              <div>
-                <h6 id="diseaseDetected" class="mb-1 diagnosis-label">Diagnosis</h6>
-                <h4 class="mb-0 diagnosis-disease fw-bold">Fungal Infection</h4>
+        <!-- Home Page -->
+        <div id="homePage" class="page-content" style="display: flex;">
+          <div class="home-container">
+              <div id="homeConnection" class="home-connection-section">
+                  <div class="connection-card">
+                      <div class="connection-icon"><i class="bi bi-phone"></i></div>
+                      <h2>Please connect to the server</h2>
+                      <p>Connect to the desktop server to use the gallery and analysis features.</p>
+                      <button id="connectPhoneButton" class="btn btn-primary">Connect</button>
+                  </div>
+              </div>
+
+              <div id="galleryOverview" class="gallery-overview" style="display:none;">
+                <div class="gallery-overview-container">
+              <!-- Left column -->
+              <div class="left-column">
+                <h3>Gallery Overview</h3>
+                <div class="gallery-grid">
+                  <!-- gallery items go here -->
+                </div>
+              </div>
+
+              <!-- Right column -->
+              <div class="right-column">
+                <!-- Top Row: Connected Server -->
+                <div class="top-row connected-server">
+                    <img class="connected_icon" src="images/connected_dog.jpg" alt="Device Image">
+                    <p>Connected Successfully!</p>
+                    <div class="device-dropdown">
+                      <button class="btn btn-secondary dropdown-toggle" type="button" id="deviceDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        Select Device
+                      </button>
+                      <ul class="dropdown-menu" aria-labelledby="deviceDropdown">
+                        <li><a class="dropdown-item" href="#">Device 1</a></li>
+                        <li><a class="dropdown-item" href="#">Device 2</a></li>
+                      </ul>
+                    </div>
+
+                    <button id="disconnectPhoneButton" class="disconnect-btn">Disconnect</button>
+                </div>
+
+
+                  <!-- Bottom Row: Activity Log -->
+                  <div class="bottom-row activity-log">
+                    <h4>Activity Log</h4>
+                    <ul class="activity-list">
+                        <li>Device connected at 10:32 AM</li>
+                        <li>Data synced successfully</li>
+                        <li>Device disconnected at 11:00 AM</li>
+                        <li>Device connected at 10:32 AM</li>
+                        <li>Data synced successfully</li>
+                        <li>Device disconnected at 11:30 AM</li>
+
+                        <!-- more items -->
+                    </ul>
+                  </div>
+
+              </div>
+
+
               </div>
             </div>
-            <div class="d-flex align-items-center">
-              <span class="confidence-label me-3">Confidence:</span>
-              <div class="confidence-badge">87%</div>
-            </div>
+
           </div>
-
-          <h5 class="mb-3">Recommendations:</h5>
-          <div class="recommendations-card flex-grow-1"></div>
         </div>
-      </div>
-    </div>
-  </div>
-</body>
 
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
+        <!-- Gallery Page -->
+        <div id="galleryPage" class="page-content" style="display:none;">
+            <div class="gallery-container">
+                <div class="gallery-header">
+                    <h3>Gallery</h3>
+                    <button class="btn btn-primary" id="createFolderBtn">
+                        <i class="bi bi-folder-plus"></i> Create Folder
+                    </button>
+                </div>
+                <div class="gallery-grid" id="galleryGrid"></div>
+            </div>
+        </div>
+
+        <!-- Analysis Page -->
+        <div id="analysisPage" class="page-content" style="display:none;">
+            <div class="analysis-row">
+                <div class="video-section">
+                    <div class="analysis-video-container">
+                        <video id="analysisVideo" autoplay playsinline muted class="analysis-video"></video>
+                    </div>
+                    <!-- <button id="disconnectPhoneButton" class="btn btn-danger">
+                        <i class="bi bi-phone-fill"></i> Disconnect Phone Camera
+                    </button> -->
+                </div>
+
+                <div class="diagnosis-section">
+                    <div class="diagnosis-card">
+                        <div class="diagnosis-header">
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <div>
+                                <h6 id="diseaseDetected" class="diagnosis-label">Diagnosis</h6>
+                                <h4 class="diagnosis-disease">Fungal Infection</h4>
+                            </div>
+                        </div>
+                        <div class="confidence">
+                            <span class="confidence-label">Confidence:</span>
+                            <div class="confidence-badge">87%</div>
+                        </div>
+                    </div>
+                    <h5>Recommendations:</h5>
+                    <div class="recommendations-card"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
 <script src="functions.js"></script>
+</body>
 </html>
