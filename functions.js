@@ -333,12 +333,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 homeBtn.classList.add('active');
                 break;
             case 'gallery':
-                galleryPage.style.display = 'block';
+                galleryPage.style.display = 'flex';
                 galleryBtn.classList.add('active');
                 if (connected) renderGallery(); // Only render if "connected"
                 break;
             case 'analysis':
-                analysisPage.style.display = 'block';
+                analysisPage.style.display = 'flex';
                 analysisBtn.classList.add('active');
                 break;
         }
@@ -383,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (connected && !serverConnected) {
         console.log("Server connection lost. Forcing disconnect.");
         // Manually trigger the disconnect logic
-        homeConnection.style.display = "block";
+        homeConnection.style.display = "flex";
         connectBtn.innerHTML = '<i class="bi bi-phone-fill me-2"></i>Connect to Server';
         connectBtn.classList.remove('btn-danger');
         connectBtn.classList.add('btn-primary');
@@ -496,21 +496,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Cannot connect. The desktop server is not running. Please start the server first.');
                 return;
             }
-            connectBtn.innerHTML = '<i class="bi bi-box-arrow-right me-2"></i>Disconnect';
-            connectBtn.classList.remove('btn-primary');
-            connectBtn.classList.add('btn-danger');
 
             homeConnection.style.display = "none";
-            galleryOverview.style.display = "block";
+            galleryOverview.style.display = "flex";
             updatePhoneStatus(true);
-        } else {
-            connectBtn.innerHTML = '<i class="bi bi-phone-fill me-2"></i>Connect';
-            connectBtn.classList.remove('btn-danger');
-            connectBtn.classList.add('btn-primary');
+            connected = true;
+        }
+    });
 
-            homeConnection.style.display = "block";
+    disconnectBtn.addEventListener('click', () => {
+        if (connected) {
+            homeConnection.style.display = "flex";
             galleryOverview.style.display = "none";
             updatePhoneStatus(false);
+            connected = false;
         }
     });
 

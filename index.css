@@ -38,7 +38,7 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #f8f9fa;
+  background: linear-gradient(to bottom, #f8f9fa, #d9b99b);
   overflow: hidden;
 }
 
@@ -53,10 +53,10 @@ html, body {
 }
 
 .navbar-container {
-  display: grid;
-  grid-template-columns: auto auto auto;
+  display: flex;
   align-items: center;
-  padding: 1rem 2rem;
+  justify-content: space-between; /* spreads logo / buttons / greeting */
+  padding: 1rem 3rem !important;
   margin-top: 1.5rem;
 }
 
@@ -76,15 +76,15 @@ html, body {
   color: #282624;
 }
 
-/* Navigation Buttons */
 .nav-buttons {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 3rem;
-  background-color: #f9f9f9;
-  padding: 0.5rem 1rem;
-  border-radius: 35px;
+  background-color: #f9f9f9 !important;
+  padding: 0.75rem !important;
+  display: flex !important;               /* ensures flex layout */
+  flex-direction: row !important;         /* horizontal layout */
+  justify-content: center !important;     /* centers buttons horizontally */
+  align-items: center !important;         /* centers buttons vertically */
+  gap: 5rem !important;  
+  border-radius: 35px;               /* spacing between buttons */
 }
 
 .nav-btn {
@@ -129,7 +129,7 @@ html, body {
   color: #282624;
   font-weight: 500;
   background-color: #f9f9f9;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 2rem;
   border-radius: 35px;
   gap: 0.5rem;
 }
@@ -142,13 +142,11 @@ html, body {
 /* Main Container */
 .main-container {
   display: flex;
-  justify-content: center; /* vertical centering */
-  align-items: center;     /* horizontal centering */
-  height: calc(100vh - 100px);
-  padding-top: 0;
+  justify-content: center;      /* horizontal center */
+  align-items: flex-start;      /* top */
+  height: 82vh;
   position: relative;
 }
-
 
 /* Phone Status */
 .phone-status {
@@ -182,6 +180,7 @@ html, body {
 .page-content {
   width: 100%;
   height: 100%;
+  opacity: 1;
   transition: opacity 0.3s ease;
 }
 
@@ -194,15 +193,13 @@ html, body {
 .home-container {
   display: flex;
   flex-direction: column;
-  justify-content: center; /* vertically center connection card when shown */
-  align-items: center;
-  height: 100%;
+  align-items: center;   /* center children horizontally */
+  justify-content: center; /* center vertically if desired */
+  gap: 2rem;
   width: 100%;
   text-align: center;
-  gap: 2rem;
-  padding: 1rem; /* optional padding for the whole container */
-  box-sizing: border-box;
 }
+
 
 /* Connection Card */
 .connection-card {
@@ -238,8 +235,9 @@ html, body {
   color: white !important;
   font-weight: 600 !important;
   padding: 0.75rem 1.5rem !important;
-  border-radius: 10px !important;
+  border-radius: 30px !important;
   transition: all 0.3s ease !important;
+  width: 40%;
 }
 
 #connectPhoneButton:hover,
@@ -263,16 +261,26 @@ html, body {
 }
 
 /* Gallery Overview */
-/* Gallery Overview: full page, two columns */
 .gallery-overview {
-  display: grid;
-  grid-template-columns: 2fr 1fr; /* left bigger, right smaller */
-  gap: 1.5rem;
-  height: calc(100vh - 100px); /* full viewport minus navbar height */
+  display: flex;
   width: 100%;
-  padding: 2rem; /* space inside the page */
+  height: calc(100vh - 120px); /* Subtract navbar height */
+  margin-top: 0;
+  padding: 0.5rem 1rem;
+  justify-content: center;
   box-sizing: border-box;
-  overflow: hidden; /* prevent scrolling outside */
+}
+
+/* Inner Container */
+.gallery-overview-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1400px;
+  height: 100%;
+  padding: 1.5rem; /* Reduced from 2rem */
+  box-sizing: border-box;
 }
 
 /* Left Column */
@@ -280,7 +288,22 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  overflow-y: auto; /* scroll if gallery items exceed column height */
+  text-align: left;
+  align-items: flex-start;
+
+  background: white;
+  padding: 1rem;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* Gallery Grid inside Left Column */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+  height: 100%;
+  overflow-y: auto;           /* scrollable content */
 }
 
 /* Right Column */
@@ -291,24 +314,163 @@ html, body {
   height: 100%;
 }
 
-/* Right Column Rows: equal height */
+/* Right Column Rows */
 .right-column .top-row,
 .right-column .bottom-row {
-  flex: 1;               /* each row takes half of right column */
   background: white;
   padding: 1rem;
   border-radius: 15px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  overflow-y: auto;      /* scroll content if needed */
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: hidden;
 }
 
-/* Gallery grid inside left column */
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+/* Top Row: Connected Server */
+.right-column .top-row {
+  flex: 3 1 0;                /* bigger portion */
+  overflow: hidden;
+}
+
+/* Bottom Row: Activity Log */
+.right-column .bottom-row {
+  flex: 1 1 0;                /* smaller portion */
+  overflow-y: auto;           /* scroll when content exceeds */
+}
+
+/* Connected Server Content */
+
+.connected_icon {
+  width: 35%;
+}
+
+.top-row.connected-server {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 1rem;
-  height: 100%;
-  overflow-y: auto;       /* scroll if items exceed container */
+}
+
+/* Server Info */
+.server-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.server-icon {
+  width: 40px;
+  height: 40px;
+}
+
+/* Ensure parent dropdown has proper width */
+.device-dropdown {
+  width: 80% !important;  /* or whatever width you want */
+  position: relative !important; /* needed for absolute menu alignment */
+}
+
+/* Button styling */
+#deviceDropdown {
+  background-color: #f9f9f9 !important;
+  color: #282624 !important;
+  width: 100% !important;
+  border: none !important;
+  border-radius: 30px !important;
+  padding: 0.5rem 1rem !important;
+  text-align: center !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Hover/focus */
+#deviceDropdown:hover,
+#deviceDropdown:focus {
+  background-color: #c4a484 !important;
+  color: white !important;
+}
+
+/* Reset when dropdown is closed */
+.dropdown:not(.show) #deviceDropdown {
+  background-color: #f9f9f9 !important;
+  color: #282624 !important;
+}
+
+/* When dropdown is open */
+.dropdown.show #deviceDropdown {
+  background-color: #c4a484 !important;
+  color: white !important;
+}
+
+/* Dropdown Menu */
+#deviceDropdown + .dropdown-menu {
+  width: 100% !important;
+  left: 0 !important;
+  right: auto !important;
+  border-radius: 15px !important;
+  border: 1px solid #d9b99b !important;
+  background-color: white !important;
+}
+
+/* Dropdown Items */
+#deviceDropdown + .dropdown-menu .dropdown-item {
+  color: #282624 !important;
+}
+
+#deviceDropdown + .dropdown-menu .dropdown-item:hover {
+  background-color: #d9b99b !important;
+  color: white !important;
+  border-radius: 10px !important;
+}
+
+.disconnect-btn {
+  background-color: #dc3545;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 80%;
+}
+
+.disconnect-btn:hover {
+  background-color: #b52a3a;
+}
+
+/* Activity Log */
+.activity-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.activity-list {
+  flex: 1;                     /* fills remaining space */
+  overflow-y: auto;            /* scroll when content overflows */
+  margin: 0;
+  padding-left: 1rem;
+  list-style-type: disc;
+}
+
+.activity-list li {
+  padding: 0.5rem;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+/* Optional: Scrollbar styling */
+.activity-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.activity-list::-webkit-scrollbar-thumb {
+  background-color: rgba(217, 185, 155, 0.5);
+  border-radius: 3px;
+}
+
+.activity-list::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 
@@ -456,7 +618,7 @@ html, body {
 /* Responsive */
 @media (max-width: 768px) {
   .nav-buttons {
-    gap: 1rem;
+    gap: 3rem;
   }
   
   .nav-btn span {
@@ -687,17 +849,6 @@ html, body {
 
 .gallery-item.server-images:hover {
   background: linear-gradient(135deg, #c4a484, #b0986b);
-}
-
-/* Animation for page transitions */
-.page-content {
-  opacity: 1;
-  transition: opacity 0.3s ease;
-}
-
-.page-content.hidden {
-  opacity: 0;
-  pointer-events: none;
 }
 
 /* Add these new rules to the end of your index.css file */

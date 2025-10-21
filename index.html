@@ -38,38 +38,21 @@
                 </button>
             </div>
 
-    <!-- GALLERY PAGE -->
-    <div id="galleryPage" class="page-content" style="display: none;">
-      <div class="gallery-container p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <div class="d-flex align-items-center">
-            <button id="backToGalleryBtn" class="btn btn-outline-secondary me-3" style="display: none;">
-              <i class="bi bi-arrow-left me-2"></i>
-              Back
-            </button>
-            <h3 id="galleryTitle">Gallery</h3>
-          </div>
-          <button class="btn btn-primary" id="createFolderBtn">
-            <i class="bi bi-folder-plus me-2"></i>
-            Create Folder
-          </button>
+            <!-- User Greeting -->
+            <div class="user-greeting">
+                <i class="user-icon bi bi-person-circle"></i>
+                <span id="userName">Greetings, User!</span>
+            </div>
         </div>
     </nav>
 
     <!-- Main container -->
     <div class="main-container">
-        <!-- Phone Status -->
-        <div id="phoneStatus" class="phone-status">
-            <div class="status-indicator">
-                <i class="bi bi-phone-x text-danger"></i>
-                <span>Phone Disconnected</span>
-            </div>
-        </div>
 
         <!-- Home Page -->
-        <div id="homePage" class="page-content">
+        <div id="homePage" class="page-content" style="display: flex;">
           <div class="home-container">
-              <div id="homeConnection" class="home-connection-section" style="display:none;">
+              <div id="homeConnection" class="home-connection-section">
                   <div class="connection-card">
                       <div class="connection-icon"><i class="bi bi-phone"></i></div>
                       <h2>Please connect to the server</h2>
@@ -78,7 +61,8 @@
                   </div>
               </div>
 
-              <div id="galleryOverview" class="gallery-overview" style="display:flex;">
+              <div id="galleryOverview" class="gallery-overview" style="display:none;">
+                <div class="gallery-overview-container">
               <!-- Left column -->
               <div class="left-column">
                 <h3>Gallery Overview</h3>
@@ -89,17 +73,44 @@
 
               <!-- Right column -->
               <div class="right-column">
+                <!-- Top Row: Connected Server -->
                 <div class="top-row connected-server">
-                  <h4>Connected Server</h4>
-                  <!-- server info here -->
+                    <img class="connected_icon" src="images/connected_dog.jpg" alt="Device Image">
+                    <p>Connected Successfully!</p>
+                    <div class="device-dropdown">
+                      <button class="btn btn-secondary dropdown-toggle" type="button" id="deviceDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        Select Device
+                      </button>
+                      <ul class="dropdown-menu" aria-labelledby="deviceDropdown">
+                        <li><a class="dropdown-item" href="#">Device 1</a></li>
+                        <li><a class="dropdown-item" href="#">Device 2</a></li>
+                      </ul>
+                    </div>
+
+                    <button id="disconnectPhoneButton" class="disconnect-btn">Disconnect</button>
                 </div>
-                <div class="bottom-row activity-log">
-                  <h4>Activity Log</h4>
-                  <!-- activity log items here -->
-                </div>
+
+
+                  <!-- Bottom Row: Activity Log -->
+                  <div class="bottom-row activity-log">
+                    <h4>Activity Log</h4>
+                    <ul class="activity-list">
+                        <li>Device connected at 10:32 AM</li>
+                        <li>Data synced successfully</li>
+                        <li>Device disconnected at 11:00 AM</li>
+                        <li>Device connected at 10:32 AM</li>
+                        <li>Data synced successfully</li>
+                        <li>Device disconnected at 11:30 AM</li>
+
+                        <!-- more items -->
+                    </ul>
+                  </div>
+
+              </div>
+
+
               </div>
             </div>
-
 
           </div>
         </div>
@@ -124,9 +135,9 @@
                     <div class="analysis-video-container">
                         <video id="analysisVideo" autoplay playsinline muted class="analysis-video"></video>
                     </div>
-                    <button id="disconnectPhoneButton" class="btn btn-danger">
+                    <!-- <button id="disconnectPhoneButton" class="btn btn-danger">
                         <i class="bi bi-phone-fill"></i> Disconnect Phone Camera
-                    </button>
+                    </button> -->
                 </div>
 
                 <div class="diagnosis-section">
