@@ -138,6 +138,16 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
+  // Name format validation
+  const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$/; 
+  if (!namePattern.test(firstName)) {
+    showMessage("Invalid first name.", "error");
+    return;
+  } else if (!namePattern.test(lastName)) {
+    showMessage("Invalid last name.", "error");
+    return;
+  }
+
         // Email format validation
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailPattern.test(email)) {
