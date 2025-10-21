@@ -281,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Other Page Elements
         const connectBtn = document.getElementById('connectPhoneButton');
         const disconnectBtn = document.getElementById('disconnectPhoneButton');
-        const analysisVideo = document.getElementById('analysisVideo');
         const statusIndicator = document.querySelector('.phone-status .status-indicator');
         const galleryGrid = document.getElementById('galleryGrid');
         const backToGalleryBtn = document.getElementById('backToGalleryBtn');
@@ -289,12 +288,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Server Configuration
         const SERVER_URL = 'http://localhost:5001';
-        let stream = null;
         let connected = false; // This is the user-facing "connected" state
         let serverConnected = false; // This is the actual server health
         let currentPage = 'home';
         let serverCheckInterval = null;
-        let analyzing = false;
         
         // Gallery Navigation State
         let currentGalleryPath = [];
@@ -610,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             
             // Close photo selection mode
-            exitPhotoSelectionMode();
+            togglePhotoSelectionMode(false);
             
             // Switch to analysis page
             switchPage('analysis');
@@ -620,49 +617,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function showPhotoSelectionModal() {
-            const modal = document.createElement('div');
-            modal.className = 'photo-selection-modal';
-            modal.innerHTML = `
-                <div class="photo-selection-content">
-                    <div class="photo-selection-header">
-                        <h5>Select Photo for Analysis</h5>
-                        <button class="close-btn">&times;</button>
-                    </div>
-                    <div class="photo-selection-body">
-                        <div class="photo-selection-grid" id="photoSelectionGrid">
-                            <!-- Photos will be loaded here -->
-                        </div>
-                    </div>
-                    <div class="photo-selection-footer">
-                        <button class="btn btn-secondary" id="cancelSelection">Cancel</button>
-                        <button class="btn btn-primary" id="confirmSelection" disabled>Select Photo</button>
-                    </div>
+            const modal = createModal('Select Photo for Analysis', `
+                <div class="photo-selection-grid" id="photoSelectionGrid">
+                    <!-- Photos will be loaded here -->
                 </div>
-            `;
+            `, [
+                { text: 'Cancel', class: 'btn-secondary', id: 'cancelSelection' },
+                { text: 'Select Photo', class: 'btn-primary', id: 'confirmSelection', disabled: true }
+            ]);
             
-            document.body.appendChild(modal);
-            
-            // Load photos in the modal
             loadPhotosInModal();
-            
-            // Event listeners
-            modal.querySelector('.close-btn').addEventListener('click', () => {
-                document.body.removeChild(modal);
-            });
-            
-            modal.querySelector('#cancelSelection').addEventListener('click', () => {
-                document.body.removeChild(modal);
-            });
             
             modal.querySelector('#confirmSelection').addEventListener('click', () => {
                 if (selectedImage) {
                     selectImageForAnalysis(selectedImage);
-                    document.body.removeChild(modal);
-                }
-            });
-            
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
                     document.body.removeChild(modal);
                 }
             });
@@ -718,15 +686,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        function enterPhotoSelectionMode() {
-            photoSelectionMode = true;
-            galleryPage.classList.add('gallery-selection-mode');
-            renderGallery();
-        }
-
-        function exitPhotoSelectionMode() {
-            photoSelectionMode = false;
-            galleryPage.classList.remove('gallery-selection-mode');
+        function togglePhotoSelectionMode(enable) {
+            photoSelectionMode = enable;
+            galleryPage.classList.toggle('gallery-selection-mode', enable);
             renderGallery();
         }
 
@@ -829,231 +791,163 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        async function processSelectedFolder(folderPath) {
+        async function processFiles(endpoint, data, message) {
+            const loadingModal = showLoadingModal(message);
+            
             try {
-                // Show loading state
-                const loadingModal = showLoadingModal('Processing selected folder...');
-                
-                // Send folder path to Flask backend
-                const response = await fetch(`${SERVER_URL}/process-folder`, {
+                const response = await fetch(`${SERVER_URL}/${endpoint}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        folderPath: folderPath
-                    })
+                    headers: data instanceof FormData ? {} : { 'Content-Type': 'application/json' },
+                    body: data instanceof FormData ? data : JSON.stringify(data)
                 });
                 
-                const data = await response.json();
-                
-                // Remove loading modal
+                const result = await response.json();
                 document.body.removeChild(loadingModal);
                 
-                if (data.success) {
-                    alert(`Successfully processed folder!\n\nProcessed ${data.processedCount} images.\nResults saved to: ${data.outputPath}`);
-                    
-                    // Refresh gallery to show any new images
+                if (result.success) {
+                    alert(`Successfully processed ${result.processedCount} images!\n\nResults saved to: ${result.outputPath}`);
                     renderGallery();
                     
-                    // Optionally open the output folder
-                    if (typeof require !== 'undefined') {
+                    if (typeof require !== 'undefined' && result.outputPath) {
                         const { ipcRenderer } = require('electron');
-                        ipcRenderer.invoke('open-folder', data.outputPath);
+                        ipcRenderer.invoke('open-folder', result.outputPath);
                     }
                 } else {
-                    alert(data.message || 'Failed to process folder. Please try again.');
+                    alert(result.message || 'Processing failed. Please try again.');
                 }
             } catch (error) {
-                console.error('Error processing folder:', error);
-                alert('Error processing folder. Please try again.');
-            }
-        }
-
-        async function processSelectedFiles(files) {
-            try {
-                // Show loading state
-                const loadingModal = showLoadingModal('Processing selected files...');
-                
-                // Filter for image files
-                const imageFiles = files.filter(file => {
-                    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'];
-                    return allowedTypes.includes(file.type) || /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(file.name);
-                });
-                
-                if (imageFiles.length === 0) {
-                    document.body.removeChild(loadingModal);
-                    alert('No valid image files found in the selected folder.');
-                    return;
-                }
-                
-                // Process each image file
-                const formData = new FormData();
-                imageFiles.forEach((file, index) => {
-                    formData.append(`images`, file);
-                });
-                
-                const response = await fetch(`${SERVER_URL}/process-images`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                // Remove loading modal
                 document.body.removeChild(loadingModal);
-                
-                if (data.success) {
-                    alert(`Successfully processed ${data.processedCount} images!\n\nResults saved to: ${data.outputPath}`);
-                    
-                    // Refresh gallery to show any new images
-                    renderGallery();
-                } else {
-                    alert(data.message || 'Failed to process images. Please try again.');
-                }
-            } catch (error) {
-                console.error('Error processing files:', error);
-                alert('Error processing files. Please try again.');
+                console.error('Error processing:', error);
+                alert('Error processing. Please try again.');
             }
         }
+        
+        async function processSelectedFolder(folderPath) {
+            await processFiles('process-folder', { folderPath }, 'Processing selected folder...');
+        }
+        
+        async function processSelectedFiles(files) {
+            const imageFiles = files.filter(file => {
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'];
+                return allowedTypes.includes(file.type) || /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(file.name);
+            });
+            
+            if (imageFiles.length === 0) {
+                alert('No valid image files found in the selected folder.');
+                return;
+            }
+            
+            const formData = new FormData();
+            imageFiles.forEach(file => formData.append('images', file));
+            
+            await processFiles('process-images', formData, 'Processing selected files...');
+        }
 
-        function showLoadingModal(message) {
+        function createModal(title, body, buttons = []) {
             const modal = document.createElement('div');
             modal.className = 'server-images-modal';
+            
+            const buttonHTML = buttons.map(btn => 
+                `<button class="btn ${btn.class}" id="${btn.id}" ${btn.disabled ? 'disabled' : ''}>${btn.text}</button>`
+            ).join('');
+            
             modal.innerHTML = `
                 <div class="modal-content" style="max-width: 400px;">
                     <div class="modal-header">
-                        <h5>Processing...</h5>
+                        <h5>${title}</h5>
+                        <button class="close-btn">&times;</button>
                     </div>
-                    <div class="modal-body text-center">
-                        <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p>${message}</p>
-                    </div>
+                    <div class="modal-body">${body}</div>
+                    ${buttons.length ? `<div class="modal-footer">${buttonHTML}</div>` : ''}
                 </div>
             `;
+            
             document.body.appendChild(modal);
+            
+            // Add close functionality
+            modal.querySelector('.close-btn').addEventListener('click', () => document.body.removeChild(modal));
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) document.body.removeChild(modal);
+            });
+            
             return modal;
         }
-
-        // --- New Rename and Move Functions ---
-
-        async function renameImage(imagePath, newFilename) {
-            try {
-                const response = await fetch(`${SERVER_URL}/rename-image`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        currentPath: imagePath,
-                        newFilename: newFilename
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('File renamed successfully!');
-                    renderGallery(); // Refresh the gallery
-                } else {
-                    alert(data.message || 'Failed to rename file.');
-                }
-            } catch (error) {
-                console.error('Error renaming file:', error);
-                alert('An error occurred. Please try again.');
-            }
-        }
-
-        async function moveImage(imagePath, newFolderPath) {
-             try {
-                const response = await fetch(`${SERVER_URL}/move-image`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        currentPath: imagePath,
-                        newFolderPath: newFolderPath
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('File moved successfully!');
-                    renderGallery(); // Refresh the gallery
-                } else {
-                    alert(data.message || 'Failed to move file.');
-                }
-            } catch (error) {
-                console.error('Error moving file:', error);
-                alert('An error occurred. Please try again.');
-            }
-        }
-
-        // Functions to be called from onclick attributes
-        // We attach them to 'window' so they are globally accessible
         
+        function showLoadingModal(message) {
+            return createModal('Processing...', `
+                <div class="text-center">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>${message}</p>
+                </div>
+            `);
+        }
+
+        // --- Image Management Functions ---
+        
+        async function performImageAction(endpoint, data, successMessage) {
+            try {
+                const response = await fetch(`${SERVER_URL}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(successMessage);
+                    renderGallery();
+                } else {
+                    alert(result.message || 'Operation failed.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            }
+        }
+
+        // Global functions for onclick attributes
         window.showRenamePrompt = async (imagePath, currentFilename) => {
             const newFilename = prompt("Enter new filename:", currentFilename);
             
             if (newFilename && newFilename.trim() && newFilename !== currentFilename) {
-                // Basic validation
-                if (!newFilename.includes('.')) {
-                    alert('Invalid filename. Please include a file extension (e.g., .jpg).');
+                if (!newFilename.includes('.') || newFilename.includes('/') || newFilename.includes('\\')) {
+                    alert('Invalid filename. Please include a file extension and avoid slashes.');
                     return;
                 }
-                if (newFilename.includes('/') || newFilename.includes('\\')) {
-                    alert('Invalid filename. Cannot include slashes.');
-                    return;
-                }
-                await renameImage(imagePath, newFilename.trim());
+                await performImageAction('rename-image', {
+                    currentPath: imagePath,
+                    newFilename: newFilename.trim()
+                }, 'File renamed successfully!');
             }
         };
 
         window.showMoveModal = async (imagePath) => {
-            // Fetch all folders from the root
             const serverData = await loadServerImages('');
-            const allFolders = serverData.folders;
+            const folderOptions = serverData.folders.map(folder => 
+                `<option value="${folder.path}">${folder.name}</option>`
+            ).join('');
 
-            // Create Modal
-            const modal = document.createElement('div');
-            modal.className = 'server-images-modal'; // Reuse existing modal style
+            const modal = createModal('Move Image', `
+                <p>Select a folder to move this image to:</p>
+                <select id="folderMoveSelect" class="form-select">
+                    <option value="">(Root Gallery)</option>
+                    ${folderOptions}
+                </select>
+            `, [
+                { text: 'Cancel', class: 'btn-secondary', id: 'cancelMoveBtn' },
+                { text: 'Move', class: 'btn-primary', id: 'confirmMoveBtn' }
+            ]);
             
-            let folderOptionsHTML = '<option value="">(Root Gallery)</option>';
-            allFolders.forEach(folder => {
-                folderOptionsHTML += `<option value="${folder.path}">${folder.name}</option>`;
-            });
-
-            modal.innerHTML = `
-                <div class="modal-content" style="max-width: 400px;">
-                    <div class="modal-header">
-                        <h5>Move Image</h5>
-                        <button class="close-btn">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Select a folder to move this image to:</p>
-                        <select id="folderMoveSelect" class="form-select">
-                            ${folderOptionsHTML}
-                        </select>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-secondary" id="cancelMoveBtn">Cancel</button>
-                        <button class="btn btn-primary" id="confirmMoveBtn">Move</button>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            
-            // Add event listeners
-            modal.querySelector('.close-btn').addEventListener('click', () => document.body.removeChild(modal));
-            modal.querySelector('#cancelMoveBtn').addEventListener('click', () => document.body.removeChild(modal));
             modal.querySelector('#confirmMoveBtn').addEventListener('click', () => {
                 const selectedFolder = document.getElementById('folderMoveSelect').value;
-                moveImage(imagePath, selectedFolder);
+                performImageAction('move-image', {
+                    currentPath: imagePath,
+                    newFolderPath: selectedFolder
+                }, 'File moved successfully!');
                 document.body.removeChild(modal);
-            });
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) document.body.removeChild(modal);
             });
         };
 
