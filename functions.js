@@ -283,8 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const disconnectBtn = document.getElementById('disconnectPhoneButton');
         const statusIndicator = document.querySelector('.phone-status .status-indicator');
         const galleryGrid = document.getElementById('galleryGrid');
-        const backToGalleryBtn = document.getElementById('backToGalleryBtn');
-        const galleryTitle = document.getElementById('galleryTitle');
 
         // Server Configuration
         const SERVER_URL = 'http://localhost:5001';
@@ -293,8 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentPage = 'home';
         let serverCheckInterval = null;
         
-        // Gallery Navigation State
-        let currentGalleryPath = [];
+        // Gallery State
         let selectedImage = null;
         let photoSelectionMode = false;
         
@@ -373,87 +370,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
         // --- Gallery Functions ---
-        async function loadServerImages(path = '') {
-            if (!serverConnected) return { images: [], folders: [] };
+        async function loadServerImages() {
+            if (!serverConnected) return { images: [] };
             try {
-                const url = path ? `${SERVER_URL}/images?path=${encodeURIComponent(path)}` : `${SERVER_URL}/images`;
-                const response = await fetch(url);
+                const response = await fetch(`${SERVER_URL}/images`);
                 const data = await response.json();
-                return data.success ? { images: data.images, folders: data.folders, currentPath: data.current_path } : { images: [], folders: [] };
+                return data.success ? { images: data.images } : { images: [] };
             } catch (error) {
                 console.error('Failed to load images:', error);
-                return { images: [], folders: [] };
+                return { images: [] };
             }
-        }
-        
-        async function createFolder(name) {
-            try {
-                const response = await fetch(`${SERVER_URL}/folders`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        name: name,
-                        path: currentGalleryPath.join('/')
-                    })
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    renderGallery();
-                    return true;
-                } else {
-                    alert(data.message || 'Failed to create folder');
-                    return false;
-                }
-            } catch (error) {
-                console.error('Failed to create folder:', error);
-                alert('Failed to create folder. Please try again.');
-                return false;
-            }
-        }
-
-
-        function navigateToFolder(folderName) {
-            currentGalleryPath.push(folderName);
-            renderGallery();
-        }
-
-        function navigateBack() {
-            if (currentGalleryPath.length > 0) {
-                currentGalleryPath.pop();
-                renderGallery();
-            }
-        }
-
-        function renderBreadcrumb() {
-            const breadcrumbContainer = document.createElement('div');
-            breadcrumbContainer.className = 'gallery-breadcrumb';
-            
-            let breadcrumbHTML = '<span class="gallery-breadcrumb-item" data-path="[]">Gallery</span>';
-            
-            if (currentGalleryPath.length > 0) {
-                let currentPath = [];
-                for (let i = 0; i < currentGalleryPath.length; i++) {
-                    currentPath.push(currentGalleryPath[i]);
-                    breadcrumbHTML += `<span class="gallery-breadcrumb-separator">></span>`;
-                    breadcrumbHTML += `<span class="gallery-breadcrumb-item" data-path='${JSON.stringify(currentPath)}'>${currentGalleryPath[i]}</span>`;
-                }
-            }
-            
-            breadcrumbContainer.innerHTML = breadcrumbHTML;
-            
-            // Add click handlers for breadcrumb navigation
-            breadcrumbContainer.querySelectorAll('.gallery-breadcrumb-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const path = JSON.parse(item.dataset.path);
-                    currentGalleryPath = path;
-                    renderGallery();
-                });
-            });
-            
-            return breadcrumbContainer;
         }
 
         async function renderGallery() {
@@ -462,16 +388,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Clear existing content and remove any existing breadcrumb
+            // Clear existing content
             galleryGrid.innerHTML = '';
-            const existingBreadcrumb = galleryGrid.parentNode.querySelector('.gallery-breadcrumb');
-            if (existingBreadcrumb) {
-                existingBreadcrumb.remove();
-            }
-
-            // Add breadcrumb navigation
-            const breadcrumb = renderBreadcrumb();
-            galleryGrid.parentNode.insertBefore(breadcrumb, galleryGrid);
 
             // Show loading state
             const loadingDiv = document.createElement('div');
@@ -480,61 +398,11 @@ document.addEventListener('DOMContentLoaded', () => {
             galleryGrid.appendChild(loadingDiv);
 
             // Load server data
-            const currentPath = currentGalleryPath.join('/');
-            const serverData = await loadServerImages(currentPath);
-            const { images, folders } = serverData;
+            const serverData = await loadServerImages();
+            const { images } = serverData;
 
             // Clear loading state
             galleryGrid.innerHTML = '';
-
-            // Show back button if not in root
-            if (currentGalleryPath.length > 0) {
-                backToGalleryBtn.style.display = 'inline-block';
-                galleryTitle.textContent = currentGalleryPath[currentGalleryPath.length - 1];
-            } else {
-                backToGalleryBtn.style.display = 'none';
-                galleryTitle.textContent = 'Gallery';
-            }
-
-            // Add select image folder button
-            const selectBtn = document.createElement('div');
-            selectBtn.className = 'folder-item';
-            selectBtn.innerHTML = `
-                <i class="bi bi-folder2-open"></i>
-                <h6>Select Image Folder</h6>
-            `;
-            selectBtn.addEventListener('click', () => {
-                selectImageFolder();
-            });
-            galleryGrid.appendChild(selectBtn);
-
-            // Add create folder button
-            const createBtn = document.createElement('div');
-            createBtn.className = 'folder-item';
-            createBtn.innerHTML = `
-                <i class="bi bi-folder-plus"></i>
-                <h6>Create New Folder</h6>
-            `;
-            createBtn.addEventListener('click', async () => {
-                const folderName = prompt('Enter folder name:');
-                if (folderName && folderName.trim()) {
-                    await createFolder(folderName.trim());
-                }
-            });
-            galleryGrid.appendChild(createBtn);
-
-            // Add folders
-            folders.forEach(folder => {
-                const folderDiv = document.createElement('div');
-                folderDiv.className = 'folder-item';
-                folderDiv.innerHTML = `
-                    <i class="bi bi-folder-fill"></i>
-                    <h6>${folder.name}</h6>
-                    <div class="folder-count">${folder.item_count} items</div>
-                `;
-                folderDiv.addEventListener('click', () => navigateToFolder(folder.name));
-                galleryGrid.appendChild(folderDiv);
-            });
 
             // Add images
             images.forEach(image => {
@@ -560,15 +428,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 galleryGrid.appendChild(imageDiv);
-
             });
 
             // If no content, show message
             if (galleryGrid.children.length === 0) {
-                galleryGrid.innerHTML = '<p class="text-center text-muted">No items in this folder.</p>';
+                galleryGrid.innerHTML = '<p class="text-center text-muted">No images found.</p>';
             }
-
-            
         }
 
 
@@ -697,10 +562,6 @@ document.addEventListener('DOMContentLoaded', () => {
         galleryBtn.addEventListener('click', () => switchPage('gallery'));
         analysisBtn.addEventListener('click', () => switchPage('analysis'));
 
-        backToGalleryBtn.addEventListener('click', () => {
-            navigateBack();
-        });
-
         // Add delete image functionality
         window.deleteImage = async function(imagePath) {
             if (confirm(`Are you sure you want to delete this image?`)) {
@@ -791,58 +652,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        async function processFiles(endpoint, data, message) {
-            const loadingModal = showLoadingModal(message);
-            
-            try {
-                const response = await fetch(`${SERVER_URL}/${endpoint}`, {
-                    method: 'POST',
-                    headers: data instanceof FormData ? {} : { 'Content-Type': 'application/json' },
-                    body: data instanceof FormData ? data : JSON.stringify(data)
-                });
-                
-                const result = await response.json();
-                document.body.removeChild(loadingModal);
-                
-                if (result.success) {
-                    alert(`Successfully processed ${result.processedCount} images!\n\nResults saved to: ${result.outputPath}`);
-                    renderGallery();
-                    
-                    if (typeof require !== 'undefined' && result.outputPath) {
-                        const { ipcRenderer } = require('electron');
-                        ipcRenderer.invoke('open-folder', result.outputPath);
-                    }
-                } else {
-                    alert(result.message || 'Processing failed. Please try again.');
-                }
-            } catch (error) {
-                document.body.removeChild(loadingModal);
-                console.error('Error processing:', error);
-                alert('Error processing. Please try again.');
-            }
-        }
-        
-        async function processSelectedFolder(folderPath) {
-            await processFiles('process-folder', { folderPath }, 'Processing selected folder...');
-        }
-        
-        async function processSelectedFiles(files) {
-            const imageFiles = files.filter(file => {
-                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'];
-                return allowedTypes.includes(file.type) || /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(file.name);
-            });
-            
-            if (imageFiles.length === 0) {
-                alert('No valid image files found in the selected folder.');
-                return;
-            }
-            
-            const formData = new FormData();
-            imageFiles.forEach(file => formData.append('images', file));
-            
-            await processFiles('process-images', formData, 'Processing selected files...');
-        }
-
         function createModal(title, body, buttons = []) {
             const modal = document.createElement('div');
             modal.className = 'server-images-modal';
@@ -907,49 +716,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('An error occurred. Please try again.');
             }
         }
-
-        // Global functions for onclick attributes
-        window.showRenamePrompt = async (imagePath, currentFilename) => {
-            const newFilename = prompt("Enter new filename:", currentFilename);
-            
-            if (newFilename && newFilename.trim() && newFilename !== currentFilename) {
-                if (!newFilename.includes('.') || newFilename.includes('/') || newFilename.includes('\\')) {
-                    alert('Invalid filename. Please include a file extension and avoid slashes.');
-                    return;
-                }
-                await performImageAction('rename-image', {
-                    currentPath: imagePath,
-                    newFilename: newFilename.trim()
-                }, 'File renamed successfully!');
-            }
-        };
-
-        window.showMoveModal = async (imagePath) => {
-            const serverData = await loadServerImages('');
-            const folderOptions = serverData.folders.map(folder => 
-                `<option value="${folder.path}">${folder.name}</option>`
-            ).join('');
-
-            const modal = createModal('Move Image', `
-                <p>Select a folder to move this image to:</p>
-                <select id="folderMoveSelect" class="form-select">
-                    <option value="">(Root Gallery)</option>
-                    ${folderOptions}
-                </select>
-            `, [
-                { text: 'Cancel', class: 'btn-secondary', id: 'cancelMoveBtn' },
-                { text: 'Move', class: 'btn-primary', id: 'confirmMoveBtn' }
-            ]);
-            
-            modal.querySelector('#confirmMoveBtn').addEventListener('click', () => {
-                const selectedFolder = document.getElementById('folderMoveSelect').value;
-                performImageAction('move-image', {
-                    currentPath: imagePath,
-                    newFolderPath: selectedFolder
-                }, 'File moved successfully!');
-                document.body.removeChild(modal);
-            });
-        };
 
         disconnectBtn.addEventListener('click', () => {
             if (disconnectBtn.textContent.includes('Select Photo')) {
