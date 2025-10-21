@@ -2,3 +2,4 @@ This focuses on the development of a computer-based and mobile-based system for 
 
 Directions:
 run npm install
+pip install -r requirements.txt

@@ -164,28 +164,55 @@ def upload_file():
 
 @app.route('/images', methods=['GET'])
 def list_images():
-    """List all uploaded images"""
+    """List all uploaded images and folders"""
     try:
+        path = request.args.get('path', '')
+        current_path = os.path.join(UPLOAD_FOLDER, path) if path else UPLOAD_FOLDER
+        
+        if not os.path.exists(current_path):
+            return jsonify({
+                'success': False,
+                'message': 'Path not found'
+            }), 404
+        
         images = []
-        for filename in os.listdir(UPLOAD_FOLDER):
-            if allowed_file(filename):
-                file_path = os.path.join(UPLOAD_FOLDER, filename)
-                file_size = os.path.getsize(file_path)
-                file_time = os.path.getmtime(file_path)
+        folders = []
+        
+        for item in os.listdir(current_path):
+            item_path = os.path.join(current_path, item)
+            
+            if os.path.isdir(item_path):
+                # Count items in folder
+                item_count = len([f for f in os.listdir(item_path) 
+                                if os.path.isfile(os.path.join(item_path, f)) and allowed_file(f)])
+                folders.append({
+                    'name': item,
+                    'type': 'folder',
+                    'item_count': item_count,
+                    'path': os.path.join(path, item).replace('\\', '/') if path else item
+                })
+            elif allowed_file(item):
+                file_size = os.path.getsize(item_path)
+                file_time = os.path.getmtime(item_path)
                 
                 images.append({
-                    'filename': filename,
+                    'filename': item,
                     'size': file_size,
-                    'uploaded_at': datetime.fromtimestamp(file_time).isoformat()
+                    'uploaded_at': datetime.fromtimestamp(file_time).isoformat(),
+                    'path': os.path.join(path, item).replace('\\', '/') if path else item
                 })
         
         # Sort by upload time (newest first)
         images.sort(key=lambda x: x['uploaded_at'], reverse=True)
+        # Sort folders alphabetically
+        folders.sort(key=lambda x: x['name'])
         
         return jsonify({
             'success': True,
             'images': images,
-            'count': len(images)
+            'folders': folders,
+            'count': len(images),
+            'current_path': path
         })
     except Exception as e:
         return jsonify({
@@ -193,29 +220,129 @@ def list_images():
             'message': f'Failed to list images: {str(e)}'
         }), 500
 
-@app.route('/images/<filename>', methods=['GET'])
-def get_image(filename):
-    """Serve uploaded images"""
+@app.route('/images/<path:filepath>', methods=['GET'])
+def get_image(filepath):
+    """Serve uploaded images from any path"""
     try:
-        if allowed_file(filename):
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
-            if os.path.exists(file_path):
+        # Security check - prevent directory traversal
+        if '..' in filepath or filepath.startswith('/'):
+            return jsonify({
+                'success': False,
+                'message': 'Invalid file path'
+            }), 400
+            
+        file_path = os.path.join(UPLOAD_FOLDER, filepath)
+        
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            filename = os.path.basename(file_path)
+            if allowed_file(filename):
                 from flask import send_file
                 return send_file(file_path)
             else:
                 return jsonify({
                     'success': False,
-                    'message': 'Image not found'
-                }), 404
+                    'message': 'Invalid file type'
+                }), 400
         else:
             return jsonify({
                 'success': False,
-                'message': 'Invalid file type'
-            }), 400
+                'message': 'Image not found'
+            }), 404
     except Exception as e:
         return jsonify({
             'success': False,
             'message': f'Failed to serve image: {str(e)}'
+        }), 500
+
+@app.route('/folders', methods=['POST'])
+def create_folder():
+    """Create a new folder"""
+    try:
+        data = request.get_json()
+        folder_name = data.get('name', '').strip()
+        parent_path = data.get('path', '')
+        
+        if not folder_name:
+            return jsonify({
+                'success': False,
+                'message': 'Folder name is required'
+            }), 400
+        
+        # Security check - prevent directory traversal
+        if '..' in folder_name or '/' in folder_name or '\\' in folder_name:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid folder name'
+            }), 400
+        
+        # Create folder path
+        if parent_path:
+            folder_path = os.path.join(UPLOAD_FOLDER, parent_path, folder_name)
+        else:
+            folder_path = os.path.join(UPLOAD_FOLDER, folder_name)
+        
+        # Check if folder already exists
+        if os.path.exists(folder_path):
+            return jsonify({
+                'success': False,
+                'message': 'Folder already exists'
+            }), 400
+        
+        # Create the folder
+        os.makedirs(folder_path, exist_ok=True)
+        print(f"Folder created: {folder_path}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Folder created successfully',
+            'folder_name': folder_name,
+            'folder_path': os.path.join(parent_path, folder_name).replace('\\', '/') if parent_path else folder_name
+        })
+        
+    except Exception as e:
+        print(f"Create folder error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Failed to create folder: {str(e)}'
+        }), 500
+
+@app.route('/images/<path:filepath>', methods=['DELETE'])
+def delete_image(filepath):
+    """Delete uploaded images from any path"""
+    try:
+        # Security check - prevent directory traversal
+        if '..' in filepath or filepath.startswith('/'):
+            return jsonify({
+                'success': False,
+                'message': 'Invalid file path'
+            }), 400
+            
+        file_path = os.path.join(UPLOAD_FOLDER, filepath)
+        
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            filename = os.path.basename(file_path)
+            if allowed_file(filename):
+                os.remove(file_path)
+                print(f"Image deleted: {filepath}")
+                return jsonify({
+                    'success': True,
+                    'message': 'Image deleted successfully'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Invalid file type'
+                }), 400
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Image not found'
+            }), 404
+    except Exception as e:
+        print(f"Delete error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Failed to delete image: {str(e)}'
         }), 500
 
 @app.route('/', methods=['GET'])
@@ -362,8 +489,10 @@ if __name__ == '__main__':
     print("Web dashboard available at: http://localhost:5000")
     print("API endpoints:")
     print("   - POST /upload - Upload images")
-    print("   - GET /images - List all images")
-    print("   - GET /images/<filename> - View specific image")
+    print("   - GET /images - List all images and folders")
+    print("   - GET /images/<path> - View specific image")
+    print("   - DELETE /images/<path> - Delete specific image")
+    print("   - POST /folders - Create new folder")
     print("   - GET /health - Health check")
     print("   - GET /ip - Get local IP address")
     print("=" * 50)

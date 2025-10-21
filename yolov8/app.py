@@ -59,6 +59,16 @@ def register():
     if not all([first_name, last_name, email, password]):
         return jsonify({"success": False, "message": "All fields are required."}), 400
 
+    # Name validation
+    name_pattern = r"^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$"
+
+    if not re.match(name_pattern, first_name):
+        return jsonify({"success": False, "message": "Invalid first name format."}), 400
+    elif not re.match(name_pattern, last_name):
+        return jsonify({"success": False, "message": "Invalid last name format."}), 400
+
+    
+    # Email validation
     email_pattern = r"^[^\s@]+@[^\s@]+\.[^\s@]+$"
     if not re.match(email_pattern, email):
         return jsonify({"success": False, "message": "Invalid email format."}), 400

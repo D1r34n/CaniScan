@@ -333,12 +333,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 homeBtn.classList.add('active');
                 break;
             case 'gallery':
-                galleryPage.style.display = 'flex';
+                galleryPage.style.display = 'block';
                 galleryBtn.classList.add('active');
                 if (connected) renderGallery(); // Only render if "connected"
                 break;
             case 'analysis':
-                analysisPage.style.display = 'flex';
+                analysisPage.style.display = 'block';
                 analysisBtn.classList.add('active');
                 break;
         }
