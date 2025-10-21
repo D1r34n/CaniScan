@@ -81,7 +81,13 @@
     <div id="galleryPage" class="page-content" style="display: none;">
       <div class="gallery-container p-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
-          <h3>Gallery</h3>
+          <div class="d-flex align-items-center">
+            <button id="backToGalleryBtn" class="btn btn-outline-secondary me-3" style="display: none;">
+              <i class="bi bi-arrow-left me-2"></i>
+              Back
+            </button>
+            <h3 id="galleryTitle">Gallery</h3>
+          </div>
           <button class="btn btn-primary" id="createFolderBtn">
             <i class="bi bi-folder-plus me-2"></i>
             Create Folder
@@ -102,8 +108,8 @@
             <video id="analysisVideo" autoplay playsinline muted class="analysis-video"></video>
           </div>
           <button id="disconnectPhoneButton" type="button" class="btn btn-danger mt-3">
-            <i class="bi bi-phone-fill me-2"></i>
-            Disconnect Phone Camera
+            <i class="bi bi-image me-2"></i>
+            Select Photo
           </button>
         </div>
 
