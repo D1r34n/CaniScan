@@ -58,16 +58,40 @@
 
         <!-- Home Page -->
         <div id="homePage" class="page-content">
-            <div id="homeConnection" class="home-connection-section" style="display:block;">
-                <div class="connection-card">
-                    <div class="connection-icon"><i class="bi bi-phone"></i></div>
-                    <h2>Please connect to the server</h2>
-                    <p>Connect to the desktop server to use the gallery and analysis features.</p>
-                    <button id="connectPhoneButton" class="btn btn-primary">Connect</button>
+          <div class="home-container">
+              <div id="homeConnection" class="home-connection-section" style="display:none;">
+                  <div class="connection-card">
+                      <div class="connection-icon"><i class="bi bi-phone"></i></div>
+                      <h2>Please connect to the server</h2>
+                      <p>Connect to the desktop server to use the gallery and analysis features.</p>
+                      <button id="connectPhoneButton" class="btn btn-primary">Connect</button>
+                  </div>
+              </div>
+
+              <div id="galleryOverview" class="gallery-overview" style="display:flex;">
+              <!-- Left column -->
+              <div class="left-column">
+                <h3>Gallery Overview</h3>
+                <div class="gallery-grid">
+                  <!-- gallery items go here -->
                 </div>
+              </div>
+
+              <!-- Right column -->
+              <div class="right-column">
+                <div class="top-row connected-server">
+                  <h4>Connected Server</h4>
+                  <!-- server info here -->
+                </div>
+                <div class="bottom-row activity-log">
+                  <h4>Activity Log</h4>
+                  <!-- activity log items here -->
+                </div>
+              </div>
             </div>
 
-            <div id="galleryOverview" class="row" style="display:none;">Gallery</div>
+
+          </div>
         </div>
 
         <!-- Gallery Page -->

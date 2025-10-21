@@ -145,9 +145,10 @@ html, body {
   justify-content: center; /* vertical centering */
   align-items: center;     /* horizontal centering */
   height: calc(100vh - 100px);
-  padding-top: 0; /* remove top padding */
+  padding-top: 0;
   position: relative;
 }
+
 
 /* Phone Status */
 .phone-status {
@@ -189,15 +190,18 @@ html, body {
   pointer-events: none;
 }
 
-/* Center everything inside homepage */
-#homePage {
+/* Home container: center everything vertically when needed */
+.home-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: center; /* vertically center connection card when shown */
   align-items: center;
   height: 100%;
+  width: 100%;
   text-align: center;
-  gap: 2rem; /* optional spacing between elements */
+  gap: 2rem;
+  padding: 1rem; /* optional padding for the whole container */
+  box-sizing: border-box;
 }
 
 /* Connection Card */
@@ -258,8 +262,59 @@ html, body {
   transform: translateY(-2px);
 }
 
+/* Gallery Overview */
+/* Gallery Overview: full page, two columns */
+.gallery-overview {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* left bigger, right smaller */
+  gap: 1.5rem;
+  height: calc(100vh - 100px); /* full viewport minus navbar height */
+  width: 100%;
+  padding: 2rem; /* space inside the page */
+  box-sizing: border-box;
+  overflow: hidden; /* prevent scrolling outside */
+}
+
+/* Left Column */
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto; /* scroll if gallery items exceed column height */
+}
+
+/* Right Column */
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: 100%;
+}
+
+/* Right Column Rows: equal height */
+.right-column .top-row,
+.right-column .bottom-row {
+  flex: 1;               /* each row takes half of right column */
+  background: white;
+  padding: 1rem;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  overflow-y: auto;      /* scroll content if needed */
+}
+
+/* Gallery grid inside left column */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+  height: 100%;
+  overflow-y: auto;       /* scroll if items exceed container */
+}
+
+
 /* Gallery Page */
 .gallery-container {
+  display: flex;
   background: white;
   border-radius: 20px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);

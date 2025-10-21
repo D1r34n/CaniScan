@@ -329,16 +329,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         switch (page) {
             case 'home':
-                homePage.style.display = 'block';
+                homePage.style.display = 'flex';
                 homeBtn.classList.add('active');
                 break;
             case 'gallery':
-                galleryPage.style.display = 'block';
+                galleryPage.style.display = 'flex';
                 galleryBtn.classList.add('active');
                 if (connected) renderGallery(); // Only render if "connected"
                 break;
             case 'analysis':
-                analysisPage.style.display = 'block';
+                analysisPage.style.display = 'flex';
                 analysisBtn.classList.add('active');
                 break;
         }
