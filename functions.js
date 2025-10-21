@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const analysisVideo = document.getElementById('analysisVideo');
     const statusIndicator = document.querySelector('.phone-status .status-indicator');
     const galleryGrid = document.getElementById('galleryGrid');
-    const createFolderBtn = document.getElementById('createFolderBtn');
+    // const createFolderBtn = document.getElementById('createFolderBtn');
 
     // Server Configuration
     const SERVER_URL = 'http://localhost:5001';
@@ -359,14 +359,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function updatePhoneStatus(isConnected) {
         connected = isConnected;
         if (isConnected) {
-            statusIndicator.innerHTML = '<i class="bi bi-hdd-stack text-success"></i><span>Server Connected</span>';
-            statusIndicator.classList.add('connected');
+            // statusIndicator.innerHTML = '<i class="bi bi-hdd-stack text-success"></i><span>Server Connected</span>';
+            // statusIndicator.classList.add('connected');
+            galleryOverview.style.display = "flex";
+            homeConnection.style.display = "none";
+            galleryBtn.disabled = false;
+            analysisBtn.disabled = false;
+
         } else {
-            statusIndicator.innerHTML = '<i class="bi bi-hdd-stack-fill text-danger"></i><span>Server Disconnected</span>';
-            statusIndicator.classList.remove('connected');
-            if (currentPage !== 'home') {
-                switchPage('home');
-            }
+            // statusIndicator.innerHTML = '<i class="bi bi-hdd-stack-fill text-danger"></i><span>Server Disconnected</span>';
+            // statusIndicator.classList.remove('connected');
+            // if (currentPage !== 'home') {
+            //     switchPage('home');
+            // }
+            galleryOverview.style.display = "none";
+            homeConnection.style.display = "flex";
+            galleryBtn.disabled = true;
+            analysisBtn.disabled = true;
         }
     }
 
@@ -410,43 +419,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // This is the restored function
-    function createFolder(name) {
-        const folder = { id: Date.now(), name: name, type: 'species', subfolders: [], images: [] };
-        galleryFolders.push(folder);
-        renderGallery();
-    }
+    // function createFolder(name) {
+    //     const folder = { id: Date.now(), name: name, type: 'species', subfolders: [], images: [] };
+    //     galleryFolders.push(folder);
+    //     renderGallery();
+    // }
 
     // This is the restored function
-    function showServerImages() {
-        const modal = document.createElement('div');
-        modal.className = 'server-images-modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5>Uploaded Images from Server</h5>
-                    <button class="close-btn">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="images-grid">
-                        ${serverImages.map(img => `
-                            <div class="image-item">
-                                <img src="${SERVER_URL}/images/${img.filename}" alt="${img.filename}">
-                                <div class="image-info">
-                                    <small>${img.filename}</small>
-                                    <small>${(img.size / 1024).toFixed(1)} KB</small>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        modal.querySelector('.close-btn').addEventListener('click', () => document.body.removeChild(modal));
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) document.body.removeChild(modal);
-        });
-    }
+    // function showServerImages() {
+    //     const modal = document.createElement('div');
+    //     modal.className = 'server-images-modal';
+    //     modal.innerHTML = `
+    //         <div class="modal-content">
+    //             <div class="modal-header">
+    //                 <h5>Uploaded Images from Server</h5>
+    //                 <button class="close-btn">&times;</button>
+    //             </div>
+    //             <div class="modal-body">
+    //                 <div class="images-grid">
+    //                     ${serverImages.map(img => `
+    //                         <div class="image-item">
+    //                             <img src="${SERVER_URL}/images/${img.filename}" alt="${img.filename}">
+    //                             <div class="image-info">
+    //                                 <small>${img.filename}</small>
+    //                                 <small>${(img.size / 1024).toFixed(1)} KB</small>
+    //                             </div>
+    //                         </div>
+    //                     `).join('')}
+    //                 </div>
+    //             </div>
+    //         </div>
+    //     `;
+    //     document.body.appendChild(modal);
+    //     modal.querySelector('.close-btn').addEventListener('click', () => document.body.removeChild(modal));
+    //     modal.addEventListener('click', (e) => {
+    //         if (e.target === modal) document.body.removeChild(modal);
+    //     });
+    // }
 
     async function renderGallery() {
         if (!connected) {
@@ -457,24 +466,40 @@ document.addEventListener('DOMContentLoaded', () => {
         serverImages = await loadServerImages();
         galleryGrid.innerHTML = '';
 
-        if (createFolderBtn) {
-            const createBtn = document.createElement('div');
-            createBtn.className = 'gallery-item';
-            createBtn.innerHTML = `<i class="bi bi-folder-plus"></i><h6>Create New Folder</h6>`;
-            createBtn.addEventListener('click', () => createFolderBtn.click());
-            galleryGrid.appendChild(createBtn);
-        }
+        // if (createFolderBtn) {
+        //     const createBtn = document.createElement('div');
+        //     createBtn.className = 'gallery-item';
+        //     createBtn.innerHTML = `<i class="bi bi-folder-plus"></i><h6>Create New Folder</h6>`;
+        //     createBtn.addEventListener('click', () => createFolderBtn.click());
+        //     galleryGrid.appendChild(createBtn);
+        // }
 
+        // if (serverImages.length > 0) {
+        //     const serverSection = document.createElement('div');
+        //     serverSection.className = 'gallery-item server-images';
+        //     serverSection.innerHTML = `
+        //         <i class="bi bi-cloud-upload"></i>
+        //         <h6>Uploaded Images</h6>
+        //         <small class="text-muted">${serverImages.length} images</small>
+        //     `;
+        //     serverSection.addEventListener('click', () => showServerImages());
+        //     galleryGrid.appendChild(serverSection);
+        // }
+
+        // Render server images directly in the gallery
         if (serverImages.length > 0) {
-            const serverSection = document.createElement('div');
-            serverSection.className = 'gallery-item server-images';
-            serverSection.innerHTML = `
-                <i class="bi bi-cloud-upload"></i>
-                <h6>Uploaded Images</h6>
-                <small class="text-muted">${serverImages.length} images</small>
-            `;
-            serverSection.addEventListener('click', () => showServerImages());
-            galleryGrid.appendChild(serverSection);
+            serverImages.forEach(img => {
+                const item = document.createElement('div');
+                item.className = 'gallery-item';
+                item.innerHTML = `
+                    <img src="${SERVER_URL}/images/${img.filename}" alt="${img.filename}">
+                    <h6>${img.filename}</h6>
+                    <small>${(img.size / 1024).toFixed(1)} KB</small>
+                `;
+                galleryGrid.appendChild(item);
+            });
+        } else {
+            galleryGrid.innerHTML += '<p class="text-center text-muted">No server images found.</p>';
         }
     }
 
@@ -483,12 +508,12 @@ document.addEventListener('DOMContentLoaded', () => {
     galleryBtn.addEventListener('click', () => switchPage('gallery'));
     analysisBtn.addEventListener('click', () => switchPage('analysis'));
 
-    createFolderBtn.addEventListener('click', () => {
-        const folderName = prompt('Enter folder name:');
-        if (folderName && folderName.trim()) {
-            createFolder(folderName.trim());
-        }
-    });
+    // createFolderBtn.addEventListener('click', () => {
+    //     const folderName = prompt('Enter folder name:');
+    //     if (folderName && folderName.trim()) {
+    //         createFolder(folderName.trim());
+    //     }
+    // });
 
         connectBtn.addEventListener('click', () => {
             if (!connected) {
@@ -499,11 +524,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 connectBtn.innerHTML = '<i class="bi bi-box-arrow-right me-2"></i>Disconnect';
                 connectBtn.classList.remove('btn-primary');
                 connectBtn.classList.add('btn-danger');
+
+                galleryOverview.style.display = "flex";
+                homeConnection.style.display = "none";
                 updatePhoneStatus(true);
-            } else {
-                connectBtn.innerHTML = '<i class="bi bi-phone-fill me-2"></i>Connect to Server';
-                connectBtn.classList.remove('btn-danger');
-                connectBtn.classList.add('btn-primary');
+            }
+        });
+
+        disconnectBtn.addEventListener('click', () => {
+            if (!connected) {
+                if (!serverConnected) {
+                    alert('Cannot connect. The desktop server is not running. Please start the server first.');
+                    return;
+                }
+                connectBtn.innerHTML = '<i class="bi bi-box-arrow-right me-2"></i>Disconnect';
+                connectBtn.classList.remove('btn-primary');
+                connectBtn.classList.add('btn-danger');
+
+                galleryOverview.style.display = "none";
+                homeConnection.style.display = "flex";
                 updatePhoneStatus(false);
             }
         });
@@ -622,7 +661,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('An error occurred. Please try again.');
             }
         }
-
+        
+        disconnectBtn.addEventListener('click', () => {
+            if (disconnectBtn.textContent.includes('Select Photo')) {
+                showPhotoSelectionModal();
+            } else {
+                // Original disconnect functionality
+                connectBtn.innerHTML = '<i class="bi bi-phone-fill me-2"></i>Connect to Server';
+                connectBtn.classList.remove('btn-danger');
+                connectBtn.classList.add('btn-primary');
+                updatePhoneStatus(false);
+            }
+        });
+        
         disconnectBtn.addEventListener('click', () => {
             if (disconnectBtn.textContent.includes('Select Photo')) {
                 showPhotoSelectionModal();

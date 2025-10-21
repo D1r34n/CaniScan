@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from ultralytics import YOLO
 import cv2, base64, numpy as np, re, csv, os, bcrypt
@@ -9,6 +9,19 @@ CORS(app)
 model = YOLO(r"runs\detect\train2\weights\best.pt")
 USERS_CSV = "users.csv"
 
+# Use a folder relative to your Flask app
+UPLOAD_FOLDER = os.path.join(app.root_path, "temp_images")
+
+# Ensure folder exists
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route('/images/<filename>')
+def serve_image(filename):
+    try:
+        return send_from_directory(UPLOAD_FOLDER, filename)
+    except FileNotFoundError:
+        return jsonify({"success": False, "message": "File not found"}), 404
+    
 # Ensure CSV exists
 if not os.path.exists(USERS_CSV):
     with open(USERS_CSV, "w", newline="") as f:
