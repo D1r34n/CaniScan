@@ -1,10 +1,12 @@
 // This function ensures all HTML is loaded before any JavaScript runs, preventing crashes.
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM Content Loaded - JavaScript starting...');
 
   // --- CODE FOR INDEX.HTML ---
   // This entire block will only run if it detects the home button on the page.
   const homeBtn = document.getElementById('homeBtn');
   if (homeBtn) {
+    console.log('Home button found - initializing main functionality...');
     const { ipcRenderer } = require('electron');
 
     // Window Controls
@@ -214,18 +216,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners ---
-    homeBtn.addEventListener('click', () => switchPage('home'));
-    galleryBtn.addEventListener('click', () => switchPage('gallery'));
-    analysisBtn.addEventListener('click', () => switchPage('analysis'));
-
-<<<<<<< Updated upstream
-    createFolderBtn.addEventListener('click', () => {
-        const folderName = prompt('Enter folder name:');
-        if (folderName && folderName.trim()) {
-            createFolder(folderName.trim());
-        }
+    console.log('Attaching event listeners...');
+    homeBtn.addEventListener('click', () => {
+        console.log('Home button clicked');
+        switchPage('home');
     });
-=======
+    galleryBtn.addEventListener('click', () => {
+        console.log('Gallery button clicked');
+        switchPage('gallery');
+    });
+    analysisBtn.addEventListener('click', () => {
+        console.log('Analysis button clicked');
+        switchPage('analysis');
+    });
+    console.log('Event listeners attached successfully');
+
     // --- Analysis Page Functionality ---
     
     // Initialize analysis page when it's shown
@@ -622,9 +627,9 @@ document.addEventListener('DOMContentLoaded', () => {
     //         createFolder(folderName.trim());
     //     }
     // });
->>>>>>> Stashed changes
 
         connectBtn.addEventListener('click', () => {
+            console.log('Connect button clicked, connected:', connected);
             if (!connected) {
                 if (!serverConnected) {
                     alert('Cannot connect. The desktop server is not running. Please start the server first.');
@@ -756,18 +761,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('An error occurred. Please try again.');
             }
         }
-
+        
         disconnectBtn.addEventListener('click', () => {
-            if (disconnectBtn.textContent.includes('Select Photo')) {
-                showPhotoSelectionModal();
-            } else {
                 // Original disconnect functionality
                 connectBtn.innerHTML = '<i class="bi bi-phone-fill me-2"></i>Connect to Server';
                 connectBtn.classList.remove('btn-danger');
                 connectBtn.classList.add('btn-primary');
                 updatePhoneStatus(false);
-            }
         });
         startServerMonitoring();
+        console.log('All initialization complete - buttons should be working now');
+    } else {
+        console.error('Home button not found - JavaScript will not initialize');
     }
 });
