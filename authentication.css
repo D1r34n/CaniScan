@@ -299,7 +299,7 @@ input::-webkit-credentials-auto-fill-button {
 /* Right branding side */
 .brand-section {
     background: #d9b99b;
-    background: url('images/ken.jpg') center center no-repeat;
+    /* background: url('images/ken.jpg') center center no-repeat; */
     color: #fff;
     text-align: center;
     display: flex;

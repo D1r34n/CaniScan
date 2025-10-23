@@ -27,13 +27,13 @@
 
             <!-- Navigation Buttons -->
             <div class="navbar-nav nav-buttons">
-                <button class="nav-btn active" id="homeBtn" data-page="home">
+                <button class="nav-btn active" id="homeBtn" data-page="home" >
                     <i class="bi bi-house-fill"></i> <span>Home</span>
                 </button>
-                <button class="nav-btn" id="galleryBtn" data-page="gallery">
+                <button class="nav-btn" id="galleryBtn" data-page="gallery" disabled>
                     <i class="bi bi-images"></i> <span>Gallery</span>
                 </button>
-                <button class="nav-btn" id="analysisBtn" data-page="analysis">
+                <button class="nav-btn" id="analysisBtn" data-page="analysis" disabled>
                     <i class="bi bi-search"></i> <span>Analysis</span>
                 </button>
             </div>
@@ -120,9 +120,17 @@
             <div class="gallery-container">
                 <div class="gallery-header">
                     <h3>Gallery</h3>
-                    <button class="btn btn-primary" id="createFolderBtn">
-                        <i class="bi bi-folder-plus"></i> Create Folder
-                    </button>
+                    <div class="gallery-header-actions">
+                        <label for="sortGallery" class="me-2">Sort:</label>
+                        <select id="sortGallery" class="form-select form-select-sm">
+                            <option value="name">Name</option>
+                            <option value="date">Date</option>
+                            <option value="size">Size</option>
+                        </select>
+                        <!-- <button class="btn btn-primary ms-3" id="createFolderBtn">
+                            <i class="bi bi-folder-plus"></i> Create Folder
+                        </button> -->
+                    </div>
                 </div>
                 <div class="gallery-grid" id="galleryGrid"></div>
             </div>
