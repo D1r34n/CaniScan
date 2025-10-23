@@ -130,32 +130,91 @@
 
         <!-- Analysis Page -->
         <div id="analysisPage" class="page-content" style="display:none;">
-            <div class="analysis-row">
-                <div class="video-section">
-                    <div class="analysis-video-container">
-                        <video id="analysisVideo" autoplay playsinline muted class="analysis-video"></video>
+            <div class="analysis-container">
+                <!-- Analysis History Floating Box -->
+                <div class="floating-box analysis-history-box">
+                    <div class="box-header">
+                        <h4><i class="bi bi-clock-history"></i> Analysis History</h4>
                     </div>
-                    <!-- <button id="disconnectPhoneButton" class="btn btn-danger">
-                        <i class="bi bi-phone-fill"></i> Disconnect Phone Camera
-                    </button> -->
-                </div>
-
-                <div class="diagnosis-section">
-                    <div class="diagnosis-card">
-                        <div class="diagnosis-header">
-                            <i class="bi bi-check-circle-fill text-success"></i>
-                            <div>
-                                <h6 id="diseaseDetected" class="diagnosis-label">Diagnosis</h6>
-                                <h4 class="diagnosis-disease">Fungal Infection</h4>
+                    <div class="box-content">
+                        <div class="history-list" id="analysisHistoryList">
+                            <!-- Analysis history items will be dynamically added here -->
+                            <div class="history-item">
+                                <div class="history-image">
+                                    <img src="images/connected_dog.jpg" alt="Analysis Image" class="history-img">
+                                </div>
+                                <div class="history-details">
+                                    <div class="history-name">sample_image.jpg</div>
+                                    <div class="history-diagnosis">Fungal Infection</div>
+                                    <div class="history-confidence">87%</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="confidence">
-                            <span class="confidence-label">Confidence:</span>
-                            <div class="confidence-badge">87%</div>
+                    </div>
+                </div>
+
+                <!-- Analyze Image Floating Box (Dominant) -->
+                <div class="floating-box analyze-image-box dominant">
+                    <div class="box-header">
+                        <h4><i class="bi bi-search"></i> Analyze Image</h4>
+                    </div>
+                    <div class="box-content">
+                        <div class="image-upload-area" id="imageUploadArea">
+                            <div class="upload-placeholder">
+                                <i class="bi bi-cloud-upload"></i>
+                                <p>Upload image from gallery or drag & drop</p>
+                                <button class="btn btn-primary" id="selectFromGalleryBtn">Select from Gallery</button>
+                            </div>
+                            <div class="image-preview" id="imagePreview" style="display: none;">
+                                <img id="previewImage" src="" alt="Preview">
+                                <div class="image-overlay">
+                                    <button class="btn btn-success" id="analyzeBtn">Analyze</button>
+                                    <button class="btn btn-secondary" id="changeImageBtn">Change Image</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="analysis-results" id="analysisResults" style="display: none;">
+                            <div class="result-header">
+                                <h5>Analysis Results</h5>
+                            </div>
+                            <div class="result-content">
+                                <div class="diagnosis-result">
+                                    <span class="result-label">Diagnosis:</span>
+                                    <span class="result-value" id="resultDiagnosis">-</span>
+                                </div>
+                                <div class="confidence-result">
+                                    <span class="result-label">Confidence:</span>
+                                    <span class="result-value" id="resultConfidence">-</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <h5>Recommendations:</h5>
-                    <div class="recommendations-card"></div>
+                </div>
+
+                <!-- Recommendations Floating Box -->
+                <div class="floating-box recommendations-box">
+                    <div class="box-header">
+                        <h4><i class="bi bi-chat-dots"></i> Recommendations</h4>
+                    </div>
+                    <div class="box-content">
+                        <div class="chat-container">
+                            <div class="chat-messages" id="chatMessages">
+                                <div class="chat-message bot-message">
+                                    <div class="message-content">
+                                        Hello! I'm here to help with recommendations for your dog's skin condition. How can I assist you today?
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chat-input-area">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="chatInput" placeholder="Ask about treatments, symptoms, or care...">
+                                    <button class="btn btn-primary" id="sendMessageBtn">
+                                        <i class="bi bi-send"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
