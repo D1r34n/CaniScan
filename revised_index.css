@@ -1,0 +1,579 @@
+/* Window Controls */
+.window-controls {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 9999;
+}
+
+.window-controls button {
+  background: transparent;
+  border: none;
+  color: #333;
+  font-size: 1.2rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.window-controls button:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.window-controls #close:hover {
+  background: #ff4d4d;
+  color: white;
+}
+
+/* Global Styles */
+* {
+  font-family: 'Poppins', sans-serif;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(to bottom, #f8f9fa, #d9b99b);
+}
+
+/* Navbar */
+.navbar {
+  background-color: white;
+  border-bottom: 1px solid #e9ecef;
+  width: 100%;
+}
+
+.navbar-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 3rem !important;
+  margin-top: 1.5rem;
+  position: relative; /* allows absolute positioning for nav-buttons */
+}
+
+.logo-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logo-img {
+  height: 40px;
+}
+
+.brand-text {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #282624;
+}
+
+.nav-buttons {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #f9f9f9 !important;
+  padding: 0.75rem !important;
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 5rem !important;
+  border-radius: 35px;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: 25px;
+  background: none;
+  border: none;
+  color: #6c757d;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.nav-btn i {
+  font-size: 1.2rem;
+}
+
+.nav-btn span {
+  font-size: 0.85rem;
+}
+
+.nav-btn:hover:not(:disabled),
+.nav-btn.active {
+  background-color: #d9b99b;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* User Greeting */
+.user-greeting {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  color: #282624;
+  font-weight: 500;
+  background-color: #f9f9f9;
+  padding: 0.5rem 2rem;
+  border-radius: 35px;
+  gap: 0.5rem;
+}
+
+.user-greeting i {
+  font-size: 2rem;
+  color: #d9b99b;
+}
+
+/* --- Main Container --- */
+.main-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: calc(100vh - 150px); /* navbar height */
+}
+
+/* --- Home Page --- */
+.home-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* --- Server Card --- */
+.server-card {
+    max-width: 600px; /* increased width */
+    width: 90%; /* makes it responsive */
+    text-align: center;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    border-radius: 16px;
+    border: none;
+    background-color: #fff;
+    padding: 3rem 2rem; /* more breathing space */
+    transform: scale(1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.server-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.server-card .card-body i {
+    font-size: 3rem; /* bigger icon */
+    color: #dc3545;
+    margin-bottom: 15px;
+}
+
+.server-card .card-title {
+    font-size: 1.75rem; /* bigger title text */
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 0.75rem;
+}
+
+.server-card .card-text {
+    font-size: 1.1rem; /* larger message text */
+    color: #6c757d;
+}
+
+/* --- Connect Button --- */
+.server-card .button {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.75rem 2rem;
+    background-color: #d9b99b;
+    color: white;
+    font-weight: 600;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.server-card .button:hover {
+    background-color: #c79c7a;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+
+/* --- Gallery Overview --- */
+.gallery-overview {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 125px); /* Subtract navbar height */
+  margin-top: 0;
+  padding: 0.5rem 1rem;
+  justify-content: center;
+  box-sizing: border-box;
+  overflow: hidden; /* prevent overall overflow */
+}
+
+.gallery-overview-container {
+  display: flex;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1400px;
+  height: 100%;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+/* Left Column (Pie + Stats Cards) */
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1 1 auto;       /* allow column to grow/shrink */
+  background: white;
+  padding: 1rem;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  overflow: hidden;
+  min-height: 0;        /* important for flex children to shrink */
+  transform: scale(1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.left-column:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.left-column h3 {
+  margin-bottom: 1rem;
+}
+
+/* Flex container for chart + cards */
+.overview-flex {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-start; /* left-align chart + cards */
+  align-items: stretch;        /* make children same height */
+  flex: 1 1 auto;              /* take remaining space */
+  min-height: 0;               /* allows proper shrinking */
+}
+
+/* --- Gallery Container Titles --- */
+.container-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem; /* space below title before content */
+    color: #333;
+    text-align: left; /* aligns with left edge of container */
+}
+
+/* Wrapper for Pie Chart + Title */
+.pie-chart-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;          /* space between title and chart */
+    flex: 1 1 40%;        /* width inside overview-flex */
+    min-height: 250px;    /* optional minimum height */
+    
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 1rem;
+    transform: scale(1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pie-chart-wrapper:hover{
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+/* Pie chart container keeps chart styling */
+.pie-chart-container {
+    flex: 1 1 auto;       /* fill remaining space inside wrapper */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+
+/* Stats Cards Grid Container to include title spacing */
+.stats-cards-grid-container {
+    flex: 2 1 55%; /* take remaining space */
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem; /* spacing between title and grid */
+    
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 1rem;
+    transform: scale(1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stats-cards-grid-container:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+/* Stats Cards Grid */
+.stats-cards-grid {
+  flex: 2 1 55%;         /* take remaining space */
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 1rem;
+  width: 100%;
+  height: auto;           /* flexible height */
+  min-height: 0;          /* allows proper shrinking */
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.stat-card {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* space label at top, number at bottom */
+  align-items: flex-start;
+  padding: 1rem;                   /* space inside card */
+  text-align: left;
+  color: white;
+  cursor: default;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  background-size: cover;
+  background-position: center;
+  transition: all 0.3s;
+}
+
+/* Label text */
+.stat-card span:first-child {
+  font-size: 1rem;
+  line-height: 1.2rem;   /* consistent line spacing */
+  margin-bottom: 0;      /* spacing is handled by flex */
+}
+
+/* Number text - thin */
+.stat-card .number {
+  font-size: 1.5rem;
+  font-weight: 300;      /* thin */
+  display: block;
+  margin: 0;             /* remove extra spacing */
+}
+
+/* Hover effect */
+.stat-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  background-color: #c4a484 !important;
+}
+
+/* Example unique backgrounds & colors */
+.stat-card:nth-child(1) {
+  background-color: rgb(119, 112, 112); /* 0.5 = 50% opacity */
+  background-blend-mode: overlay;
+}
+
+
+.stat-card:nth-child(2) {
+  background-color: rgba(102, 153, 255, 0.7);
+  background-blend-mode: overlay;
+}
+
+.stat-card:nth-child(3) {
+  background-color: rgba(255, 102, 102, 0.7);
+  background-blend-mode: overlay;
+}
+
+.stat-card:nth-child(4) {
+  background-color: rgba(255, 204, 102, 0.7);
+  background-blend-mode: overlay;
+}
+
+.stat-card:nth-child(5) {
+  background-color: rgba(102, 204, 153, 0.7);
+  background-blend-mode: overlay;
+}
+
+.stat-card:nth-child(6) {
+  background-color: rgba(153, 102, 255, 0.7);
+  background-blend-mode: overlay;
+}
+
+
+/* Right Column */
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 0 0 300px; /* fixed width for right column */
+  height: 100%;
+}
+
+/* Right Column Rows */
+.right-column .top-row,
+.right-column .bottom-row {
+  background: white;
+  padding: 1rem;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: hidden;
+}
+
+/* Top Row: Connected Server */
+.right-column .top-row {
+  flex: 2 1 0;
+  overflow: hidden;
+  align-items: center;
+  transform: scale(1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.right-column .top-row:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+/* Bottom Row: Activity Log */
+.right-column .bottom-row {
+  flex: 1 1 0;
+  overflow-y: auto;
+  transform: scale(1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.right-column .bottom-row:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+/* Connected Server Content */
+.connected_icon {
+  width: 45%;
+}
+
+/* Device Dropdown */
+.device-dropdown {
+  width: 80% !important;
+  position: relative !important;
+}
+
+#deviceDropdown {
+  background-color: #f9f9f9 !important;
+  color: #282624 !important;
+  width: 100% !important;
+  border: none !important;
+  border-radius: 30px !important;
+  padding: 0.5rem 1rem !important;
+  text-align: center !important;
+  transition: all 0.3s ease !important;
+}
+
+#deviceDropdown:hover,
+#deviceDropdown:focus {
+  background-color: #c4a484 !important;
+  color: white !important;
+}
+
+.dropdown:not(.show) #deviceDropdown {
+  background-color: #f9f9f9 !important;
+  color: #282624 !important;
+}
+
+.dropdown.show #deviceDropdown {
+  background-color: #c4a484 !important;
+  color: white !important;
+}
+
+#deviceDropdown + .dropdown-menu {
+  width: 100% !important;
+  left: 0 !important;
+  right: auto !important;
+  border-radius: 15px !important;
+  border: 1px solid #d9b99b !important;
+  background-color: white !important;
+}
+
+#deviceDropdown + .dropdown-menu .dropdown-item {
+  color: #282624 !important;
+}
+
+#deviceDropdown + .dropdown-menu .dropdown-item:hover {
+  background-color: #d9b99b !important;
+  color: white !important;
+  border-radius: 10px !important;
+}
+
+/* Disconnect Button */
+.disconnect-btn {
+  background-color: #dc3545;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 80%;
+}
+
+.disconnect-btn:hover {
+  background-color: #b52a3a;
+}
+
+/* Activity Log */
+.activity-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.activity-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  padding-left: 1rem;
+  list-style-type: disc;
+}
+
+.activity-list li {
+  padding: 0.5rem;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+/* Scrollbar Styling */
+.activity-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.activity-list::-webkit-scrollbar-thumb {
+  background-color: rgba(217, 185, 155, 0.5);
+  border-radius: 3px;
+}
+
+.activity-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
