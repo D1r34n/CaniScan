@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, send_file, send_from_directory
 from flask_cors import CORS
 import os
 import uuid
@@ -226,29 +226,25 @@ def get_image(filepath):
     try:
         # Security check - prevent directory traversal
         if '..' in filepath or filepath.startswith('/'):
-            return jsonify({
-                'success': False,
-                'message': 'Invalid file path'
-            }), 400
-            
-        file_path = os.path.join(UPLOAD_FOLDER, filepath)
+            return jsonify({'success': False, 'message': 'Invalid file path'}), 400
         
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            filename = os.path.basename(file_path)
-            if allowed_file(filename):
-                from flask import send_file
-                return send_file(file_path)
-            else:
-                return jsonify({
-                    'success': False,
-                    'message': 'Invalid file type'
-                }), 400
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Image not found'
-            }), 404
+        # Get the absolute path to the 'uploads' directory
+        directory = os.path.abspath(UPLOAD_FOLDER)
+        
+        # This will print to your Python terminal, e.g.:
+        # "Attempting to send file: 1_paw_jan_blog_2.jpg from directory: C:\YourProject\uploads"
+        print(f"Attempting to send file: {filepath} from directory: {directory}")
+
+        # send_from_directory is the recommended way to send files.
+        # It takes the base directory and the relative path of the file.
+        return send_from_directory(directory, filepath)
+        
+    except FileNotFoundError:
+        print(f"File not found: {filepath}")
+        return jsonify({'success': False, 'message': 'Image not found'}), 404
     except Exception as e:
+        # This will print the *REAL* error to your Python terminal
+        print(f"Error in get_image: {str(e)}") 
         return jsonify({
             'success': False,
             'message': f'Failed to serve image: {str(e)}'
