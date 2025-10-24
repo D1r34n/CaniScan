@@ -148,47 +148,91 @@
 
         <!-- Gallery Page -->
         <div id="galleryPage" class="gallery-page" style="display: none;">
-            <!-- Top Bar: Title + Sort + Toggle -->
+            <!-- Top Bar: Title + Controls -->
             <div class="gallery-top-bar">
+
+                <!-- Left Controls: Sort Dropdown + Show Details -->
+                <div class="left-controls">
+                    <div class="gallery-controls">
+                        <div class="sort-dropdown">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-filter-left"></i> Sort image
+                            </button>
+                            <ul class="dropdown-menu p-2" aria-labelledby="sortDropdown" style="min-width: 200px;">
+                                <li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Analyzed" id="sortAnalyzed">
+                                    <label class="form-check-label" for="sortAnalyzed">Analyzed</label>
+                                </div>
+                                </li>
+                                <li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Raw" id="sortRaw">
+                                    <label class="form-check-label" for="sortRaw">Raw</label>
+                                </div>
+                                </li>
+                                <li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="sortDermatitis">
+                                    <label class="form-check-label" for="sortDermatitis">Dermatitis</label>
+                                </div>
+                                </li>
+                                <li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="sortMange">
+                                    <label class="form-check-label" for="sortMange">Mange</label>
+                                </div>
+                                </li>
+                                <li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="sortHotspot">
+                                    <label class="form-check-label" for="sortHotspot">Hotspot</label>
+                                </div>
+                                </li>
+                                <li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="sortHealthy">
+                                    <label class="form-check-label" for="sortHealthy">Healthy</label>
+                                </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                    </div>
+
+                    <button id="minimizeDetail" class="btn btn-light minimize-detail">
+                        <i class="bi bi-layout-text-sidebar-reverse"></i> Show Details
+                    </button>
+                </div>
+
+                <!-- Right Control: Upload Button -->
                 <button id="uploadImage" class="btn btn-light upload-image">
                     <i class="bi bi-box-arrow-in-down"></i> Upload Image
                 </button>
 
-                <div class="gallery-controls">
-                    <div class="sort-dropdown">
-                        <button class="btn btn-secondary sort-dropdown" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            Select Device
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="sortDropdown">
-                            <li><a class="dropdown-item" href="#">Device 1</a></li>
-                            <li><a class="dropdown-item" href="#">Device 2</a></li>
-                        </ul>
-                    </div>
-                </div>
             </div>
 
             <!-- Columns container -->
             <div class="gallery-columns">
                 <!-- Left Column: Image Grid -->
                 <div class="gallery-left">
-                <div class="image-grid">
-                    <div class="image-item">Image 1</div>
-                    <div class="image-item">Image 2</div>
-                    <div class="image-item">Image 3</div>
-                    <div class="image-item">Image 4</div>
-                </div>
+                    <div class="image-grid">
+                        <div class="image-item">Image 1</div>
+                        <div class="image-item">Image 2</div>
+                        <div class="image-item">Image 3</div>
+                        <div class="image-item">Image 4</div>
+                    </div>
                 </div>
 
                 <!-- Right Column: Detail Pane -->
                 <div class="gallery-right minimized" id="detailPane">
-                <div class="detail-content">
-                    <p>Details of selected image will appear here.</p>
-                </div>
+                    <div class="detail-content">
+                        <p>Details of selected image will appear here.</p>
+                    </div>
                 </div>
             </div>
         </div>
         <!-- End of Gallery Page -->
-
 
         <!-- Analysis Page -->
         <div id="analysisPage" class="gallery-page" style="display: none;"></div>

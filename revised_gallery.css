@@ -4,9 +4,9 @@
   flex-direction: column;
   width: 100%;
   height: calc(100vh - 125px);
-  padding: 1rem;           /* remove outer page padding */
+  padding: 1rem;           
   box-sizing: border-box;
-  gap: 0;               /* remove vertical gap between top bar and columns */
+  gap: 0;                   
   overflow: hidden;
 }
 
@@ -14,116 +14,123 @@
 .gallery-top-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: space-between; /* distribute left/right */
   gap: 0.5rem;
   background-color: white;
-  padding: 0.5rem 1rem;
+  padding: 1rem;
   border-radius: 16px 16px 0 0;
   border-bottom: 2px solid #e9ecef;
 }
 
+/* Left Controls Container: Sort + Show Details */
+.left-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Minimize Detail Button */
+.minimize-detail {
+  background-color: #f9f9f9 !important;
+  color: #282624 !important;
+  width: 100% !important;
+  border: none;
+  border-radius: 30px !important;
+  padding: 0.5rem 1rem !important;
+  text-align: left !important;             /* text left so arrow shows */
+  transition: all 0.3s ease !important;
+}
+
+.minimize-detail:hover {
+    background-color: #c4a484 !important;
+  color: white !important;
+}
+
+/* Upload Image Button (Right side) */
 .upload-image {
-  font-size: 2rem;
   font-weight: 500 !important;
   color: white !important;
   border-radius: 26px !important;
   padding: 0.5rem 1rem !important;
   background-color: #d9b99b !important;
+  transition: all 0.3s ease;
 }
 
 .upload-image:hover {
-    background-color: #e9ecef !important;
-    color: #282624 !important;
+  background-color: #e9ecef !important;
+  color: #282624 !important;
 }
 
+/* Controls Container inside left-controls */
 .gallery-controls {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex-wrap: nowrap;      /* ensure select + button stay on one line */
+  flex-wrap: nowrap;
 }
 
-/* Sort Dropdown Container */
+/* --- Device Dropdown --- */
 .sort-dropdown {
-  width: 80% !important;
+  width: 100% !important;  /* fixed width */
   position: relative !important;
 }
 
-/* Container */
-.sort-dropdown {
-  width: 80% !important;
-  position: relative !important;
-}
-
-/* Button inside container */
-.sort-dropdown > button {
+/* Dropdown Button */
+#sortDropdown {
   background-color: #f9f9f9 !important;
   color: #282624 !important;
   width: 100% !important;
-  border: none !important;
+  border: none;
   border-radius: 30px !important;
   padding: 0.5rem 1rem !important;
-  text-align: center !important;
+  text-align: left !important;             /* text left so arrow shows */
   transition: all 0.3s ease !important;
 }
 
-.sort-dropdown > button:hover,
-.sort-dropdown > button:focus {
+/* Hover / Focus state */
+#sortDropdown:hover,
+#sortDropdown:focus {
   background-color: #c4a484 !important;
   color: white !important;
 }
 
 /* Open dropdown */
-.dropdown.show > .sort-dropdown > button {
+.dropdown.show #sortDropdown {
   background-color: #c4a484 !important;
   color: white !important;
 }
 
-/* Dropdown menu */
-.sort-dropdown > .dropdown-menu {
+/* Dropdown Menu */
+#sortDropdown + .dropdown-menu {
   width: 100% !important;
   left: 0 !important;
-  border-radius: 15px !important;
-  border: 1px solid #d9b99b !important;
+  border-radius: 6px !important;
+  border: none;
   background-color: white !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* subtle drop shadow */
 }
 
-.sort-dropdown > .dropdown-menu .dropdown-item {
+/* Dropdown Items */
+#sortDropdown + .dropdown-menu .dropdown-item {
   color: #282624 !important;
 }
 
-.sort-dropdown > .dropdown-menu .dropdown-item:hover {
+#sortDropdown + .dropdown-menu .dropdown-item:hover {
   background-color: #d9b99b !important;
   color: white !important;
   border-radius: 10px !important;
-}
-
-
-/* Minimize Button */
-#minimizeBtn {
-  background: transparent;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 0.2rem 0.5rem;
-  border-radius: 8px;
-  transition: background 0.2s ease;
-}
-
-#minimizeBtn:hover {
-  background: rgba(0,0,0,0.05);
 }
 
 /* Columns container */
 .gallery-columns {
   display: flex;
   flex: 1;
-  gap: 1.5rem;           /* space between left and right columns */
-  height: 100%;           /* fill remaining space below top bar */
+  gap: 1.5rem;
+  height: 100%;
   transition: all 0.3s ease;
   background-color: white;
   padding: 1rem;
-border-radius: 0 0 16px 16px;
+  border-radius: 0 0 16px 16px;
 }
 
 /* Left Column */
@@ -143,7 +150,6 @@ border-radius: 0 0 16px 16px;
 .image-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(70px, 0.15fr));
-  transition: all 0.3s;
   gap: 1rem;
 }
 
@@ -184,7 +190,7 @@ border-radius: 0 0 16px 16px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
-/* Minimized state (disappear) */
+/* Minimized state */
 .gallery-right.minimized {
   flex: 0;
   max-width: 0;
