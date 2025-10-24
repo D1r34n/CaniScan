@@ -108,23 +108,23 @@
                     <!-- Right Column -->
                     <div class="right-column">
 
-                        <!-- Top Row: Connected Server -->
-                        <div class="top-row connected-server">
-                            <img class="connected_icon" src="images/connected_dog.jpg" alt="Device Image">
-                            <p>Connected Successfully!</p>
-
-                            <div class="device-dropdown">
-                                <button class="btn btn-secondary dropdown-toggle" type="button" id="deviceDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Select Device
-                                </button>
-                                <ul class="dropdown-menu" aria-labelledby="deviceDropdown">
-                                    <li><a class="dropdown-item" href="#">Device 1</a></li>
-                                    <li><a class="dropdown-item" href="#">Device 2</a></li>
-                                </ul>
-                            </div>
-
-                            <button id="disconnectServerButton" class="disconnect-btn">Disconnect</button>
+                       <!-- Top Row: Server Status -->
+                        <div class="top-row server-status">
+                        <img class="connected_icon" src="images/connected_dog.jpg" alt="Server Icon">
+                        <p id="serverStatusText">
+                        <i class="bi bi-wifi"></i> Server is <span id="serverStatus">inactive</span> at
+                        </p>
+                        <div id="serverIPWrapper">
+                        <span id="serverIP">Loading...</span>
+                        <button id="copyIPBtn" title="Copy IP"><i class="bi bi-clipboard"></i></button>
                         </div>
+
+
+
+                        <button id="disconnectServerButton" class="disconnect-btn">Disconnect</button>
+                        </div>
+
+
 
                         <!-- Bottom Row: Activity Log -->
                         <div class="bottom-row activity-log">
@@ -216,7 +216,7 @@
             <div class="gallery-columns">
                 <!-- Left Column: Image Grid -->
                 <div class="gallery-left">
-                    <div class="image-grid">
+                    <div id="imageGrid" class="image-grid">
                         <div class="image-item">Image 1</div>
                         <div class="image-item">Image 2</div>
                         <div class="image-item">Image 3</div>

@@ -1,8 +1,9 @@
 // ------------------- Module Imports -------------------
-const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron'); // Electron modules
-const { spawn } = require('child_process'); // Spawn Python scripts
-const path = require('path'); // File path utilities
-const axios = require('axios'); // HTTP requests to check Flask server status
+const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
+const { spawn } = require('child_process');
+const path = require('path');
+const axios = require('axios');
+const os = require('os');
 
 // ------------------- Global Variables -------------------
 let yoloProcess;          // YOLOv8 Python process
@@ -12,10 +13,9 @@ let mainWindow;            // Main application window reference
 let splashWindow;          // Splash/loading window reference
 let tray;                  // System tray reference
 let isQuiting = false;     // Flag to check if the app is quitting
+const DESKTOP_SERVER_URL = 'http://127.0.0.1:5001';
 
 // ------------------- Window Creation Functions -------------------
-
-// Create a splash window to display while waiting for Flask server
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
     width: 400,
@@ -23,23 +23,22 @@ function createSplashWindow() {
     frame: false,
     resizable: false,
     alwaysOnTop: true,
-    transparent: true, // transparent background
+    transparent: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     }
   });
 
-  splashWindow.loadFile('splash.html'); // HTML showing logo/loading animation
-  splashWindow.setAlwaysOnTop(true, 'screen-saver'); // Keep window on top
-  splashWindow.center(); // Center the window
+  splashWindow.loadFile('splash.html');
+  splashWindow.setAlwaysOnTop(true, 'screen-saver');
+  splashWindow.center();
 
   splashWindow.on('closed', () => {
     splashWindow = null;
   });
 }
 
-// Create the login window
 function createLoginWindow() {
   loginWindow = new BrowserWindow({
     width: 1280,
@@ -52,11 +51,10 @@ function createLoginWindow() {
     },
   });
 
-  loginWindow.setMenuBarVisibility(false); // Hide menu bar
-  loginWindow.loadFile('authentication.html'); // Load login HTML
+  loginWindow.setMenuBarVisibility(false);
+  loginWindow.loadFile('authentication.html');
   loginWindow.setBackgroundColor('white');
 
-  // Prevent window from closing; hide instead
   loginWindow.on('close', (event) => {
     if (!isQuiting) {
       event.preventDefault();
@@ -69,7 +67,6 @@ function createLoginWindow() {
   });
 }
 
-// Create the main application window
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -78,17 +75,16 @@ function createMainWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      devTools: true // Open DevTools for debugging
+      devTools: true
     },
   });
 
-  mainWindow.setMenuBarVisibility(false); // Hide menu bar
-  mainWindow.loadFile('revised_index.html');      // Load main UI
-  mainWindow.setBackgroundColor('black'); // Set background color
+  mainWindow.setMenuBarVisibility(false);
+  mainWindow.loadFile('revised_index.html');
+  mainWindow.setBackgroundColor('black');
 
-  mainWindow.webContents.openDevTools();  // Automatically open DevTools
+  mainWindow.webContents.openDevTools();
 
-  // Prevent window from closing; hide instead
   mainWindow.on('close', (event) => {
     if (!isQuiting) {
       event.preventDefault();
@@ -96,7 +92,6 @@ function createMainWindow() {
     }
   });
 
-  // Send user data to renderer if available
   mainWindow.webContents.on('did-finish-load', () => {
     if (global.userName) {
       mainWindow.webContents.send('user-data', { name: global.userName });
@@ -104,7 +99,6 @@ function createMainWindow() {
   });
 }
 
-// Create a system tray with context menu
 function createTray() {
   const trayIconPath = path.join(__dirname, 'images', 'system_tray_icon.png');
   tray = new Tray(trayIconPath);
@@ -113,7 +107,6 @@ function createTray() {
     {
       label: 'Show App',
       click: () => {
-        // Show or focus main or login window
         if (mainWindow && mainWindow.isVisible()) mainWindow.focus();
         else if (mainWindow) mainWindow.show();
         else if (loginWindow && loginWindow.isVisible()) loginWindow.focus();
@@ -124,16 +117,15 @@ function createTray() {
     {
       label: 'Quit',
       click: () => {
-        isQuiting = true; // Flag to allow quitting
+        isQuiting = true;
         app.quit();
       },
     },
   ]);
 
-  tray.setToolTip('CaniScan');        // Tooltip text
-  tray.setContextMenu(trayMenu);      // Assign menu to tray icon
+  tray.setToolTip('CaniScan');
+  tray.setContextMenu(trayMenu);
 
-  // Double-click tray icon to show app
   tray.on('double-click', () => {
     if (mainWindow && !mainWindow.isVisible()) mainWindow.show();
     else if (loginWindow && !loginWindow.isVisible()) loginWindow.show();
@@ -142,29 +134,22 @@ function createTray() {
 
 // ------------------- App Ready Logic -------------------
 app.whenReady().then(async () => {
-  // --- Start YOLOv8 Python process ---
+  // Start YOLOv8 process
   const yoloScriptPath = path.join(__dirname, 'yolov8', 'app.py');
   yoloProcess = spawn('python', [yoloScriptPath]);
   yoloProcess.stdout.on('data', (data) => console.log(`[YOLOv8] ${data}`));
   yoloProcess.stderr.on('data', (data) => console.error(`[YOLOv8 Error] ${data}`));
 
-  // --- Start Desktop Server Python process ---
-  const desktopServerPath = path.join(__dirname, 'DesktopServer', 'desktop_server.py');
-  desktopServerProcess = spawn('python', [desktopServerPath]);
-  desktopServerProcess.stdout.on('data', (data) => console.log(`[Desktop Server] ${data}`));
-  desktopServerProcess.stderr.on('data', (data) => console.error(`[Desktop Server Error] ${data}`));
-
-  // --- Create System Tray ---
+  // Create System Tray
   createTray();
 
-  // --- Show splash window while waiting for Flask server ---
+  // Show splash window while waiting for Flask server
   createSplashWindow();
 
-  const flaskURL = 'http://127.0.0.1:5000/health'; // Flask health check endpoint
+  const flaskURL = 'http://127.0.0.1:5000/health';
   let flaskConnected = false;
   console.log("Waiting for Flask server...");
 
-  // Poll Flask server until it is ready
   while (!flaskConnected) {
     try {
       const res = await axios.get(flaskURL);
@@ -178,43 +163,108 @@ app.whenReady().then(async () => {
     }
   }
 
-  // --- Close splash window and show login window ---
   if (splashWindow) splashWindow.close();
   createLoginWindow();
 });
 
 // ------------------- IPC Events -------------------
 
-// Handle login success event from renderer
+// Login success
 ipcMain.on('login-success', (event, userData) => {
   global.userName = userData.name;
-
-  if (loginWindow) loginWindow.hide();    // Hide login window
-  if (!mainWindow) createMainWindow();    // Create main window if not exists
-  else mainWindow.show();                  // Otherwise, show main window
+  if (loginWindow) loginWindow.hide();
+  if (!mainWindow) createMainWindow();
+  else mainWindow.show();
 });
 
-// Minimize window
+// Minimize / Close
 ipcMain.on('minimize-window', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (win && !win.isDestroyed()) win.minimize();
 });
-
-// Close window (hide instead)
 ipcMain.on('close-window', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (win && !win.isDestroyed()) win.hide();
 });
 
+// ------------------- Desktop Server Connect/Disconnect -------------------
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+ipcMain.on('connect-desktop-server', async (event) => {
+  try {
+    await axios.get(`${DESKTOP_SERVER_URL}/health`);
+    console.log("Desktop server already running.");
+    const ip = getLocalIP();
+    event.sender.send('desktop-server-status', { success: true, ip });
+    return;
+  } catch (_) {
+    const desktopServerPath = path.join(__dirname, 'DesktopServer', 'desktop_server.py');
+    desktopServerProcess = spawn('python', [desktopServerPath]);
+
+    desktopServerProcess.stdout.on('data', (data) => console.log(`[Desktop Server] ${data}`));
+    desktopServerProcess.stderr.on('data', (data) => console.error(`[Desktop Server Error] ${data}`));
+
+    desktopServerProcess.on('exit', (code, signal) => {
+      console.log(`Desktop server exited (code: ${code}, signal: ${signal})`);
+      desktopServerProcess = null;
+    });
+
+    setTimeout(async () => {
+      try {
+        await axios.get(`${DESKTOP_SERVER_URL}/health`);
+        console.log("Desktop server started successfully.");
+        const ip = getLocalIP();
+        event.sender.send('desktop-server-status', { success: true, ip });
+      } catch (err) {
+        console.error("Failed to start desktop server:", err.message);
+        event.sender.send('desktop-server-status', { success: false, message: err.message });
+      }
+    }, 1500);
+  }
+});
+
+ipcMain.on('disconnect-desktop-server', async (event) => {
+  try {
+    if (desktopServerProcess && !desktopServerProcess.killed) {
+      desktopServerProcess.kill('SIGINT');
+      desktopServerProcess = null;
+      console.log("Desktop server disconnected via process kill.");
+      event.sender.send('desktop-server-disconnected');
+      return;
+    }
+
+    // Fallback: try HTTP shutdown if process object is lost
+    try {
+      await axios.post(`${DESKTOP_SERVER_URL}/shutdown`);
+      console.log("Desktop server shutdown via HTTP.");
+    } catch (err) {
+      console.warn("Failed to shutdown desktop server via HTTP:", err.message);
+    }
+  } catch (err) {
+    console.error("Error disconnecting desktop server:", err);
+  } finally {
+    desktopServerProcess = null;
+    event.sender.send('desktop-server-disconnected');
+  }
+});
+
 // ------------------- App Quit Handling -------------------
 app.on('window-all-closed', (event) => {
-  // Prevent quitting if windows are hidden
   if (!isQuiting) {
     event.preventDefault();
     return;
   }
 
-  // Kill Python processes if running
   if (yoloProcess && !yoloProcess.killed) yoloProcess.kill('SIGINT');
   if (desktopServerProcess && !desktopServerProcess.killed) desktopServerProcess.kill('SIGINT');
 
@@ -222,7 +272,11 @@ app.on('window-all-closed', (event) => {
 });
 
 app.on('quit', () => {
-  // Cleanup Python processes on quit
+  if (yoloProcess && !yoloProcess.killed) yoloProcess.kill('SIGINT');
+  if (desktopServerProcess && !desktopServerProcess.killed) desktopServerProcess.kill('SIGINT');
+});
+
+app.on('before-quit', () => {
   if (yoloProcess && !yoloProcess.killed) yoloProcess.kill('SIGINT');
   if (desktopServerProcess && !desktopServerProcess.killed) desktopServerProcess.kill('SIGINT');
 });

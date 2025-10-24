@@ -7,17 +7,29 @@ import json
 import socket
 import subprocess
 import platform
+import signal
+import sys
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Configuration
-UPLOAD_FOLDER = 'uploads'
+# Configuration - Point to uploads folder outside of desktop server
+# Get the parent directory of the current script
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(os.path.dirname(BASE_DIR), 'uploads')
+
+# Alternative: Use absolute path
+# UPLOAD_FOLDER = r'C:\path\to\your\uploads'  # Windows
+# UPLOAD_FOLDER = '/path/to/your/uploads'      # Linux/Mac
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
 
 # Create upload directory if it doesn't exist
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+    print(f"Created uploads folder at: {UPLOAD_FOLDER}")
+else:
+    print(f"Using uploads folder at: {UPLOAD_FOLDER}")
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -345,6 +357,24 @@ def delete_image(filepath):
             'message': f'Failed to delete image: {str(e)}'
         }), 500
 
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    """Shutdown the Flask server"""
+    try:
+        print("Shutdown request received. Stopping server...")
+        func = request.environ.get('werkzeug.server.shutdown')
+        if func is None:
+            # For production servers, we need to use os._exit
+            os._exit(0)
+        func()
+        return jsonify({
+            'success': True,
+            'message': 'Server shutting down...'
+        })
+    except Exception as e:
+        print(f"Shutdown error: {str(e)}")
+        os._exit(0)
+
 @app.route('/', methods=['GET'])
 def dashboard():
     """Simple web dashboard to view uploaded images"""
@@ -484,7 +514,16 @@ def dashboard():
     return dashboard_html
 
 if __name__ == '__main__':
+    # Handle SIGINT (Ctrl+C) and SIGTERM signals
+    def signal_handler(sig, frame):
+        print("\n🛑 Shutting down Desktop Server...")
+        sys.exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     print("Starting Caniscan Desktop Server...")
+    print(f"Uploads folder location: {UPLOAD_FOLDER}")
     print("Ready to receive images from Android app")
     print("Web dashboard available at: http://localhost:5000")
     print("API endpoints:")
@@ -493,6 +532,7 @@ if __name__ == '__main__':
     print("   - GET /images/<path> - View specific image")
     print("   - DELETE /images/<path> - Delete specific image")
     print("   - POST /folders - Create new folder")
+    print("   - POST /shutdown - Shutdown server")
     print("   - GET /health - Health check")
     print("   - GET /ip - Get local IP address")
     print("=" * 50)
@@ -508,4 +548,8 @@ if __name__ == '__main__':
     
     print("=" * 50)
     
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    try:
+        app.run(host='0.0.0.0', port=5001, debug=False, use_reloader=False)
+    except KeyboardInterrupt:
+        print("\n🛑 Server stopped by user.")
+        sys.exit(0)

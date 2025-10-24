@@ -8,47 +8,56 @@ if (!window._functionReloadProtected) {
 
   console.log("%c⚙️ Initializing functions.js...", "color: cyan; font-weight: bold;");
 
-  // Wait for DOM content to fully load before accessing elements
   document.addEventListener("DOMContentLoaded", () => {
     console.log("%c📄 DOM fully loaded.", "color: green;");
 
     // ================================
     // ELECTRON WINDOW CONTROLS
     // ================================
-    // Allows window minimize and close actions from renderer process
-    const { ipcRenderer } = require('electron');
+    let ipcRenderer;
+    try {
+      const electron = require('electron');
+      ipcRenderer = electron.ipcRenderer;
+      console.log("Electron detected, ipcRenderer loaded.");
+    } catch (err) {
+      console.log("Not running in Electron, skipping ipcRenderer.");
+    }
 
     const minimizeBtn = document.getElementById('minimize');
     const closeBtn = document.getElementById('close');
 
-    // Add click event listeners to window controls if present
     if (minimizeBtn) minimizeBtn.addEventListener('click', () => ipcRenderer.send('minimize-window'));
     if (closeBtn) closeBtn.addEventListener('click', () => ipcRenderer.send('close-window'));
 
     // ================================
     // SERVER CONNECTION LOGIC
     // ================================
-    // Grab DOM elements for server connection card and gallery overview
     const serverCardContainer = document.getElementById("serverCardContainer");
     const connectButton = document.getElementById("connectServerButton");
     const disconnectButton = document.getElementById("disconnectServerButton");
     const galleryOverview = document.getElementById("galleryOverview");
 
-    // Grab nav buttons that depend on server connection
     const galleryBtn = document.getElementById("galleryBtn");
     const analysisBtn = document.getElementById("analysisBtn");
 
-    // Track server connection state
     let serverConnected = false;
+
+    // ================================
+    // DISPLAY LOGGED-IN USER
+    // ================================
+    const userNameElement = document.getElementById("userName");
+    if (ipcRenderer && userNameElement) {
+      ipcRenderer.on("user-data", (event, data) => {
+        if (data && data.name) {
+          userNameElement.textContent = `Hello, ${data.name}!`;
+          console.log("%c👤 Logged-in user set to:", "color: cyan;", data.name);
+        }
+      });
+    }
 
     // ================================
     // FADE UTILITY FUNCTIONS
     // ================================
-    /**
-     * Fade in a DOM element over the given duration (ms)
-     * @param {HTMLElement} element
-     * @param {number} duration
-     */
     function fadeIn(element, duration = 400) {
       element.style.display = "flex";
       element.style.opacity = 0;
@@ -62,13 +71,6 @@ if (!window._functionReloadProtected) {
       }, interval);
     }
 
-    /**
-     * Fade out a DOM element over the given duration (ms)
-     * Executes callback after fade out completes
-     * @param {HTMLElement} element
-     * @param {number} duration
-     * @param {Function} callback
-     */
     function fadeOut(element, duration = 400, callback) {
       element.style.opacity = 1;
       let opacity = 1;
@@ -86,56 +88,96 @@ if (!window._functionReloadProtected) {
     }
 
     // ================================
-    // SERVER CONNECT/DISCONNECT BUTTON LOGIC
+    // CONNECT/DISCONNECT BUTTON LOGIC
     // ================================
     if (serverCardContainer && connectButton && disconnectButton && galleryOverview) {
 
-      // Connect button logic
-      connectButton.addEventListener("click", () => {
+      // Connect button
+      connectButton.addEventListener("click", async () => {
         console.log("%c🖧 Connecting to server...", "color: limegreen;");
         connectButton.textContent = "Connecting...";
         connectButton.disabled = true;
 
-        setTimeout(() => {
-          // Fade out server card, then fade in gallery overview
-          fadeOut(serverCardContainer, 400, () => {
-            fadeIn(galleryOverview, 400);
-          });
+        if (!ipcRenderer) {
+          console.warn("ipcRenderer not available. Running outside Electron?");
+          return;
+        }
 
-          // Update server connection state and enable gallery/analysis buttons
-          serverConnected = true;
-          if (galleryBtn) galleryBtn.disabled = false;
-          if (analysisBtn) analysisBtn.disabled = false;
+        ipcRenderer.send('connect-desktop-server');
 
-          console.log("%c✅ Gallery overview displayed and buttons enabled.", "color: limegreen;");
-        }, 1500); // Simulate server connection delay
+        ipcRenderer.once('desktop-server-status', (event, status) => {
+          if (status.success) {
+            console.log("%c✅ Desktop server started successfully.", "color: limegreen;");
+
+            fadeOut(serverCardContainer, 400, () => fadeIn(galleryOverview, 400));
+            serverConnected = true;
+            if (galleryBtn) galleryBtn.disabled = false;
+            if (analysisBtn) analysisBtn.disabled = false;
+
+            // ================================
+            // SHOW LOCAL SERVER IP & COPY
+            // ================================
+            const statusSpan = document.getElementById("serverStatus");
+            const ipSpan = document.getElementById("serverIP");
+            const copyIPBtn = document.getElementById("copyIPBtn");
+
+            if (statusSpan && ipSpan && status.ip) {
+              statusSpan.textContent = "active";
+              const originalIP = `${status.ip}:5001`;
+              ipSpan.textContent = originalIP;
+
+              if (copyIPBtn) {
+                copyIPBtn.addEventListener("click", () => {
+                  const ipText = ipSpan.textContent.trim();
+                  if (!ipText) return;
+
+                  navigator.clipboard.writeText(originalIP).then(() => {
+                    // Temporarily change IP text
+                    ipSpan.textContent = "IP copied!";
+                    ipSpan.style.color = "limegreen";
+
+                    setTimeout(() => {
+                      ipSpan.textContent = originalIP;    // revert back
+                      ipSpan.style.color = "#333";        // reset color
+                    }, 1500);
+                  }).catch(err => console.error("Failed to copy IP:", err));
+                });
+              }
+            }
+          } else {
+            console.error("%c❌ Failed to start desktop server:", "color: red;", status.message);
+            alert("Failed to connect to server: " + status.message);
+            connectButton.textContent = "Connect to server";
+            connectButton.disabled = false;
+          }
+        });
       });
 
-      // Disconnect button logic
+      // Disconnect button
       disconnectButton.addEventListener("click", () => {
         console.log("%c🛑 Disconnecting from server...", "color: red;");
         disconnectButton.textContent = "Disconnecting...";
         disconnectButton.disabled = true;
 
-        setTimeout(() => {
-          // Fade out gallery, then fade in server card
-          fadeOut(galleryOverview, 400, () => {
-            fadeIn(serverCardContainer, 400);
+        if (ipcRenderer) {
+          ipcRenderer.send('disconnect-desktop-server');
 
-            // Update server connection state and disable gallery/analysis buttons
-            serverConnected = false;
-            if (galleryBtn) galleryBtn.disabled = true;
-            if (analysisBtn) analysisBtn.disabled = true;
+          ipcRenderer.once('desktop-server-disconnected', () => {
+            fadeOut(galleryOverview, 400, () => {
+              fadeIn(serverCardContainer, 400);
+              serverConnected = false;
+              if (galleryBtn) galleryBtn.disabled = true;
+              if (analysisBtn) analysisBtn.disabled = true;
 
-            // Reset button states
-            disconnectButton.textContent = "Disconnect";
-            disconnectButton.disabled = false;
-            connectButton.textContent = "Connect to server";
-            connectButton.disabled = false;
+              disconnectButton.textContent = "Disconnect";
+              disconnectButton.disabled = false;
+              connectButton.textContent = "Connect to server";
+              connectButton.disabled = false;
 
-            console.log("%c✅ Server card displayed again. Buttons disabled.", "color: red;");
+              console.log("%c✅ Server card displayed again. Buttons disabled.", "color: red;");
+            });
           });
-        }, 500); // Simulate disconnection delay
+        }
       });
     }
 
@@ -149,23 +191,71 @@ if (!window._functionReloadProtected) {
     if (detailPane && minimizeDetail && leftColumn) {
       minimizeDetail.addEventListener("click", () => {
         const isMinimized = detailPane.classList.contains("minimized");
-
         if (isMinimized) {
-          // Restore right pane
           detailPane.classList.remove("minimized");
-          leftColumn.style.flex = "3"; // original left column width
+          leftColumn.style.flex = "3";
           minimizeDetail.innerHTML = "<i class='bi bi-layout-text-sidebar-reverse'></i> Hide Details";
         } else {
-          // Minimize right pane
           detailPane.classList.add("minimized");
-          leftColumn.style.flex = "4.5"; // expand left column
+          leftColumn.style.flex = "4.5";
           minimizeDetail.innerHTML = "<i class='bi bi-layout-text-sidebar-reverse'></i> Show Details";
         }
       });
     }
 
     // ================================
-    // PAGE SWITCHING LOGIC WITH FADE
+    // GALLERY IMAGE LOADING
+    // ================================
+    const imageGrid = document.querySelector(".gallery-left .image-grid");
+
+    async function loadGalleryImages() {
+      if (!imageGrid) return;
+
+      try {
+        const response = await fetch('http://localhost:5001/images');
+        const data = await response.json();
+
+        imageGrid.innerHTML = '';
+
+        if (data.success && data.images.length > 0) {
+          data.images.forEach(image => {
+            const div = document.createElement('div');
+            div.classList.add('image-item');
+
+            const img = document.createElement('img');
+            img.src = `http://localhost:5001/images/${image.filename}`;
+            img.alt = image.filename;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+
+            div.appendChild(img);
+            imageGrid.appendChild(div);
+          });
+        } else {
+          imageGrid.innerHTML = '<div class="no-images">No images uploaded yet.</div>';
+        }
+      } catch (error) {
+        console.error('Error loading gallery images:', error);
+        imageGrid.innerHTML = '<div class="no-images">Failed to load images from server.</div>';
+      }
+    }
+
+    if (galleryBtn) {
+      galleryBtn.addEventListener('click', () => {
+        showPage(galleryPage);
+        loadGalleryImages();
+      });
+    }
+
+    setInterval(() => {
+      if (galleryPage && galleryPage.style.display !== 'none') {
+        loadGalleryImages();
+      }
+    }, 5000);
+
+    // ================================
+    // PAGE SWITCHING WITH FADE
     // ================================
     const homeBtn = document.getElementById("homeBtn");
     const galleryPage = document.getElementById("galleryPage");
@@ -174,12 +264,7 @@ if (!window._functionReloadProtected) {
 
     const navButtons = [homeBtn, galleryBtn, analysisBtn];
 
-    /**
-     * Show a page after fading out all others
-     * @param {HTMLElement} pageToShow
-     */
     function showPage(pageToShow) {
-      // Security: prevent access to gallery/analysis if server not connected
       if (!serverConnected && (pageToShow === galleryPage || pageToShow === analysisPage)) {
         alert("⚠️ You must connect to the server first!");
         return;
@@ -187,17 +272,14 @@ if (!window._functionReloadProtected) {
 
       const pages = [homePage, galleryPage, analysisPage];
 
-      // Fade out all other pages first
       const fadeOutPromises = pages.map(page => {
         if (!page || page === pageToShow) return Promise.resolve();
         return new Promise(resolve => fadeOut(page, 100, resolve));
       });
 
-      // After all fade outs complete, fade in target page
       Promise.all(fadeOutPromises).then(() => {
         fadeIn(pageToShow, 100);
 
-        // Update navbar active state
         navButtons.forEach(btn => {
           if (!btn) return;
           btn.classList.toggle("active", (
@@ -209,12 +291,10 @@ if (!window._functionReloadProtected) {
       });
     }
 
-    // Attach click events for page navigation
     if (homeBtn) homeBtn.addEventListener("click", () => showPage(homePage));
     if (galleryBtn) galleryBtn.addEventListener("click", () => showPage(galleryPage));
     if (analysisBtn) analysisBtn.addEventListener("click", () => showPage(analysisPage));
 
-    // Show home page by default on load
     showPage(homePage);
 
   }); // end DOMContentLoaded
