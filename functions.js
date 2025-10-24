@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const galleryOverview = document.getElementById('galleryOverview');
     const galleryPage = document.getElementById('galleryPage');
     const analysisPage = document.getElementById('analysisPage');
-    const sortGallery = document.getElementById('sortGallery');
 
     // Other Page Elements
     const connectBtn = document.getElementById('connectPhoneButton');
@@ -160,96 +159,36 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         galleryGrid.innerHTML = '<p class="text-center text-muted">Loading images...</p>';
-        
-        // This line fetches the images
-        serverImages = await loadServerImages(); 
-        
-        
-        // Get the current sort value from the dropdown
-        const sortValue = sortGallery.value;
+        serverImages = await loadServerImages();
+        galleryGrid.innerHTML = '';
 
-        // Sort the serverImages array based on the value
-        if (sortValue === 'name') {
-            serverImages.sort((a, b) => a.filename.localeCompare(b.filename));
-        } else if (sortValue === 'date') {
-            // This assumes your server sends an 'uploaded_at' field (which it should)
-            // It sorts from newest to oldest
-            serverImages.sort((a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at));
-        } else if (sortValue === 'size') {
-            // This sorts from smallest to largest
-            serverImages.sort((a, b) => a.size - b.size);
-        }   
+        if (serverImages.length > 0) {
+        const serverSection = document.createElement('div');
+        serverSection.className = 'gallery-item server-images';
+        serverSection.innerHTML = `
+        <i class="bi bi-cloud-upload"></i>
+        <h6>Uploaded Images</h6>
+        /<small class="text-muted">${serverImages.length} images</small>
+        `;
+        serverSection.addEventListener('click', () => showServerImages());
+        galleryGrid.appendChild(serverSection);
+        }
 
-        galleryGrid.innerHTML = ''; // Clear the "Loading..." text
-
-        // This section now loops over the *sorted* serverImages array
+        // Render server images directly in the gallery
         if (serverImages.length > 0) {
             serverImages.forEach(img => {
                 const item = document.createElement('div');
                 item.className = 'gallery-item';
                 item.innerHTML = `
-                    <img src="${SERVER_URL}/images/${img.path}" alt="${img.filename}">
+                    <img src="${SERVER_URL}/images/${img.filename}" alt="${img.filename}">
                     <h6>${img.filename}</h6>
                     <small>${(img.size / 1024).toFixed(1)} KB</small>
                 `;
-                item.addEventListener('click', () => {
-                    showImageDetailsModal(img);
-                });
                 galleryGrid.appendChild(item);
             });
         } else {
-            galleryGrid.innerHTML = '<p class="text-center text-muted">No server images found.</p>';
+            galleryGrid.innerHTML += '<p class="text-center text-muted">No server images found.</p>';
         }
-    }
-
-    // --- SHOW IMAGE DETAILS MODAL ---
-    function showImageDetailsModal(imageObject) {
-        // Create the modal elements
-        const modal = document.createElement('div');
-        modal.className = 'image-detail-modal'; // This will be the overlay
-
-        // Format details
-        const imageUrl = `${SERVER_URL}/images/${imageObject.path}`;
-        const fileSize = (imageObject.size / 1024).toFixed(1) + ' KB';
-        // Check if uploaded_at exists, otherwise show 'Unknown'
-        const uploadedDate = imageObject.uploaded_at 
-            ? new Date(imageObject.uploaded_at).toLocaleString() 
-            : 'Unknown';
-
-        // Set the modal content
-        modal.innerHTML = `
-            <div class="modal-content">
-                <span class="modal-close-btn">&times;</span>
-                <div class="modal-body">
-                    <div class="modal-image-container">
-                        <img src="${imageUrl}" alt="${imageObject.filename}" class="modal-image">
-                    </div>
-                    <div class="modal-details">
-                        <h4>Image Details</h4>
-                        <p><strong>Filename:</strong> ${imageObject.filename}</p>
-                        <p><strong>File Size:</strong> ${fileSize}</p>
-                        <p><strong>Uploaded:</strong> ${uploadedDate}</p>
-                        <p><strong>Path:</strong> ${imageObject.path}</p>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Add to the page
-        document.body.appendChild(modal);
-
-        // Add close functionality
-        const closeBtn = modal.querySelector('.modal-close-btn');
-        closeBtn.addEventListener('click', () => {
-            document.body.removeChild(modal);
-        });
-
-        // Add close on overlay click
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) { // Only if clicking the overlay itself
-                document.body.removeChild(modal);
-            }
-        });
     }
 
         // Initialize analysis page when it's shown
@@ -627,7 +566,6 @@ document.addEventListener('DOMContentLoaded', () => {
     homeBtn.addEventListener('click', () => switchPage('home'));
     galleryBtn.addEventListener('click', () => switchPage('gallery'));
     analysisBtn.addEventListener('click', () => switchPage('analysis'));
-    sortGallery.addEventListener('change', renderGallery);
 
     // Initialize analysis page when analysis page is shown
     const originalSwitchPage = switchPage;

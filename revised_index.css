@@ -221,7 +221,7 @@ html, body {
   width: 100%;
   height: calc(100vh - 125px); /* Subtract navbar height */
   margin-top: 0;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0rem;
   justify-content: center;
   box-sizing: border-box;
   overflow: hidden; /* prevent overall overflow */
@@ -455,6 +455,7 @@ html, body {
     box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
+
 /* Bottom Row: Activity Log */
 .right-column .bottom-row {
   flex: 1 1 0;
@@ -471,58 +472,60 @@ html, body {
 /* Connected Server Content */
 .connected_icon {
   width: 45%;
+  display: block;
+  margin: 0 auto; /* center the icon */
 }
 
-/* Device Dropdown */
-.device-dropdown {
-  width: 80% !important;
-  position: relative !important;
+/* Status text (first line) */
+.top-row.server-status #serverStatusText {
+  text-align: center;
+  font-size: 0.95rem;
+  color: #333;
+  margin: 0 0 0.25rem 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
 }
 
-#deviceDropdown {
-  background-color: #f9f9f9 !important;
-  color: #282624 !important;
-  width: 100% !important;
-  border: none !important;
-  border-radius: 30px !important;
-  padding: 0.5rem 1rem !important;
-  text-align: center !important;
-  transition: all 0.3s ease !important;
+/* Make Wi-Fi icon green */
+#serverStatusText i.bi-wifi {
+    color: #28a745; /* Bootstrap green */
 }
 
-#deviceDropdown:hover,
-#deviceDropdown:focus {
-  background-color: #c4a484 !important;
-  color: white !important;
+/* IP + copy button (second line) */
+.top-row.server-status #serverIPWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
 }
 
-.dropdown:not(.show) #deviceDropdown {
-  background-color: #f9f9f9 !important;
-  color: #282624 !important;
+/* IP styling */
+.top-row.server-status #serverIP {
+  background-color: #e9ecef;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-family: monospace;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
-.dropdown.show #deviceDropdown {
-  background-color: #c4a484 !important;
-  color: white !important;
+/* Copy button styling */
+.top-row.server-status #copyIPBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #495057;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  padding: 0;
 }
 
-#deviceDropdown + .dropdown-menu {
-  width: 100% !important;
-  left: 0 !important;
-  right: auto !important;
-  border-radius: 15px !important;
-  border: 1px solid #d9b99b !important;
-  background-color: white !important;
-}
-
-#deviceDropdown + .dropdown-menu .dropdown-item {
-  color: #282624 !important;
-}
-
-#deviceDropdown + .dropdown-menu .dropdown-item:hover {
-  background-color: #d9b99b !important;
-  color: white !important;
-  border-radius: 10px !important;
+.top-row.server-status #copyIPBtn:hover {
+  color: #212529;
 }
 
 /* Disconnect Button */
@@ -535,6 +538,8 @@ html, body {
   cursor: pointer;
   transition: all 0.3s ease;
   width: 80%;
+  display: block;
+  margin: 0.5rem auto 0 auto; /* center the button */
 }
 
 .disconnect-btn:hover {
