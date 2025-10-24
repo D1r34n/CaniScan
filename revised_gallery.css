@@ -1,0 +1,204 @@
+/* --- Gallery Page --- */
+.gallery-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: calc(100vh - 125px);
+  padding: 1rem;           /* remove outer page padding */
+  box-sizing: border-box;
+  gap: 0;               /* remove vertical gap between top bar and columns */
+  overflow: hidden;
+}
+
+/* Top Bar: Title + Controls */
+.gallery-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background-color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 16px 16px 0 0;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.upload-image {
+  font-size: 2rem;
+  font-weight: 500 !important;
+  color: white !important;
+  border-radius: 26px !important;
+  padding: 0.5rem 1rem !important;
+  background-color: #d9b99b !important;
+}
+
+.upload-image:hover {
+    background-color: #e9ecef !important;
+    color: #282624 !important;
+}
+
+.gallery-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: nowrap;      /* ensure select + button stay on one line */
+}
+
+/* Sort Dropdown Container */
+.sort-dropdown {
+  width: 80% !important;
+  position: relative !important;
+}
+
+/* Container */
+.sort-dropdown {
+  width: 80% !important;
+  position: relative !important;
+}
+
+/* Button inside container */
+.sort-dropdown > button {
+  background-color: #f9f9f9 !important;
+  color: #282624 !important;
+  width: 100% !important;
+  border: none !important;
+  border-radius: 30px !important;
+  padding: 0.5rem 1rem !important;
+  text-align: center !important;
+  transition: all 0.3s ease !important;
+}
+
+.sort-dropdown > button:hover,
+.sort-dropdown > button:focus {
+  background-color: #c4a484 !important;
+  color: white !important;
+}
+
+/* Open dropdown */
+.dropdown.show > .sort-dropdown > button {
+  background-color: #c4a484 !important;
+  color: white !important;
+}
+
+/* Dropdown menu */
+.sort-dropdown > .dropdown-menu {
+  width: 100% !important;
+  left: 0 !important;
+  border-radius: 15px !important;
+  border: 1px solid #d9b99b !important;
+  background-color: white !important;
+}
+
+.sort-dropdown > .dropdown-menu .dropdown-item {
+  color: #282624 !important;
+}
+
+.sort-dropdown > .dropdown-menu .dropdown-item:hover {
+  background-color: #d9b99b !important;
+  color: white !important;
+  border-radius: 10px !important;
+}
+
+
+/* Minimize Button */
+#minimizeBtn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+#minimizeBtn:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+/* Columns container */
+.gallery-columns {
+  display: flex;
+  flex: 1;
+  gap: 1.5rem;           /* space between left and right columns */
+  height: 100%;           /* fill remaining space below top bar */
+  transition: all 0.3s ease;
+  background-color: white;
+  padding: 1rem;
+border-radius: 0 0 16px 16px;
+}
+
+/* Left Column */
+.gallery-left {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  overflow-y: auto;
+  min-height: 0;
+  transform: scale(1);
+  transition: transform 0.3s ease, flex 0.3s ease; 
+}
+
+/* Image Grid */
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 0.15fr));
+  transition: all 0.3s;
+  gap: 1rem;
+}
+
+.image-item {
+  background: #ccc;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, width 0.3s ease;
+}
+
+.image-item:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.2);
+}
+
+/* Right pane smooth flex transition */
+.gallery-right {
+  flex: 1.5;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 15px;
+  background: #e9ecef;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  overflow: hidden;
+  transform: scale(1);
+  transition: flex 0.3s ease, max-width 0.3s ease, padding 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gallery-right:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+/* Minimized state (disappear) */
+.gallery-right.minimized {
+  flex: 0;
+  max-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.gallery-right.minimized .detail-content {
+  display: none;
+}
+
+/* Detail Content */
+.detail-content {
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+}

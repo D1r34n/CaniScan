@@ -50,7 +50,7 @@
     <div class="main-container">
 
         <!-- Home Page -->
-        <div id="homePage" class="page-content" style="display: flex;">
+        <div id="homePage" class="page-content" style="display: none;">
           <div class="home-container">
               <div id="homeConnection" class="home-connection-section">
                   <div class="connection-card">
@@ -116,25 +116,32 @@
         </div>
 
         <!-- Gallery Page -->
-        <div id="galleryPage" class="page-content" style="display:none;">
-            <div class="gallery-container">
-                <div class="gallery-header">
-                    <h3>Gallery</h3>
-                    <div class="gallery-header-actions">
-                        <label for="sortGallery" class="me-2">Sort:</label>
-                        <select id="sortGallery" class="form-select form-select-sm">
-                            <option value="name">Name</option>
-                            <option value="date">Date</option>
-                            <option value="size">Size</option>
-                        </select>
-                        <!-- <button class="btn btn-primary ms-3" id="createFolderBtn">
-                            <i class="bi bi-folder-plus"></i> Create Folder
-                        </button> -->
-                    </div>
+        <div id="galleryPage" class="page-content" style="display:flex;">
+        <div class="gallery-container">
+            <!-- Left: Image display area -->
+            <div class="gallery-main">
+            <div class="image-grid">
+                <!-- Example images -->
+                <div class="image-item" onclick="showDetails('Dog 1', 'Uploaded on Oct 20, 2025', 'Healthy skin detected')">
+                <img src="images/dog1.jpg" alt="Dog 1">
                 </div>
-                <div class="gallery-grid" id="galleryGrid"></div>
+                <div class="image-item" onclick="showDetails('Dog 2', 'Uploaded on Oct 22, 2025', 'Possible skin issue detected')">
+                <img src="images/dog2.jpg" alt="Dog 2">
+                </div>
+                <!-- More image-item divs will go here -->
+            </div>
+            </div>
+
+            <!-- Right: Details panel -->
+            <div class="gallery-details">
+            <h3>Image Details</h3>
+            <p><strong>Name:</strong> <span id="detailName">Select an image</span></p>
+            <p><strong>Date:</strong> <span id="detailDate">–</span></p>
+            <p><strong>Remarks:</strong> <span id="detailDesc">–</span></p>
             </div>
         </div>
+        </div>
+
 
         <!-- Analysis Page -->
         <div id="analysisPage" class="page-content" style="display:none;">
