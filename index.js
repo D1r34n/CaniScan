@@ -80,7 +80,7 @@ function createMainWindow() {
   });
 
   mainWindow.setMenuBarVisibility(false);
-  mainWindow.loadFile('revised_index.html');
+  mainWindow.loadFile('index.html');
   mainWindow.setBackgroundColor('black');
 
   mainWindow.webContents.openDevTools();
