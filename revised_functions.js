@@ -186,19 +186,23 @@ if (!window._functionReloadProtected) {
     // ================================
     const detailPane = document.getElementById("detailPane");
     const minimizeDetail = document.getElementById("minimizeDetail");
+    const galleryColumns = document.querySelector(".gallery-columns");
     const leftColumn = document.querySelector(".gallery-left");
 
-    if (detailPane && minimizeDetail && leftColumn) {
+    if (detailPane && minimizeDetail && leftColumn && galleryColumns) {
+      galleryColumns.classList.add("detail-minimized");
+      // 🔹 Toggle when clicked
       minimizeDetail.addEventListener("click", () => {
-        const isMinimized = detailPane.classList.contains("minimized");
+        const isMinimized = detailPane.classList.toggle("minimized");
+
         if (isMinimized) {
-          detailPane.classList.remove("minimized");
-          leftColumn.style.flex = "3";
-          minimizeDetail.innerHTML = "<i class='bi bi-layout-text-sidebar-reverse'></i> Hide Details";
-        } else {
-          detailPane.classList.add("minimized");
           leftColumn.style.flex = "4.5";
+          galleryColumns.classList.add("detail-minimized");
           minimizeDetail.innerHTML = "<i class='bi bi-layout-text-sidebar-reverse'></i> Show Details";
+        } else {
+          leftColumn.style.flex = "3";
+          galleryColumns.classList.remove("detail-minimized");
+          minimizeDetail.innerHTML = "<i class='bi bi-layout-text-sidebar-reverse'></i> Hide Details";
         }
       });
     }
