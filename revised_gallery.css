@@ -125,7 +125,7 @@
 .gallery-columns {
   display: flex;
   flex: 1;
-  gap: 1rem;
+  gap: 1.5rem;
   height: 100%;
   transition: all 0.3s ease;
   background-color: white;
@@ -150,8 +150,8 @@
 /* Image Grid */
 .image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(70px, 0.2fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 0.15fr));
+  gap: 1rem;
 }
 
 .image-item {
@@ -181,6 +181,11 @@
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   overflow: hidden;
   transition: flex 0.3s ease, max-width 0.3s ease, margin-right 0.3s ease, transform 0.3s ease;
+}
+
+.gallery-right:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
 /* Minimized state */
