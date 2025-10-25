@@ -1,0 +1,49 @@
+How to run (Windows / PowerShell)
+
+Prerequisites
+- Install Python 3.10+ and ensure "python" is on PATH
+- Install Ollama for Windows and start it (Ollama app or run: ollama serve)
+- Pull the model once: ollama pull llama3.2
+
+Setup (first time)
+1) Open PowerShell and change directory to this folder:
+   cd "D:\School Files\Thesis\Llama\Proxies_DoggyDiseaseDetector_back"
+
+2) Create a virtual environment (if it doesn't exist yet):
+   python -m venv venv
+
+3) Activate the virtual environment:
+   .\venv\Scripts\Activate.ps1
+
+   If you see an execution policy error, run this in the SAME PowerShell window and try activating again:
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+4) Upgrade pip and install dependencies:
+   python -m pip install --upgrade pip
+   pip install -r requirements.txt
+
+Run the app
+1) Ensure Ollama is running and the model is available (see prerequisites)
+2) From this directory with the venv activated, run:
+   python .\diagnosis_diaglog.py
+
+What to expect
+- The assistant will ask structured questions about a dog's skin condition
+- Answer in short, clear responses; when confident, it will output a likely diagnosis,
+  confidence score, rationale, and differentials, and advise consulting a veterinarian
+
+Troubleshooting
+- Error: model not found / cannot connect to Ollama
+  -> Start Ollama (ollama serve) and run: ollama pull llama3.2
+
+- Error: Activate.ps1 is disabled on this system
+  -> Run in the current PowerShell: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+     Then activate again: .\venv\Scripts\Activate.ps1
+
+- Dependency install issues
+  -> Ensure you are inside the venv (prompt shows (venv)) and run: pip install -r requirements.txt
+
+Notes
+- You can edit the initial complaint inside diagnosis_diaglog.py (variable: complaint)
+- To stop the app at any time, press Ctrl + C in the terminal
+

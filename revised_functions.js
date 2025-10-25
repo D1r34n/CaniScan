@@ -432,16 +432,28 @@ if (!window._functionReloadProtected) {
             analyzeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
             
             try {
-                // Simulate YOLOv8 analysis (replace with actual API call)
-                await simulateAnalysis();
+                // Call real YOLO analysis API
+                const analysisResult = await performRealAnalysis(previewImage.src);
                 
                 // Show results
                 analysisResults.style.display = 'block';
-                resultDiagnosis.textContent = 'Fungal Infection';
-                resultConfidence.textContent = '87%';
+                resultDiagnosis.textContent = analysisResult.disease;
+                resultConfidence.textContent = `${analysisResult.confidence}%`;
                 
                 // Add to history
-                addToAnalysisHistory(previewImage.src, 'Fungal Infection', '87%');
+                addToAnalysisHistory(previewImage.src, analysisResult.disease, `${analysisResult.confidence}%`);
+                
+                // Show initial LLM recommendation in chat
+                showInitialRecommendation(analysisResult.recommendation);
+                
+                // Store current analysis data for chat context
+                window.currentAnalysis = {
+                    diagnosis: analysisResult.disease,
+                    confidence: analysisResult.confidence
+                };
+                
+                // Debug: Log the stored analysis data
+                console.log('DEBUG: Stored analysis data:', window.currentAnalysis);
                 
             } catch (error) {
                 console.error('Analysis failed:', error);
@@ -453,9 +465,28 @@ if (!window._functionReloadProtected) {
             }
         });
         
-        async function simulateAnalysis() {
-            // Simulate processing time
-            return new Promise(resolve => setTimeout(resolve, 2000));
+        async function performRealAnalysis(imageSrc) {
+            try {
+                const response = await fetch('http://localhost:5000/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        frame: imageSrc
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                console.error('Error calling analysis API:', error);
+                throw error;
+            }
         }
     }
     
@@ -473,17 +504,88 @@ if (!window._functionReloadProtected) {
             addChatMessage(message, 'user');
             chatInput.value = '';
             
-            // Simulate bot response
-            setTimeout(() => {
-                const responses = [
-                    "Based on the analysis, I recommend consulting with a veterinarian for proper treatment.",
-                    "For fungal infections, keep the affected area clean and dry. Avoid scratching.",
-                    "Consider using antifungal treatments as prescribed by your vet.",
-                    "Monitor your dog's condition and watch for any changes in behavior or symptoms."
-                ];
-                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-                addChatMessage(randomResponse, 'bot');
-            }, 1000);
+            // Show typing indicator
+            const typingIndicator = addTypingIndicator();
+            
+            // Call LLM API for response
+            callLLMAPI(message)
+                .then(response => {
+                    // Remove typing indicator
+                    removeTypingIndicator(typingIndicator);
+                    
+                    // Add bot response
+                    addChatMessage(response.response, 'bot');
+                })
+                .catch(error => {
+                    console.error('Error getting LLM response:', error);
+                    // Remove typing indicator
+                    removeTypingIndicator(typingIndicator);
+                    
+                    // Add error message
+                    addChatMessage("I apologize, but I'm having trouble processing your request right now. Please try again or consult a veterinarian for immediate assistance.", 'bot');
+                });
+        }
+        
+        async function callLLMAPI(message) {
+            const currentAnalysis = window.currentAnalysis || { diagnosis: '', confidence: 0 };
+            
+            // Debug: Log the data being sent to the API
+            console.log('DEBUG: Sending to chat API:', {
+                message: message,
+                diagnosis: currentAnalysis.diagnosis,
+                confidence: currentAnalysis.confidence
+            });
+            
+            const response = await fetch('http://localhost:5000/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: message,
+                    diagnosis: currentAnalysis.diagnosis,
+                    confidence: currentAnalysis.confidence
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        }
+        
+        function addTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'chat-message bot-message typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="message-content">
+                    <span class="typing-dots">
+                        <span>.</span><span>.</span><span>.</span>
+                    </span>
+                </div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return typingDiv;
+        }
+        
+        function removeTypingIndicator(typingDiv) {
+            if (typingDiv && typingDiv.parentNode) {
+                typingDiv.parentNode.removeChild(typingDiv);
+            }
+        }
+        
+        function showInitialRecommendation(recommendation) {
+            // Clear existing messages except the welcome message
+            const welcomeMessage = chatMessages.querySelector('.bot-message');
+            chatMessages.innerHTML = '';
+            if (welcomeMessage) {
+                chatMessages.appendChild(welcomeMessage);
+            }
+            
+            // Add the initial recommendation
+            addChatMessage(recommendation, 'bot');
         }
         
         sendMessageBtn.addEventListener('click', sendMessage);

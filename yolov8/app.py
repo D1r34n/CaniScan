@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from ultralytics import YOLO
 import cv2, base64, numpy as np, re, csv, os, bcrypt
+from llm_service import llm_service
 
 # ----------------------------
 # Flask App Initialization
@@ -128,7 +129,7 @@ def login():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    """Analyze an image frame for disease using YOLOv8."""
+    """Analyze an image frame for disease using YOLOv8 and provide LLM recommendations."""
     data = request.get_json()
     frame_data = data.get('frame').split(',')[1]  # Remove data URL prefix
     frame_bytes = base64.b64decode(frame_data)
@@ -139,14 +140,53 @@ def analyze():
     detections = results[0].boxes
 
     if detections is None or len(detections) == 0:
-        return jsonify({'disease': "No disease detected", 'confidence': 0})
+        # No disease detected - get general healthy recommendation
+        llm_response = llm_service.get_initial_recommendation("No disease detected", 0)
+        return jsonify({
+            'disease': "No disease detected", 
+            'confidence': 0,
+            'recommendation': llm_response
+        })
 
     # Pick the detection with highest confidence
     top_conf_idx = np.argmax(detections.conf.cpu().numpy())
     disease = model.names[int(detections.cls[top_conf_idx])]
     confidence = float(detections.conf[top_conf_idx]) * 100
 
-    return jsonify({'disease': disease, 'confidence': round(confidence, 2)})
+    # Debug: Print the analysis results
+    print(f"DEBUG: Analysis results - Disease: {disease}, Confidence: {confidence}")
+
+    # Get LLM recommendation based on the diagnosis
+    llm_response = llm_service.get_initial_recommendation(disease, confidence)
+
+    return jsonify({
+        'disease': disease, 
+        'confidence': round(confidence, 2),
+        'recommendation': llm_response
+    })
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    """Handle chat messages with LLM for additional recommendations."""
+    data = request.get_json()
+    user_message = data.get('message', '').strip()
+    diagnosis = data.get('diagnosis', '')
+    confidence = data.get('confidence', 0)
+    
+    # Debug: Print the chat request data
+    print(f"DEBUG: Chat request - Message: {user_message}, Diagnosis: {diagnosis}, Confidence: {confidence}")
+    
+    if not user_message:
+        return jsonify({"success": False, "message": "Message is required"}), 400
+    
+    # Get LLM recommendation based on user question and current analysis
+    llm_response = llm_service.get_recommendation(diagnosis, confidence, user_message)
+    
+    return jsonify({
+        "success": True,
+        "response": llm_response["recommendation"],
+        "status": llm_response["status"]
+    })
 
 @app.route('/health', methods=['GET'])
 def health():
