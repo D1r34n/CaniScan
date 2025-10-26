@@ -45,7 +45,7 @@
 
             <!-- User Greeting with Dropdown -->
 <div class="user-greeting" id="userGreeting">
-    <i class="user-icon bi bi-person-circle"></i>
+    <img id="navbarUserAvatar" src="images/Earl.png" alt="Avatar" class="navbar-avatar">
     <span id="userName">Greetings, User!</span>
     <i class="dropdown-arrow bi bi-chevron-down"></i>
     
@@ -58,7 +58,7 @@
         <div class="dropdown-menu-items">
             <button class="dropdown-item" id="changeProfileBtn">
                 <i class="bi bi-person"></i>
-                <span>Change Profile</span>
+                <span>Change Avatar</span>
             </button>
             <button class="dropdown-item" id="changeAppearanceBtn">
                 <i class="bi bi-palette"></i>
@@ -246,23 +246,17 @@
                 <!-- Left Column: Image Grid -->
                 <div class="gallery-left">
                     <div id="imageGrid" class="image-grid">
-                <div class="image-item" onclick="showDetails('Dog 1', 'Uploaded on Oct 20, 2025', 'Healthy skin detected')">
-                    <img src="images/dog1.jpg" alt="Dog 1">
-                </div>
-                <div class="image-item" onclick="showDetails('Dog 2', 'Uploaded on Oct 22, 2025', 'Possible skin issue detected')">
-                    <img src="images/dog2.jpg" alt="Dog 2">
-                </div>
-                <!-- More image-item divs will go here -->
+                        <div class="image-item">Image 1</div>
+                        <div class="image-item">Image 2</div>
+                        <div class="image-item">Image 3</div>
+                        <div class="image-item">Image 4</div>
                     </div>
                 </div>
 
                 <!-- Right Column: Detail Pane -->
                 <div class="gallery-right minimized" id="detailPane">
                     <div class="detail-content">
-                        <h3>Image Details</h3>
-                        <p><strong>Name:</strong> <span id="detailName">Select an image</span></p>
-                        <p><strong>Date:</strong> <span id="detailDate">–</span></p>
-                        <p><strong>Remarks:</strong> <span id="detailDesc">–</span></p>
+                        <p>Details of selected image will appear here.</p>
                     </div>
                 </div>
             </div>
@@ -372,6 +366,39 @@
     </div>
     </div>
 
+<<<<<<< HEAD
+=======
+    <!-- Account Selection Modal -->
+    <div id="accountSelectionModal" class="account-modal">
+        <div class="account-modal-overlay"></div>
+        <div class="account-modal-content">
+            <h2>Choose Your Avatar</h2>
+            <div class="accounts-grid">
+                <div class="account-item" data-account="Earl">
+                    <img src="images/Earl.png" alt="Earl">
+                    <span>LABRADOR</span>
+                </div>
+                <div class="account-item" data-account="Edrian">
+                    <img src="images/Edrian.png" alt="Edrian">
+                    <span>POMERANIAN</span>
+                </div>
+                <div class="account-item" data-account="Ken">
+                    <img src="images/Ken2.png" alt="Ken">
+                    <span>KEN</span>
+                </div>
+                <div class="account-item" data-account="Joaquin">
+                    <img src="images/Joaquin.png" alt="Joaquin">
+                    <span>SHIH TZU</span>
+                </div>
+                <div class="account-item" data-account="Jignesh">
+                    <img src="images/Jigs.png" alt="Jignesh">
+                    <span>CORGI</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+>>>>>>> earl
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
     <script src="revised_functions.js"></script>
