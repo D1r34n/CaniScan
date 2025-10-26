@@ -4,7 +4,7 @@
   flex-direction: column;
   width: 100%;
   height: calc(100vh - 125px);
-  padding: 1rem;           
+  padding: 1rem 1rem 0 1rem; /* top, right, bottom, left */          
   box-sizing: border-box;
   gap: 0;                   
   overflow: hidden;
@@ -16,7 +16,7 @@
   align-items: center;
   justify-content: space-between; /* distribute left/right */
   gap: 0.5rem;
-  background-color: white;
+  background-color: #d9b99b;
   padding: 1rem;
   border-radius: 16px 16px 0 0;
   border-bottom: 2px solid #e9ecef;
@@ -42,24 +42,26 @@
 }
 
 .minimize-detail:hover {
-    background-color: #c4a484 !important;
-  color: white !important;
+  background-color: #f0e2d2 !important;
+  color: #282624 !important;
+  transform: translateY(-4px);
 }
 
-/* Upload Image Button (Right side) */
 .upload-image {
-  font-weight: 500 !important;
-  color: white !important;
-  border-radius: 26px !important;
-  padding: 0.5rem 1rem !important;
-  background-color: #d9b99b !important;
+  background-color: white;
+  color: #282624;
+  border-radius: 16px;
+  padding: 0.5rem 1rem;
   transition: all 0.3s ease;
+  border: none;
 }
 
 .upload-image:hover {
-  background-color: #e9ecef !important;
-  color: #282624 !important;
+  background-color: #f0e2d2; /* light beige hover */
+  color: #282624;
+  transform: translateY(-4px);
 }
+
 
 /* Controls Container inside left-controls */
 .gallery-controls {
@@ -77,7 +79,7 @@
 
 /* Dropdown Button */
 #sortDropdown {
-  background-color: #f9f9f9 !important;
+  background-color: white !important;
   color: #282624 !important;
   width: 100% !important;
   border: none;
@@ -90,14 +92,15 @@
 /* Hover / Focus state */
 #sortDropdown:hover,
 #sortDropdown:focus {
-  background-color: #c4a484 !important;
-  color: white !important;
+  background-color: #f0e2d2 !important; /* light beige hover */
+  color: #282624 !important;
+  transform: translateY(-4px);
 }
 
 /* Open dropdown */
 .dropdown.show #sortDropdown {
-  background-color: #c4a484 !important;
-  color: white !important;
+  background-color: #f0e2d2 !important;
+  color: #282624 !important;
 }
 
 /* Dropdown Menu */
@@ -112,6 +115,7 @@
 
 /* Dropdown Items */
 #sortDropdown + .dropdown-menu .dropdown-item {
+  background-color: #f0e2d2 !important;
   color: #282624 !important;
 }
 
@@ -124,9 +128,10 @@
 /* Columns container */
 .gallery-columns {
   display: flex;
-  flex: 1;
-  gap: 1.5rem;
+  flex: 1 1 auto;
+  gap: 1.5rem 1rem;
   height: 100%;
+  min-height: 0;
   transition: all 0.3s ease;
   background-color: white;
   padding: 1rem;
@@ -155,16 +160,24 @@
 }
 
 .image-item {
+  overflow: hidden;
   background: #ccc;
   aspect-ratio: 1 / 1;
   width: 100%;
-  border-radius: 12px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   transition: transform 0.3s ease, box-shadow 0.3s ease, width 0.3s ease;
+
+  /* Prevent dragging */
+  user-select: none;        /* Prevent text selection */
+  -webkit-user-drag: none; /* Chrome/Safari */
+  -moz-user-drag: none;    /* Firefox (not fully supported) */
+  -ms-user-drag: none;     /* IE/Edge */
+  pointer-events: auto;    /* Ensure clicks still work */
 }
 
 .image-item:hover {
@@ -172,18 +185,28 @@
   box-shadow: 0 8px 18px rgba(0,0,0,0.2);
 }
 
+.image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ensures it fills container while keeping aspect ratio */
+  border-radius: inherit; /* Optional if you want img to explicitly follow parent's radius */
+
+  -webkit-user-drag: none; /* Specifically prevent image drag */
+  pointer-events: none;    /* Optional if you want only the container clickable */
+}
+
 /* Right Pane */
 .gallery-right {
   flex: 1.5 1 0%; /* Add flex-basis: 0% to prevent snap */
   margin: -1rem;
   padding: 0 !important;
-  background: #e9ecef;
+  background: white;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   overflow: hidden;
+  border-bottom-right-radius: 16px;
   transform-origin: right center;
   opacity: 1;
   transform: scaleX(1);
-  border-radius: 15px;
   transition:
     flex 0.4s cubic-bezier(0.4, 0, 0.2, 1), /* smoother easing */
     opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
@@ -193,7 +216,7 @@
 
 /* Smooth minimized state */
 .gallery-right.minimized {
-  flex: 0 0 0%; /* Explicit flex-basis: 0% */*
+  flex: 0 0 0%; /* Explicit flex-basis: 0% */
   transform: scaleX(0);
   opacity: 0;
   pointer-events: none;

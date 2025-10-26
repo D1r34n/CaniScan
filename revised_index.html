@@ -214,7 +214,7 @@
             </div>
 
             <!-- Columns container -->
-            <div class="gallery-columns detail-minimized">
+            <div class="gallery-columns">
                 <!-- Left Column: Image Grid -->
                 <div class="gallery-left">
                     <div id="imageGrid" class="image-grid">
@@ -227,10 +227,18 @@
 
                 <!-- Right Column: Detail Pane -->
                 <div class="gallery-right minimized" id="detailPane">
-                    <div class="detail-content">
-                        <p>Details of selected image will appear here.</p>
+                <div class="detail-content d-flex align-items-center justify-content-center h-100">
+                    <div class="card text-center p-4" style="max-width: 300px;">
+                    <div class="card-body">
+                        <i class="bi bi-exclamation-circle display-4 mb-3" style="color: #d9b99b;"></i>
+                        <p class="card-text text-muted mb-0">
+                        Select a single file to get more information.
+                        </p>
+                    </div>
                     </div>
                 </div>
+                </div>
+
             </div>
             <!-- End of Gallery Columns -->
         </div>

@@ -193,11 +193,11 @@ if (!window._functionReloadProtected) {
         const isMinimized = detailPane.classList.contains("minimized");
         if (isMinimized) {
           detailPane.classList.remove("minimized");
-          leftColumn.style.flex = "3";
+          // leftColumn.style.flex = "3.5";
           minimizeDetail.innerHTML = "<i class='bi bi-layout-text-sidebar-reverse'></i> Hide Details";
         } else {
           detailPane.classList.add("minimized");
-          leftColumn.style.flex = "4.5";
+          // leftColumn.style.flex = "3.5";
           minimizeDetail.innerHTML = "<i class='bi bi-layout-text-sidebar-reverse'></i> Show Details";
         }
       });
@@ -738,6 +738,9 @@ if (!window._functionReloadProtected) {
     const navButtons = [homeBtn, galleryBtn, analysisBtn];
 
     function showPage(pageToShow) {
+      // Prevent re-showing the page if it’s already visible
+      if (pageToShow.style.display !== "none") return;
+
       if (!serverConnected && (pageToShow === galleryPage || pageToShow === analysisPage)) {
         alert("⚠️ You must connect to the server first!");
         return;

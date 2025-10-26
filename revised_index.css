@@ -113,7 +113,7 @@ html, body {
 .nav-btn.active {
   background-color: #d9b99b;
   color: white;
-  transform: translateY(-2px);
+  transform: translateY(-4px);
 }
 
 .nav-btn:disabled {
@@ -210,8 +210,8 @@ html, body {
 }
 
 .server-card .button:hover {
-    background-color: #c79c7a;
-    transform: translateY(-2px);
+    background-color: #bfa077; /* darker hover */
+    transform: translateY(-4px);
     box-shadow: 0 6px 16px rgba(0,0,0,0.15);
 }
 
@@ -544,6 +544,7 @@ html, body {
 
 .disconnect-btn:hover {
   background-color: #b52a3a;
+  transform: translateY(-4px);
 }
 
 /* Activity Log */
