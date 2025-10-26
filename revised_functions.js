@@ -788,3 +788,49 @@ if (!window._functionReloadProtected) {
 } else {
   console.log("%c⚠️ functions.js already initialized — skipping duplicate load.", "color: orange;");
 }
+
+  // ============================================
+  // CUSTOM DROPDOWN MENU FOR ANALYSIS PAGE LOGIC
+  // ============================================
+  const dropdownButton = document.getElementById('dropdownButton');
+  const dropdownMenu = document.getElementById('dropdownMenu');
+
+  if (dropdownButton && dropdownMenu) {
+    // Toggle dropdown on button click
+    dropdownButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdownMenu.classList.toggle('show');
+      console.log('Dropdown toggled');
+    });
+
+    // Handle dropdown item selection
+    const dropdownItems = dropdownMenu.querySelectorAll('div');
+    dropdownItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        const selectedValue = e.target.textContent.trim();
+        
+        // Update button text (keep the arrow)
+        dropdownButton.innerHTML = `${selectedValue} <span>▼</span>`;
+        
+        // Close dropdown
+        dropdownMenu.classList.remove('show');
+        
+        // Store selected model
+        window.selectedModel = selectedValue;
+        
+        console.log('Selected model:', selectedValue);
+        
+        // You can trigger any additional logic here
+        // For example, update the analysis function to use this model
+      });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!dropdownButton.contains(e.target) && !dropdownMenu.contains(e.target)) {
+        dropdownMenu.classList.remove('show');
+      }
+    });
+    
+    console.log('%c✅ Simple dropdown initialized', 'color: limegreen;');
+  }
