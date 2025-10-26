@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CaniScan - Dog Skin Disease Analyzer</title>
-    <link rel="stylesheet" href="index.css">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="revised_index.css">
+    <link rel="stylesheet" href="revised_gallery.css">
+    <link rel="stylesheet" href="revised_analysis.css">
+
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -50,100 +55,194 @@
     <div class="main-container">
 
         <!-- Home Page -->
-        <div id="homePage" class="page-content" style="display: none;">
-          <div class="home-container">
-              <div id="homeConnection" class="home-connection-section">
-                  <div class="connection-card">
-                      <div class="connection-icon"><i class="bi bi-phone"></i></div>
-                      <h2>Please connect to the server</h2>
-                      <p>Connect to the desktop server to use the gallery and analysis features.</p>
-                      <button id="connectPhoneButton" class="btn btn-primary">Connect</button>
-                  </div>
-              </div>
+        <div id="homePage" class="home-page" style="display: flex;">
 
-              <div id="galleryOverview" class="gallery-overview" style="display:none;">
-                <div class="gallery-overview-container">
-              <!-- Left column -->
-              <div class="left-column">
-                <h3>Gallery Overview</h3>
-                <div class="gallery-grid">
-                  <!-- gallery items go here -->
+            <!-- Server Card Container -->
+            <div id="serverCardContainer" class="server-card-container">
+                <div class="card server-card">
+                <div class="card-body">
+                    <i class="bi bi-wifi-off"></i>
+                    <h5 class="card-title">Please connect to server</h5>
+                    <p class="card-text text-muted">
+                    The application is unable to reach the server. Make sure your connection is active.
+                    </p>
                 </div>
-              </div>
-
-              <!-- Right column -->
-              <div class="right-column">
-                <!-- Top Row: Connected Server -->
-                <div class="top-row connected-server">
-                    <img class="connected_icon" src="images/connected_dog.jpg" alt="Device Image">
-                    <p>Connected Successfully!</p>
-                    <div class="device-dropdown">
-                      <button class="btn btn-secondary dropdown-toggle" type="button" id="deviceDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        Select Device
-                      </button>
-                      <ul class="dropdown-menu" aria-labelledby="deviceDropdown">
-                        <li><a class="dropdown-item" href="#">Device 1</a></li>
-                        <li><a class="dropdown-item" href="#">Device 2</a></li>
-                      </ul>
-                    </div>
-
-                    <button id="disconnectPhoneButton" class="disconnect-btn">Disconnect</button>
+                <div id="connectServerButton" class="button">Connect to server</div>
                 </div>
-
-
-                  <!-- Bottom Row: Activity Log -->
-                  <div class="bottom-row activity-log">
-                    <h4>Activity Log</h4>
-                    <ul class="activity-list">
-                        <li>Device connected at 10:32 AM</li>
-                        <li>Data synced successfully</li>
-                        <li>Device disconnected at 11:00 AM</li>
-                        <li>Device connected at 10:32 AM</li>
-                        <li>Data synced successfully</li>
-                        <li>Device disconnected at 11:30 AM</li>
-
-                        <!-- more items -->
-                    </ul>
-                  </div>
-
-              </div>
-
-
-              </div>
             </div>
 
-          </div>
-        </div>
+            <!-- Gallery Overview (Hidden by default) -->
+            <div id="galleryOverview" class="gallery-overview" style="display:none;">
+                <div class="gallery-overview-container">
+
+                    <!-- Left Column -->
+                    <div class="left-column">
+                        <h3>Gallery Overview</h3>
+
+                        <div class="overview-flex">
+
+                            <!-- Pie Chart Container with Outer Wrapper for Title -->
+                            <div class="pie-chart-wrapper">
+                                <h4 class="container-title">Gallery Image Distribution</h4>
+                                <div class="pie-chart-container">
+                                    <canvas id="statsPieChart"></canvas>
+                                </div>
+                            </div>
+
+
+                            <!-- Stats Cards with Container Title -->
+                            <div class="stats-cards-grid-container">
+                                <h4 class="container-title">Image Statistics</h4>
+                                <div class="stats-cards-grid">
+                                    <div class="stat-card"><span>Raw Images</span><span class="number">12</span></div>
+                                    <div class="stat-card"><span>Analyzed Images</span><span class="number">48</span></div>
+                                    <div class="stat-card"><span>Dermatitis</span><span class="number">15</span></div>
+                                    <div class="stat-card"><span>Mange</span><span class="number">10</span></div>
+                                    <div class="stat-card"><span>Hotspot</span><span class="number">8</span></div>
+                                    <div class="stat-card"><span>Healthy</span><span class="number">15</span></div>
+                                </div>
+                            </div>
+
+                        </div> <!-- end of overview-flex -->
+                    </div> <!-- end of left-column -->
+
+                    <!-- Right Column -->
+                    <div class="right-column">
+
+                       <!-- Top Row: Server Status -->
+                        <div class="top-row server-status">
+                        <img class="connected_icon" src="images/connected_dog.jpg" alt="Server Icon">
+                        <p id="serverStatusText">
+                        <i class="bi bi-wifi"></i> Server is <span id="serverStatus">inactive</span> at
+                        </p>
+                        <div id="serverIPWrapper">
+                        <span id="serverIP">Loading...</span>
+                        <button id="copyIPBtn" title="Copy IP"><i class="bi bi-clipboard"></i></button>
+                        </div>
+
+
+
+                        <button id="disconnectServerButton" class="disconnect-btn">Disconnect</button>
+                        </div>
+
+
+
+                        <!-- Bottom Row: Activity Log -->
+                        <div class="bottom-row activity-log">
+                            <h4>Activity Log</h4>
+                            <ul class="activity-list">
+                                <li>Device connected at 10:32 AM</li>
+                                <li>Data synced successfully</li>
+                                <li>Device disconnected at 11:00 AM</li>
+                                <li>Device connected at 10:32 AM</li>
+                                <li>Data synced successfully</li>
+                                <li>Device disconnected at 11:30 AM</li>
+                            </ul>
+                        </div>
+
+                    </div> <!-- end of right-column -->
+                </div> <!-- end of gallery-overview-container -->
+            </div> <!-- end of galleryOverview -->
+
+        </div> <!-- end of homePage -->
+
 
         <!-- Gallery Page -->
-        <div id="galleryPage" class="page-content" style="display:flex;">
-        <div class="gallery-container">
-            <!-- Left: Image display area -->
-            <div class="gallery-main">
-            <div class="image-grid">
-                <!-- Example images -->
+        <div id="galleryPage" class="gallery-page" style="display: none;">
+            <!-- Top Bar: Title + Controls -->
+            <div class="gallery-top-bar">
+
+                <!-- Left Controls: Sort Dropdown + Show Details -->
+                <div class="left-controls">
+                    <div class="gallery-controls">
+                        <div class="sort-dropdown">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-filter-left"></i> Sort image
+                            </button>
+                            <ul class="dropdown-menu p-2" aria-labelledby="sortDropdown" style="min-width: 200px;">
+                                <li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Analyzed" id="sortAnalyzed">
+                                    <label class="form-check-label" for="sortAnalyzed">Analyzed</label>
+                                </div>
+                                </li>
+                                <li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Raw" id="sortRaw">
+                                    <label class="form-check-label" for="sortRaw">Raw</label>
+                                </div>
+                                </li>
+                                <li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="sortDermatitis">
+                                    <label class="form-check-label" for="sortDermatitis">Dermatitis</label>
+                                </div>
+                                </li>
+                                <li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="sortMange">
+                                    <label class="form-check-label" for="sortMange">Mange</label>
+                                </div>
+                                </li>
+                                <li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="sortHotspot">
+                                    <label class="form-check-label" for="sortHotspot">Hotspot</label>
+                                </div>
+                                </li>
+                                <li>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="sortHealthy">
+                                    <label class="form-check-label" for="sortHealthy">Healthy</label>
+                                </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                    </div>
+
+                    <button id="minimizeDetail" class="btn btn-light minimize-detail">
+                        <i class="bi bi-layout-text-sidebar-reverse"></i> Show Details
+                    </button>
+                </div>
+
+                <!-- Right Control: Upload Button -->
+                <button id="uploadImage" class="btn btn-light upload-image">
+                    <i class="bi bi-box-arrow-in-down"></i> Upload Image
+                </button>
+
+            </div>
+
+            <!-- Columns container -->
+            <div class="gallery-columns">
+                <!-- Left Column: Image Grid -->
+                <div class="gallery-left">
+                    <div id="imageGrid" class="image-grid">
                 <div class="image-item" onclick="showDetails('Dog 1', 'Uploaded on Oct 20, 2025', 'Healthy skin detected')">
-                <img src="images/dog1.jpg" alt="Dog 1">
+                    <img src="images/dog1.jpg" alt="Dog 1">
                 </div>
                 <div class="image-item" onclick="showDetails('Dog 2', 'Uploaded on Oct 22, 2025', 'Possible skin issue detected')">
-                <img src="images/dog2.jpg" alt="Dog 2">
+                    <img src="images/dog2.jpg" alt="Dog 2">
                 </div>
                 <!-- More image-item divs will go here -->
-            </div>
-            </div>
+                    </div>
+                </div>
 
-            <!-- Right: Details panel -->
-            <div class="gallery-details">
-            <h3>Image Details</h3>
-            <p><strong>Name:</strong> <span id="detailName">Select an image</span></p>
-            <p><strong>Date:</strong> <span id="detailDate">–</span></p>
-            <p><strong>Remarks:</strong> <span id="detailDesc">–</span></p>
+                <!-- Right Column: Detail Pane -->
+                <div class="gallery-right minimized" id="detailPane">
+                    <div class="detail-content">
+                        <h3>Image Details</h3>
+                        <p><strong>Name:</strong> <span id="detailName">Select an image</span></p>
+                        <p><strong>Date:</strong> <span id="detailDate">–</span></p>
+                        <p><strong>Remarks:</strong> <span id="detailDesc">–</span></p>
+                    </div>
+                </div>
             </div>
         </div>
-        </div>
-
+        <!-- End of Gallery Page -->
 
         <!-- Analysis Page -->
+                <!-- Analysis Page -->
         <div id="analysisPage" class="page-content" style="display:none;">
             <div class="analysis-container">
                 <!-- Analysis History Floating Box -->
@@ -234,9 +333,12 @@
             </div>
         </div>
     </div>
+    </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
-<script src="functions.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+    <script src="revised_functions.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="gallery_chart.js"></script>
 </body>
 </html>

@@ -287,6 +287,45 @@
   border-bottom-right-radius: 5px;
 }
 
+/* Typing indicator */
+.typing-indicator .message-content {
+  background: #f8f9fa;
+  color: #6c757d;
+  border-bottom-left-radius: 5px;
+}
+
+.typing-dots {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.typing-dots span {
+  width: 4px;
+  height: 4px;
+  background-color: #6c757d;
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes typing {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .chat-input-area {
   margin-top: auto;
   padding-top: 1rem;
