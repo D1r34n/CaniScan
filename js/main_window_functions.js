@@ -43,156 +43,158 @@ if (!window._functionReloadProtected) {
     let serverConnected = false;
 
     // ================================
-// DISPLAY LOGGED-IN USER & DROPDOWN
-// ================================
-const userNameElement = document.getElementById("userName");
-const dropdownUserName = document.getElementById("dropdownUserName");
-const dropdownUserEmail = document.getElementById("dropdownUserEmail");
-if (ipcRenderer && userNameElement) {
-  ipcRenderer.on("user-data", (event, data) => {
-    console.log("%c📧 Full user data received:", "color: yellow;", data);  // ADD THIS DEBUG LINE
-    
-    if (data && data.name) {
-      userNameElement.textContent = `Hello, ${data.name}!`;
-      if (dropdownUserName) {
-        dropdownUserName.textContent = data.name;
-      }
-      if (dropdownUserEmail && data.email) {
-        console.log("%c✉️ Setting email to:", "color: yellow;", data.email);  // ADD THIS DEBUG LINE
-        dropdownUserEmail.textContent = data.email;
-      } else {
-        console.log("%c❌ Email not found in data:", "color: red;", data);  // ADD THIS DEBUG LINE
-      }
-      console.log("%c👤 Logged-in user set to:", "color: cyan;", data.name);
+    // DISPLAY LOGGED-IN USER & DROPDOWN
+    // ================================
+    const userNameElement = document.getElementById("userName");
+    const dropdownUserName = document.getElementById("dropdownUserName");
+    const dropdownUserEmail = document.getElementById("dropdownUserEmail");
+
+    let loggedInUserName = ""; // store user name globally
+
+    if (ipcRenderer && userNameElement) {
+      ipcRenderer.on("user-data", (event, data) => {
+        console.log("%c📧 Full user data received:", "color: yellow;", data);
+
+        if (data && data.name) {
+          loggedInUserName = data.name; // store globally
+          userNameElement.textContent = `Hello, ${loggedInUserName}!`;
+
+          if (dropdownUserName) dropdownUserName.textContent = loggedInUserName;
+          if (dropdownUserEmail && data.email) {
+            console.log("%c✉️ Setting email to:", "color: yellow;", data.email);
+            dropdownUserEmail.textContent = data.email;
+          } else {
+            console.log("%c❌ Email not found in data:", "color: red;", data);
+          }
+          console.log("%c👤 Logged-in user set to:", "color: cyan;", loggedInUserName);
+        }
+      });
     }
-  });
-}
 
-// User Dropdown Functionality
-const userGreeting = document.getElementById('userGreeting');
-const userDropdown = document.getElementById('userDropdown');
+    // User Dropdown Functionality
+    const userGreeting = document.getElementById('userGreeting');
+    const userDropdown = document.getElementById('userDropdown');
 
-if (userGreeting && userDropdown) {
-    console.log("%c✅ User dropdown elements found", "color: cyan;");
-    
-    // Toggle dropdown on click
-    userGreeting.addEventListener('click', (e) => {
+    if (userGreeting && userDropdown) {
+      console.log("%c✅ User dropdown elements found", "color: cyan;");
+
+      // Toggle dropdown on click
+      userGreeting.addEventListener('click', (e) => {
         e.stopPropagation();
         userDropdown.classList.toggle('show');
         userGreeting.classList.toggle('active');
         console.log("%c👆 Dropdown toggled", "color: cyan;");
-    });
+      });
 
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
         if (!userGreeting.contains(e.target)) {
-            userDropdown.classList.remove('show');
-            userGreeting.classList.remove('active');
+          userDropdown.classList.remove('show');
+          userGreeting.classList.remove('active');
         }
-    });
+      });
 
-    // Prevent dropdown from closing when clicking inside it
-    userDropdown.addEventListener('click', (e) => {
-        e.stopPropagation();
-    });
+      // Prevent dropdown from closing when clicking inside it
+      userDropdown.addEventListener('click', (e) => e.stopPropagation());
 
-    // Dropdown menu item handlers
-    const changeProfileBtn = document.getElementById('changeProfileBtn');
-    const changeAppearanceBtn = document.getElementById('changeAppearanceBtn');
-    const settingsBtn = document.getElementById('settingsBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
+      // Dropdown menu item handlers
+      const changeProfileBtn = document.getElementById('changeProfileBtn');
+      const changeAppearanceBtn = document.getElementById('changeAppearanceBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
 
-   if (changeProfileBtn) {
-    changeProfileBtn.addEventListener('click', () => {
-        // Show account selection modal
-        const accountModal = document.getElementById('accountSelectionModal');
-        if (accountModal) {
+      if (changeProfileBtn) {
+        changeProfileBtn.addEventListener('click', () => {
+          // Show account selection modal
+          const accountModal = document.getElementById('accountSelectionModal');
+          if (accountModal) {
             accountModal.classList.add('show');
             console.log("%c👥 Account selection modal opened", "color: cyan;");
-        }
-        
-        // Close dropdown
-        userDropdown.classList.remove('show');
-        userGreeting.classList.remove('active');
-    });
-}
+          }
 
-    if (changeAppearanceBtn) {
-        changeAppearanceBtn.addEventListener('click', () => {
-            alert('Change Appearance functionality - Coming soon!');
-            userDropdown.classList.remove('show');
-            userGreeting.classList.remove('active');
+          // Close dropdown
+          userDropdown.classList.remove('show');
+          userGreeting.classList.remove('active');
         });
-    }
+      }
 
-    if (settingsBtn) {
-        settingsBtn.addEventListener('click', () => {
-            alert('Settings functionality - Coming soon!');
-            userDropdown.classList.remove('show');
-            userGreeting.classList.remove('active');
+      if (changeAppearanceBtn) {
+        changeAppearanceBtn.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
         });
-    }
+      }
 
-    if (logoutBtn) {
+      if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
+            console.log('Logout clicked');
             if (confirm('Are you sure you want to log out?')) {
                 if (ipcRenderer) {
+                    console.log('Sending logout to main process...');
                     ipcRenderer.send('logout');
+                } else {
+                    console.warn('ipcRenderer not available — cannot log out!');
                 }
             }
             userDropdown.classList.remove('show');
             userGreeting.classList.remove('active');
         });
+      }
+
+      ipcRenderer.on('logout-success', () => {
+        console.log("Logged out, login window should appear");
+      });
     }
-}
 
-// ================================
-// AVATAR SELECTION MODAL LOGIC
-// ================================
-const accountModal = document.getElementById('accountSelectionModal');
-const accountModalOverlay = accountModal?.querySelector('.account-modal-overlay');
-const accountItems = accountModal?.querySelectorAll('.account-item');
-const navbarUserAvatar = document.getElementById('navbarUserAvatar');
+    // ================================
+    // AVATAR SELECTION MODAL LOGIC
+    // ================================
+    const accountModal = document.getElementById('accountSelectionModal');
+    const accountModalOverlay = accountModal?.querySelector('.account-modal-overlay');
+    const accountItems = accountModal?.querySelectorAll('.account-item');
+    const navbarUserAvatar = document.getElementById('navbarUserAvatar');
 
-// Close modal when clicking overlay
-if (accountModalOverlay) {
-    accountModalOverlay.addEventListener('click', () => {
-        accountModal.classList.remove('show');
-        console.log("%c❌ Avatar selection modal closed", "color: orange;");
-    });
-}
-
-// Handle avatar selection
-if (accountItems) {
-    accountItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const avatarName = item.getAttribute('data-account');
-            const avatarImg = item.querySelector('img').src;
-            
-            console.log(`%c🖼️ Avatar selected: ${avatarName}`, "color: yellow;");
-            
-            // Update the navbar avatar
-            if (navbarUserAvatar) {
-                navbarUserAvatar.src = avatarImg;
-            }
-            
-            // Save to localStorage
-            localStorage.setItem('userAvatar', avatarImg);
-            
-            // Close modal
+    // Close modal when clicking overlay
+    if (accountModalOverlay) {
+        accountModalOverlay.addEventListener('click', () => {
             accountModal.classList.remove('show');
-            
-            console.log("%c✅ Avatar updated successfully!", "color: limegreen;");
+            console.log("%c❌ Avatar selection modal closed", "color: orange;");
         });
-    });
-}
+    }
 
-// Load saved avatar on page load
-const savedAvatar = localStorage.getItem('userAvatar');
-if (savedAvatar && navbarUserAvatar) {
-    navbarUserAvatar.src = savedAvatar;
-    console.log("%c🖼️ Loaded saved avatar", "color: cyan;");
-}
+    // Handle avatar selection
+    if (accountItems) {
+        accountItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const avatarName = item.getAttribute('data-account');
+                const avatarImg = item.querySelector('img').src;
+                
+                console.log(`%c🖼️ Avatar selected: ${avatarName}`, "color: yellow;");
+                
+                // Update the navbar avatar
+                if (navbarUserAvatar) {
+                    navbarUserAvatar.src = avatarImg;
+                }
+                
+                // Save to localStorage
+                localStorage.setItem('userAvatar', avatarImg);
+                
+                // Close modal
+                accountModal.classList.remove('show');
+                
+                console.log("%c✅ Avatar updated successfully!", "color: limegreen;");
+            });
+        });
+    }
+
+    // Load saved avatar on page load
+    const savedAvatar = localStorage.getItem('userAvatar');
+    if (savedAvatar && navbarUserAvatar) {
+        navbarUserAvatar.src = savedAvatar;
+        console.log("%c🖼️ Loaded saved avatar", "color: cyan;");
+    }
 
     // ================================
     // FADE UTILITY FUNCTIONS
@@ -346,7 +348,15 @@ if (savedAvatar && navbarUserAvatar) {
     // GALLERY IMAGE LOADING
     // ================================
     const imageGrid = document.querySelector(".gallery-left .image-grid");
+    const refreshButton = document.getElementById('refreshButton');
 
+    let refreshInterval = 60000; // 60 seconds
+    let countdown = refreshInterval / 1000; // in seconds
+    let countdownTimer;
+
+    let analyzeModeActive = false;
+
+    // Load gallery images from server
     async function loadGalleryImages() {
       if (!imageGrid) return;
 
@@ -370,6 +380,14 @@ if (savedAvatar && navbarUserAvatar) {
 
             div.appendChild(img);
             imageGrid.appendChild(div);
+
+            // When image is clicked, show its details in the right pane
+            div.addEventListener('click', () => {
+              // Clear previous selection
+              document.querySelectorAll('.image-item.active').forEach(el => el.classList.remove('active'));
+              div.classList.add('active');
+              showImageDetails(image);
+            });
           });
         } else {
           imageGrid.innerHTML = '<div class="no-images">No images uploaded yet.</div>';
@@ -380,20 +398,195 @@ if (savedAvatar && navbarUserAvatar) {
       }
     }
 
+    function showImageDetails(image) {
+      const detailPane = document.getElementById("detailPane");
+      if (!detailPane) return;
+
+      // Example image info: adjust based on your backend data
+      const { filename, uploadDate, sizeKB, width, height } = image;
+
+      detailPane.innerHTML = `
+        <div class="detail-header">
+          <h3>Image Details</h3>
+        </div>
+        <div class="detail-body">
+          <div class="detail-preview">
+            <img src="http://localhost:5001/images/${filename}" alt="${filename}">
+          </div>
+          <div class="detail-info">
+            <p><strong>Name:</strong> ${filename}</p>
+            <p><strong>Resolution:</strong> ${width || '?'} × ${height || '?'}</p>
+            <p><strong>Size:</strong> ${sizeKB ? sizeKB + ' KB' : 'Unknown'}</p>
+            <p><strong>Uploaded:</strong> ${uploadDate ? new Date(uploadDate).toLocaleString() : 'N/A'}</p>
+          </div>
+        </div>
+      `;
+    }
+
+
+    let lastAnalyzeState = false; // remember previous state
+
+    function updateRefreshButtonText() {
+      if (!refreshButton) return;
+
+      // Detect mode change (ON <-> OFF)
+      const modeChanged = analyzeModeActive !== lastAnalyzeState;
+      lastAnalyzeState = analyzeModeActive;
+
+      // Only fade if mode has just changed
+      if (modeChanged) {
+        refreshButton.classList.add('fade-out');
+
+        setTimeout(() => {
+          if (analyzeModeActive) {
+            refreshButton.classList.add('disabled');
+            refreshButton.innerHTML = `<i class="bi bi-pause-circle"></i> Refresh Disabled`;
+          } else {
+            refreshButton.classList.remove('disabled');
+            refreshButton.innerHTML = `<i class="bi bi-arrow-clockwise"></i> Refresh (${countdown}s)`;
+          }
+          refreshButton.classList.remove('fade-out');
+        }, 300);
+      } else {
+        // Normal updates (no fade)
+        if (analyzeModeActive) {
+          refreshButton.innerHTML = `<i class="bi bi-pause-circle"></i> Refresh Disabled`;
+        } else {
+          refreshButton.innerHTML = `<i class="bi bi-arrow-clockwise"></i> Refresh (${countdown}s)`;
+        }
+      }
+    }
+
+    // Manual refresh
+    if (refreshButton) {
+      refreshButton.addEventListener('click', () => {
+        if (analyzeModeActive) {
+          console.log("⚠️ Refresh disabled during Analyze Mode.");
+          return; // 🚫 stop here, no refresh
+        }
+
+        loadGalleryImages();
+        countdown = refreshInterval / 1000;
+        updateRefreshButtonText();
+      });
+    }
+
+    // Auto-refresh every interval (only if not analyzing)
+    setInterval(() => {
+      if (galleryPage && galleryPage.style.display !== 'none' && !analyzeModeActive) {
+        loadGalleryImages();
+        countdown = refreshInterval / 1000; // reset countdown after refresh
+      }
+    }, refreshInterval);
+
+    // Countdown timer, updates every second
+    countdownTimer = setInterval(() => {
+      if (galleryPage && galleryPage.style.display !== 'none') {
+        if (!analyzeModeActive && countdown > 0) {
+          countdown--;
+        }
+        updateRefreshButtonText();
+      }
+    }, 1000);
+
+    // Initial load when gallery button is clicked
     if (galleryBtn) {
       galleryBtn.addEventListener('click', () => {
         showPage(galleryPage);
         loadGalleryImages();
+        countdown = refreshInterval / 1000;
+        updateRefreshButtonText();
       });
     }
 
-    setInterval(() => {
-      if (galleryPage && galleryPage.style.display !== 'none') {
-        loadGalleryImages();
-      }
-    }, 5000);
+    // Initialize button text
+    updateRefreshButtonText();
 
-     // Initialize analysis page when it's shown
+    // Enable Analyze mode
+    const analyzeModeButton = document.getElementById('analyzeModeButton');
+    const analyzeSelected = document.getElementById('analyzeFloatingButton');
+    const galleryColumn = document.querySelector('.gallery-columns');
+    let lastSelectedIndex = null;
+
+    analyzeModeButton.addEventListener('click', () => {
+        analyzeModeActive = !analyzeModeActive;
+
+        const images = Array.from(imageGrid.querySelectorAll('.image-item'));
+
+        if (analyzeModeActive == true) {
+            // Change button to cancel mode
+            analyzeModeButton.innerHTML = `<i class="bi bi-x-lg"></i> Cancel`;
+            analyzeModeButton.classList.add('active');
+            analyzeSelected.style.display = "block";
+
+            // Make images selectable
+            images.forEach(img => {
+                img.classList.add('selectable');
+                img.addEventListener('click', selectImage);
+            });
+
+            // Clear selection if empty space is clicked
+            galleryColumn.addEventListener('click', clearSelectionOnEmpty);
+
+        } else {
+            // Restore button text
+            analyzeModeButton.innerHTML = '<i class="bi bi-box-arrow-in-down"></i> Analyze Images';
+            analyzeModeButton.classList.remove('active');
+            analyzeSelected.style.display = "none";
+            updateRefreshButtonText();
+
+            // Remove selectable behavior
+            images.forEach(img => {
+                img.classList.remove('selectable', 'selected', 'last-selected');
+                img.removeEventListener('click', selectImage);
+            });
+
+            // Remove empty-space click listener
+            galleryColumn.removeEventListener('click', clearSelectionOnEmpty);
+
+            // Reset state
+            lastSelectedIndex = null;
+        }
+    });
+
+    // Function to handle click selection with Shift/Ctrl
+    function selectImage(e) {
+        e.stopPropagation(); // prevent triggering empty space click
+        const images = Array.from(imageGrid.querySelectorAll('.image-item'));
+        const currentIndex = images.indexOf(e.currentTarget);
+
+        if (e.ctrlKey || e.metaKey) {
+            // Toggle selection
+            e.currentTarget.classList.toggle('selected');
+            if (e.currentTarget.classList.contains('selected')) {
+                images.forEach(img => img.classList.remove('last-selected'));
+                e.currentTarget.classList.add('last-selected');
+                lastSelectedIndex = currentIndex;
+            }
+        } else if (e.shiftKey && lastSelectedIndex !== null) {
+            // Range selection
+            const [start, end] = currentIndex > lastSelectedIndex ? [lastSelectedIndex, currentIndex] : [currentIndex, lastSelectedIndex];
+            for (let i = start; i <= end; i++) {
+                images[i].classList.add('selected');
+            }
+        } else {
+            // Single selection
+            images.forEach(img => img.classList.remove('selected', 'last-selected'));
+            e.currentTarget.classList.add('selected', 'last-selected');
+            lastSelectedIndex = currentIndex;
+        }
+    }
+
+    // Clear selection when clicking empty space
+    function clearSelectionOnEmpty(e) {
+        if (!e.target.closest('.image-item')) {
+            const images = Array.from(imageGrid.querySelectorAll('.image-item'));
+            images.forEach(img => img.classList.remove('selected', 'last-selected'));
+            lastSelectedIndex = null;
+        }
+    }
+
+    // Initialize analysis page when it's shown
     function initializeAnalysisPage() {
         console.log('Initializing analysis page components...');
         try {

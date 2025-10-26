@@ -177,26 +177,29 @@ def upload_file():
 @app.route('/images', methods=['GET'])
 def list_images():
     """List all uploaded images and folders"""
+    import sys
+    print("Refreshing gallery...")
+    sys.stdout.flush()  # ensures print appears immediately
+
     try:
         path = request.args.get('path', '')
         current_path = os.path.join(UPLOAD_FOLDER, path) if path else UPLOAD_FOLDER
-        
+
         if not os.path.exists(current_path):
             return jsonify({
                 'success': False,
                 'message': 'Path not found'
             }), 404
-        
+
         images = []
         folders = []
-        
+
         for item in os.listdir(current_path):
             item_path = os.path.join(current_path, item)
-            
+
             if os.path.isdir(item_path):
-                # Count items in folder
                 item_count = len([f for f in os.listdir(item_path) 
-                                if os.path.isfile(os.path.join(item_path, f)) and allowed_file(f)])
+                                  if os.path.isfile(os.path.join(item_path, f)) and allowed_file(f)])
                 folders.append({
                     'name': item,
                     'type': 'folder',
@@ -206,19 +209,17 @@ def list_images():
             elif allowed_file(item):
                 file_size = os.path.getsize(item_path)
                 file_time = os.path.getmtime(item_path)
-                
+
                 images.append({
                     'filename': item,
                     'size': file_size,
                     'uploaded_at': datetime.fromtimestamp(file_time).isoformat(),
                     'path': os.path.join(path, item).replace('\\', '/') if path else item
                 })
-        
-        # Sort by upload time (newest first)
+
         images.sort(key=lambda x: x['uploaded_at'], reverse=True)
-        # Sort folders alphabetically
         folders.sort(key=lambda x: x['name'])
-        
+
         return jsonify({
             'success': True,
             'images': images,
@@ -230,7 +231,7 @@ def list_images():
         return jsonify({
             'success': False,
             'message': f'Failed to list images: {str(e)}'
-        }), 500
+        }), 60000
 
 @app.route('/images/<path:filepath>', methods=['GET'])
 def get_image(filepath):

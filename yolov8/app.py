@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from ultralytics import YOLO
 import cv2, base64, numpy as np, re, csv, os, bcrypt
@@ -9,6 +9,7 @@ from llm_service import llm_service
 # ----------------------------
 app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin requests, necessary for Electron <-> Flask communication
+app.secret_key = "skibidi"
 
 # ----------------------------
 # Load YOLO Model for Disease Detection
@@ -18,7 +19,7 @@ model = YOLO(r"runs\detect\train2\weights\best.pt")  # Path to trained YOLOv8 we
 # ----------------------------
 # User Database Setup
 # ----------------------------
-USERS_CSV = "users.csv"
+USERS_CSV = "csv/users.csv"
 
 # Ensure the CSV file exists; create with headers if not
 if not os.path.exists(USERS_CSV):
@@ -112,21 +113,30 @@ def register():
 
 @app.route('/login', methods=['POST'])
 def login():
-    """Handle user login and verify credentials."""
     data = request.get_json()
     email = data.get("email", "").strip()
     password = data.get("password", "").strip()
 
     user = find_user_by_email(email)
     if user and verify_password(password, user["password"]):
+        # Set session
+        session['email'] = user["email"]
+        session['name'] = user['first_name']
         return jsonify({
             "success": True,
             "message": "Login successful",
-            "name": f"{user['first_name']}",
-            "email": user["email"]  
+            "name": user['first_name'],
+            "email": user["email"]
         })
     else:
         return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.clear()  # Remove all session data
+    return jsonify({"success": True, "message": "Logged out successfully"})
+
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -194,6 +204,13 @@ def health():
     """Simple health check endpoint for Electron to confirm Flask server is running."""
     return jsonify({"status": "ok"}), 200
 
+@app.route('/status', methods=['GET'])
+def status():
+    if 'email' in session:
+        return jsonify({"logged_in": True, "email": session['email']})
+    else:
+        return jsonify({"logged_in": False})
+    
 # ----------------------------
 # Start Flask Server
 # ----------------------------

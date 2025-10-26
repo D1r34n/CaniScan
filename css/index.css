@@ -75,10 +75,11 @@ html, body {
 
 .nav-buttons {
   position: absolute;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   background-color: #f9f9f9 !important;
-  padding: 0.75rem !important;
+  padding: 0.5rem !important;
   display: flex !important;
   flex-direction: row !important;
   justify-content: center !important;
@@ -86,6 +87,7 @@ html, body {
   gap: 5rem !important;
   border-radius: 35px;
 }
+
 
 .nav-btn {
   display: flex;
@@ -109,11 +111,14 @@ html, body {
   font-size: 0.85rem;
 }
 
+.nav-btn:hover:not(:disabled) {
+  transform: translateY(-4px);
+}
+
 .nav-btn:hover:not(:disabled),
 .nav-btn.active {
   background-color: #d9b99b;
   color: white;
-  transform: translateY(-4px);
 }
 
 .nav-btn:disabled {
@@ -125,61 +130,93 @@ html, body {
 .user-greeting {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   color: #282624;
   font-weight: 500;
   background-color: #f9f9f9;
-  padding: 0.5rem 2rem;
+  padding: 2rem 1rem;
   border-radius: 35px;
   gap: 0.5rem;
-  position: relative;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease, transform 0.2s ease;
   user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
+  height: 50px;
+  position: relative; /* needed for overlay positioning */
 }
 
 .user-greeting:hover {
-    background-color: #e9e9e9;
+  transform: translateY(-4px);
 }
 
-/* Navbar Avatar */
-.navbar-avatar {
+/* Overlay for hover */
+.user-greeting .overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+    background-color: #d9b99b;
+  color: white;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-radius: 35px; /* match .user-greeting */
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none; /* overlay won’t block hover */
+}
+
+/* Show overlay on hover */
+.user-greeting:hover .overlay {
+  opacity: 1;
+}
+
+/* Single-spin animation with ease-out */
+@keyframes spin-once {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Gear icon styling */
+.user-greeting i.bi-gear-fill {
+  display: inline-block; /* allow transform */
+  margin-right: 0.5rem;  /* space between icon and text */
+}
+
+/* Trigger spin on hover */
+.user-greeting:hover i.bi-gear-fill {
+  animation: spin-once 2s ease-out forwards; /* spin gradually and keep final state */
+}
+
+.avatar-container {
   width: 40px;
   height: 40px;
+  flex-shrink: 0;
   border-radius: 50%;
+  overflow: hidden;
+  transition: width 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+}
+
+.avatar-hidden {
+  width: 0 !important; /* force collapse */
+  opacity: 0;
+}
+
+.navbar-avatar {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border: 2px solid #d9b99b;
 }
 
-.user-greeting * {
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
+#userNameContainer {
+  display: inline-block;
+  text-align: center;
+  transition: all 0.3s ease;
+  flex: 1; /* allow it to take remaining space */
 }
 
-.user-greeting span {
-    pointer-events: none;
-}
-
-.user-greeting i {
-  font-size: 2rem;
-  color: #d9b99b;
-}
-
-.user-greeting i.dropdown-arrow {
-    font-size: 0.8rem;
-    color: #6c757d;
-    transition: transform 0.3s ease;
-    margin-left: 0.5rem;
-}
-
-.user-greeting.active i.dropdown-arrow {
-    transform: rotate(180deg);
-}
 
 /* --- Main Container --- */
 .main-container {
@@ -713,6 +750,81 @@ html, body {
     color: #dc3545;
 }
 
+/* Slider for dark / light mode */
+#changeAppearanceBtn {
+    height: 100%; /* fill parent height if parent has set height */
+}
+
+/* Flexible switch to fill height */
+.switch {
+    position: relative;
+    display: flex;
+    width: 40%; /* width relative to dropdown item */
+    height: 100%; /* full height */
+    min-height: 35px; /* optional minimum for visibility */
+}
+
+/* Hide default checkbox */
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Slider styling */
+.slider {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* start position for circle + icon */
+    border: 1px solid #ccc; /* fixed: need 'solid' and proper syntax */
+    background-color: transparent;
+    border-radius: 50px; /* fully pill-shaped */
+    transition: 0.4s;
+    padding: 0 0.25rem;
+}
+
+
+/* Circle inside slider carrying the icon */
+.slider::before {
+    content: "\F5A1"; /* sun icon unicode from Bootstrap Icons */
+    font-family: "bootstrap-icons";
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    height: 70%; /* slightly smaller than slider height */
+    width: 30%;  /* circle width */
+    left: 5%;
+    bottom: 15%; /* vertically center the circle */
+    background-color: #ccc;
+    border-radius: 50%;
+    transition: 0.4s;
+    font-size: 1rem;
+    color:#343a40; /* sun color */
+}
+
+/* Move circle and switch icon on toggle */
+input:checked + .slider::before {
+    transform: translateX(200%);
+    content: "\F494"; /* moon icon unicode from Bootstrap Icons */
+    color: #f1f1f1;   /* moon color */
+    background-color: #343a40;
+}
+
+/* Optional: static background icons on slider (sun and moon at ends) */
+.slider i {
+    z-index: 1;
+    font-size: 1rem;
+    color: #fff;
+}
+
+/* Dark mode background of slider itself */
+input:checked + .slider {
+    border: 1px solid #ccc; /* fixed: need 'solid' and proper syntax */
+}
+
 /* Account Selection Modal */
 .account-modal {
     position: fixed;
@@ -742,7 +854,7 @@ html, body {
 
 .account-modal-content {
     position: relative;
-    background: #1a1a1a;
+    background: white;
     border-radius: 20px;
     padding: 3rem 2rem;
     max-width: 600px;
@@ -763,7 +875,7 @@ html, body {
 }
 
 .account-modal-content h2 {
-    color: white;
+    color: #282624;
     text-align: center;
     font-size: 2rem;
     font-weight: 700;
@@ -800,23 +912,23 @@ html, body {
 }
 
 .account-item:nth-child(1) img {
-    background: #f4d03f;
+    background: #F9D549;
 }
 
 .account-item:nth-child(2) img {
-    background: #e74c3c;
+    background: #FF3131;
 }
 
 .account-item:nth-child(3) img {
-    background: #5d6d7e;
+    background: #455C67;
 }
 
 .account-item:nth-child(4) img {
-    background: #3498db;
+    background: #004AAD;
 }
 
 .account-item:nth-child(5) img {
-    background: #f5b7a1;
+    background: #D9B99B;
 }
 
 .account-item:hover img {
@@ -825,7 +937,7 @@ html, body {
 }
 
 .account-item span {
-    color: white;
+    color: #282624;
     font-size: 1.1rem;
     font-weight: 500;
 }
