@@ -80,11 +80,7 @@ function createMainWindow() {
   });
 
   mainWindow.setMenuBarVisibility(false);
-<<<<<<< HEAD
   mainWindow.loadFile('revised_index.html');
-=======
-  mainWindow.loadFile('index.html');
->>>>>>> Joaquin
   mainWindow.setBackgroundColor('black');
 
   mainWindow.webContents.openDevTools();
