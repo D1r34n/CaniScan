@@ -17,12 +17,83 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Send username
-    ipcRenderer.on("user-data", (event, data) => {
-      const userNameSpan = document.getElementById("userName");
-      if (userNameSpan) {
-        userNameSpan.textContent = `Welcome, ${data.name}!`;
-      }
+ipcRenderer.on("user-data", (event, data) => {
+  const userNameSpan = document.getElementById("userName");
+  const dropdownUserName = document.getElementById("dropdownUserName");
+  if (userNameSpan) {
+    userNameSpan.textContent = `Hello, ${data.name}!`;
+  }
+  if (dropdownUserName) {
+    dropdownUserName.textContent = data.name;
+  }
+});
+
+// User Dropdown Functionality
+const userGreeting = document.getElementById('userGreeting');
+const userDropdown = document.getElementById('userDropdown');
+
+if (userGreeting && userDropdown) {
+    // Toggle dropdown on click
+    userGreeting.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userDropdown.classList.toggle('show');
+        userGreeting.classList.toggle('active');
     });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!userGreeting.contains(e.target)) {
+            userDropdown.classList.remove('show');
+            userGreeting.classList.remove('active');
+        }
+    });
+
+    // Prevent dropdown from closing when clicking inside it
+    userDropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
+    // Dropdown menu item handlers
+    const changeProfileBtn = document.getElementById('changeProfileBtn');
+    const changeAppearanceBtn = document.getElementById('changeAppearanceBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    if (changeProfileBtn) {
+        changeProfileBtn.addEventListener('click', () => {
+            alert('Change Profile functionality - Coming soon!');
+            userDropdown.classList.remove('show');
+            userGreeting.classList.remove('active');
+        });
+    }
+
+    if (changeAppearanceBtn) {
+        changeAppearanceBtn.addEventListener('click', () => {
+            alert('Change Appearance functionality - Coming soon!');
+            userDropdown.classList.remove('show');
+            userGreeting.classList.remove('active');
+        });
+    }
+
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+            alert('Settings functionality - Coming soon!');
+            userDropdown.classList.remove('show');
+            userGreeting.classList.remove('active');
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to log out?')) {
+                // Add your logout logic here
+                ipcRenderer.send('logout');
+            }
+            userDropdown.classList.remove('show');
+            userGreeting.classList.remove('active');
+        });
+    }
+}
 
     // Navigation Elements
     const galleryBtn = document.getElementById('galleryBtn');
@@ -673,6 +744,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 updatePhoneStatus(false);
             }
         });
+        // DEBUG: Test dropdown outside the homeBtn check
+console.log('=== DROPDOWN DEBUG START ===');
+setTimeout(() => {
+    const testGreeting = document.getElementById('userGreeting');
+    const testDropdown = document.getElementById('userDropdown');
+    
+    console.log('userGreeting element:', testGreeting);
+    console.log('userDropdown element:', testDropdown);
+    
+    if (testGreeting && testDropdown) {
+        console.log('✓ Both elements found!');
+        console.log('Dropdown initial display:', window.getComputedStyle(testDropdown).display);
+        console.log('Dropdown initial opacity:', window.getComputedStyle(testDropdown).opacity);
+        
+        testGreeting.addEventListener('click', () => {
+            console.log('>>> Greeting clicked!');
+            testDropdown.classList.toggle('show');
+            testGreeting.classList.toggle('active');
+            console.log('Dropdown classes:', testDropdown.className);
+            console.log('Dropdown computed opacity:', window.getComputedStyle(testDropdown).opacity);
+        });
+    } else {
+        console.log('✗ Elements NOT found!');
+        console.log('testGreeting:', testGreeting);
+        console.log('testDropdown:', testDropdown);
+    }
+}, 2000);
+console.log('=== DROPDOWN DEBUG END ===');
+
         startServerMonitoring();
     }
 });
