@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import cv2
 
 # Load your trained model
-model = YOLO(r"C:\Users\Edrian\Documents\VSCodeProjects\YOLOv8 Image Processing\runs\detect\train3\weights\best.pt")
+model = YOLO(r"runs\detect\train\weights\best.pt")
 
 # Run prediction
 results = model.predict(
