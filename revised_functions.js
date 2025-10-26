@@ -43,17 +43,156 @@ if (!window._functionReloadProtected) {
     let serverConnected = false;
 
     // ================================
-    // DISPLAY LOGGED-IN USER
-    // ================================
-    const userNameElement = document.getElementById("userName");
-    if (ipcRenderer && userNameElement) {
-      ipcRenderer.on("user-data", (event, data) => {
-        if (data && data.name) {
-          userNameElement.textContent = `Hello, ${data.name}!`;
-          console.log("%c👤 Logged-in user set to:", "color: cyan;", data.name);
-        }
-      });
+// DISPLAY LOGGED-IN USER & DROPDOWN
+// ================================
+const userNameElement = document.getElementById("userName");
+const dropdownUserName = document.getElementById("dropdownUserName");
+const dropdownUserEmail = document.getElementById("dropdownUserEmail");
+if (ipcRenderer && userNameElement) {
+  ipcRenderer.on("user-data", (event, data) => {
+    console.log("%c📧 Full user data received:", "color: yellow;", data);  // ADD THIS DEBUG LINE
+    
+    if (data && data.name) {
+      userNameElement.textContent = `Hello, ${data.name}!`;
+      if (dropdownUserName) {
+        dropdownUserName.textContent = data.name;
+      }
+      if (dropdownUserEmail && data.email) {
+        console.log("%c✉️ Setting email to:", "color: yellow;", data.email);  // ADD THIS DEBUG LINE
+        dropdownUserEmail.textContent = data.email;
+      } else {
+        console.log("%c❌ Email not found in data:", "color: red;", data);  // ADD THIS DEBUG LINE
+      }
+      console.log("%c👤 Logged-in user set to:", "color: cyan;", data.name);
     }
+  });
+}
+
+// User Dropdown Functionality
+const userGreeting = document.getElementById('userGreeting');
+const userDropdown = document.getElementById('userDropdown');
+
+if (userGreeting && userDropdown) {
+    console.log("%c✅ User dropdown elements found", "color: cyan;");
+    
+    // Toggle dropdown on click
+    userGreeting.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userDropdown.classList.toggle('show');
+        userGreeting.classList.toggle('active');
+        console.log("%c👆 Dropdown toggled", "color: cyan;");
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!userGreeting.contains(e.target)) {
+            userDropdown.classList.remove('show');
+            userGreeting.classList.remove('active');
+        }
+    });
+
+    // Prevent dropdown from closing when clicking inside it
+    userDropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
+    // Dropdown menu item handlers
+    const changeProfileBtn = document.getElementById('changeProfileBtn');
+    const changeAppearanceBtn = document.getElementById('changeAppearanceBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+   if (changeProfileBtn) {
+    changeProfileBtn.addEventListener('click', () => {
+        // Show account selection modal
+        const accountModal = document.getElementById('accountSelectionModal');
+        if (accountModal) {
+            accountModal.classList.add('show');
+            console.log("%c👥 Account selection modal opened", "color: cyan;");
+        }
+        
+        // Close dropdown
+        userDropdown.classList.remove('show');
+        userGreeting.classList.remove('active');
+    });
+}
+
+    if (changeAppearanceBtn) {
+        changeAppearanceBtn.addEventListener('click', () => {
+            alert('Change Appearance functionality - Coming soon!');
+            userDropdown.classList.remove('show');
+            userGreeting.classList.remove('active');
+        });
+    }
+
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+            alert('Settings functionality - Coming soon!');
+            userDropdown.classList.remove('show');
+            userGreeting.classList.remove('active');
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to log out?')) {
+                if (ipcRenderer) {
+                    ipcRenderer.send('logout');
+                }
+            }
+            userDropdown.classList.remove('show');
+            userGreeting.classList.remove('active');
+        });
+    }
+}
+
+// ================================
+// AVATAR SELECTION MODAL LOGIC
+// ================================
+const accountModal = document.getElementById('accountSelectionModal');
+const accountModalOverlay = accountModal?.querySelector('.account-modal-overlay');
+const accountItems = accountModal?.querySelectorAll('.account-item');
+const navbarUserAvatar = document.getElementById('navbarUserAvatar');
+
+// Close modal when clicking overlay
+if (accountModalOverlay) {
+    accountModalOverlay.addEventListener('click', () => {
+        accountModal.classList.remove('show');
+        console.log("%c❌ Avatar selection modal closed", "color: orange;");
+    });
+}
+
+// Handle avatar selection
+if (accountItems) {
+    accountItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const avatarName = item.getAttribute('data-account');
+            const avatarImg = item.querySelector('img').src;
+            
+            console.log(`%c🖼️ Avatar selected: ${avatarName}`, "color: yellow;");
+            
+            // Update the navbar avatar
+            if (navbarUserAvatar) {
+                navbarUserAvatar.src = avatarImg;
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('userAvatar', avatarImg);
+            
+            // Close modal
+            accountModal.classList.remove('show');
+            
+            console.log("%c✅ Avatar updated successfully!", "color: limegreen;");
+        });
+    });
+}
+
+// Load saved avatar on page load
+const savedAvatar = localStorage.getItem('userAvatar');
+if (savedAvatar && navbarUserAvatar) {
+    navbarUserAvatar.src = savedAvatar;
+    console.log("%c🖼️ Loaded saved avatar", "color: cyan;");
+}
 
     // ================================
     // FADE UTILITY FUNCTIONS

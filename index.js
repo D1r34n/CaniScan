@@ -93,10 +93,13 @@ function createMainWindow() {
   });
 
   mainWindow.webContents.on('did-finish-load', () => {
-    if (global.userName) {
-      mainWindow.webContents.send('user-data', { name: global.userName });
-    }
-  });
+  if (global.userName) {
+    mainWindow.webContents.send('user-data', { 
+      name: global.userName,
+      email: global.userEmail 
+    });
+  }
+});
 }
 
 function createTray() {
@@ -172,6 +175,7 @@ app.whenReady().then(async () => {
 // Login success
 ipcMain.on('login-success', (event, userData) => {
   global.userName = userData.name;
+  global.userEmail = userData.email;  // THIS LINE MUST BE HERE
   if (loginWindow) loginWindow.hide();
   if (!mainWindow) createMainWindow();
   else mainWindow.show();

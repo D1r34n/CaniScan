@@ -121,7 +121,8 @@ def login():
         return jsonify({
             "success": True,
             "message": "Login successful",
-            "name": f"{user['first_name']}"
+            "name": f"{user['first_name']}",
+            "email": user["email"]  
         })
     else:
         return jsonify({"success": False, "message": "Invalid credentials"}), 401
