@@ -241,6 +241,108 @@ if (!window._functionReloadProtected) {
       }
     }
 
+<<<<<<< Updated upstream:revised_functions.js
+=======
+    function showImageDetails(image) {
+      const detailPane = document.getElementById("detailPane");
+      if (!detailPane) return;
+
+      // Remove minimized class to show details
+      detailPane.classList.remove("minimized");
+
+      const { filename, uploaded_at, size, analyzed, disease, confidence } = image;
+      const sizeKB = size ? (size / 1024).toFixed(1) : 'Unknown';
+
+      detailPane.innerHTML = `
+        <div class="detail-content">
+          <div class="detail-preview">
+            <img src="http://localhost:5001/images/${filename}" alt="${filename}" style="width: 100%; max-width: 500px; border-radius: 8px; margin-bottom: 1rem;">
+          </div>
+          <div class="detail-info">
+            <h3>Image Details</h3>
+            <p><strong>Name:</strong> ${filename}</p>
+            <p><strong>Size:</strong> ${sizeKB} KB</p>
+            <p><strong>Uploaded:</strong> ${uploaded_at ? new Date(uploaded_at).toLocaleString() : 'N/A'}</p>
+            ${analyzed ? `
+            <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #d9b99b;">
+              <p style="margin: 0; font-weight: 600; color: #d9b99b;">Analysis Status: Analyzed</p>
+              <p style="margin: 0.5rem 0 0 0;"><strong>Disease:</strong> ${disease || 'N/A'}</p>
+              <p style="margin: 0.5rem 0 0 0;"><strong>Confidence:</strong> ${confidence || '0'}%</p>
+            </div>
+            ` : '<p style="margin-top: 1rem;"><em>Not analyzed</em></p>'}
+          </div>
+        </div>
+      `;
+    }
+
+
+    let lastAnalyzeState = false; // remember previous state
+
+    function updateRefreshButtonText() {
+      if (!refreshButton) return;
+
+      // Detect mode change (ON <-> OFF)
+      const modeChanged = analyzeModeActive !== lastAnalyzeState;
+      lastAnalyzeState = analyzeModeActive;
+
+      // Only fade if mode has just changed
+      if (modeChanged) {
+        refreshButton.classList.add('fade-out');
+
+        setTimeout(() => {
+          if (analyzeModeActive) {
+            refreshButton.classList.add('disabled');
+            refreshButton.innerHTML = `<i class="bi bi-pause-circle"></i> Refresh Disabled`;
+          } else {
+            refreshButton.classList.remove('disabled');
+            refreshButton.innerHTML = `<i class="bi bi-arrow-clockwise"></i> Refresh (${countdown}s)`;
+          }
+          refreshButton.classList.remove('fade-out');
+        }, 300);
+      } else {
+        // Normal updates (no fade)
+        if (analyzeModeActive) {
+          refreshButton.innerHTML = `<i class="bi bi-pause-circle"></i> Refresh Disabled`;
+        } else {
+          refreshButton.innerHTML = `<i class="bi bi-arrow-clockwise"></i> Refresh (${countdown}s)`;
+        }
+      }
+    }
+
+    // Manual refresh
+    if (refreshButton) {
+      refreshButton.addEventListener('click', () => {
+        if (analyzeModeActive) {
+          console.log("⚠️ Refresh disabled during Analyze Mode.");
+          return; // 🚫 stop here, no refresh
+        }
+
+        loadGalleryImages();
+        countdown = refreshInterval / 1000;
+        updateRefreshButtonText();
+      });
+    }
+
+    // Auto-refresh every interval (only if not analyzing)
+    setInterval(() => {
+      if (galleryPage && galleryPage.style.display !== 'none' && !analyzeModeActive) {
+        loadGalleryImages();
+        countdown = refreshInterval / 1000; // reset countdown after refresh
+      }
+    }, refreshInterval);
+
+    // Countdown timer, updates every second
+    countdownTimer = setInterval(() => {
+      if (galleryPage && galleryPage.style.display !== 'none') {
+        if (!analyzeModeActive && countdown > 0) {
+          countdown--;
+        }
+        updateRefreshButtonText();
+      }
+    }, 1000);
+
+    // Initial load when gallery button is clicked
+>>>>>>> Stashed changes:js/main_window_functions.js
     if (galleryBtn) {
       galleryBtn.addEventListener('click', () => {
         showPage(galleryPage);
@@ -266,6 +368,16 @@ if (!window._functionReloadProtected) {
             console.log('Analysis button setup complete');
             setupChatInterface();
             console.log('Chat interface setup complete');
+            
+            // Setup clear history button
+            const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+            if (clearHistoryBtn) {
+                clearHistoryBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    clearAnalysisHistory();
+                });
+            }
+            
             loadAnalysisHistory();
             console.log('Analysis history loaded');
         } catch (error) {
@@ -440,8 +552,11 @@ if (!window._functionReloadProtected) {
                 resultDiagnosis.textContent = analysisResult.disease;
                 resultConfidence.textContent = `${analysisResult.confidence}%`;
                 
-                // Add to history
-                addToAnalysisHistory(previewImage.src, analysisResult.disease, `${analysisResult.confidence}%`);
+                // Save analyzed image to gallery
+                const savedFilename = await saveAnalyzedImageToGallery(previewImage.src, analysisResult.disease, analysisResult.confidence);
+                
+                // Add to history with filename
+                await addToAnalysisHistory(previewImage.src, analysisResult.disease, `${analysisResult.confidence}%`, savedFilename);
                 
                 // Show initial LLM recommendation in chat
                 showInitialRecommendation(analysisResult.recommendation);
@@ -527,13 +642,14 @@ if (!window._functionReloadProtected) {
         }
         
         async function callLLMAPI(message) {
+            // LLM works with or without analysis - if analysis exists, it enhances the response
             const currentAnalysis = window.currentAnalysis || { diagnosis: '', confidence: 0 };
             
             // Debug: Log the data being sent to the API
             console.log('DEBUG: Sending to chat API:', {
                 message: message,
-                diagnosis: currentAnalysis.diagnosis,
-                confidence: currentAnalysis.confidence
+                diagnosis: currentAnalysis.diagnosis || 'None',
+                confidence: currentAnalysis.confidence || 0
             });
             
             const response = await fetch('http://localhost:5000/chat', {
@@ -541,10 +657,11 @@ if (!window._functionReloadProtected) {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',  // Include session cookie
                 body: JSON.stringify({
                     message: message,
-                    diagnosis: currentAnalysis.diagnosis,
-                    confidence: currentAnalysis.confidence
+                    diagnosis: currentAnalysis.diagnosis || '',
+                    confidence: currentAnalysis.confidence || 0
                 })
             });
             
@@ -595,6 +712,31 @@ if (!window._functionReloadProtected) {
             }
         });
         
+        // Ensure chat input is always focusable
+        chatInput.addEventListener('click', () => {
+            chatInput.focus();
+            if (window.require && window.require('electron')) {
+                const { ipcRenderer } = window.require('electron');
+                if (ipcRenderer) {
+                    ipcRenderer.send('focus-window');
+                }
+            }
+        });
+        
+        // Auto-focus chat input when analysis page is shown
+        const analysisPage = document.getElementById('analysisPage');
+        if (analysisPage) {
+            const observer = new MutationObserver(() => {
+                if (analysisPage.style.display !== 'none') {
+                    // Small delay to ensure page is fully rendered
+                    setTimeout(() => {
+                        chatInput.focus();
+                    }, 100);
+                }
+            });
+            observer.observe(analysisPage, { attributes: true, attributeFilter: ['style'] });
+        }
+        
         function addChatMessage(message, sender) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `chat-message ${sender}-message`;
@@ -606,11 +748,10 @@ if (!window._functionReloadProtected) {
         }
     }
     
-    // Analysis history functionality
-    function loadAnalysisHistory() {
-        // Load from localStorage or server
-        const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+    // Analysis history functionality - now user-specific from server
+    async function loadAnalysisHistory() {
         const historyList = document.getElementById('analysisHistoryList');
+        if (!historyList) return;
         
         // Clear existing items except sample
         const sampleItem = historyList.querySelector('.history-item');
@@ -619,26 +760,116 @@ if (!window._functionReloadProtected) {
             historyList.appendChild(sampleItem);
         }
         
-        // Add history items
-        history.forEach(item => {
-            addHistoryItem(item.imageSrc, item.diagnosis, item.confidence);
-        });
+        try {
+            // Load from server (user-specific)
+            const response = await fetch('http://localhost:5000/analysis-history', {
+                method: 'GET',
+                credentials: 'include'  // Include session cookie
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.history) {
+                    data.history.forEach(item => {
+                        addHistoryItem(item.imageSrc, item.diagnosis, item.confidence, item.timestamp);
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error loading analysis history:', error);
+        }
     }
     
-    function addToAnalysisHistory(imageSrc, diagnosis, confidence) {
-        const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
-        const newItem = {
-            imageSrc,
-            diagnosis,
-            confidence,
-            timestamp: new Date().toISOString()
-        };
+    async function addToAnalysisHistory(imageSrc, diagnosis, confidence, imageFilename = null) {
+        try {
+            // Save to server (user-specific)
+            const response = await fetch('http://localhost:5000/analysis-history', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',  // Include session cookie
+                body: JSON.stringify({
+                    imageSrc,
+                    diagnosis,
+                    confidence,
+                    imageFilename
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    // Add to UI
+                    const timestamp = new Date().toISOString();
+                    addHistoryItem(imageSrc, diagnosis, confidence, timestamp);
+                }
+            }
+        } catch (error) {
+            console.error('Error saving analysis history:', error);
+        }
+    }
+    
+    async function clearAnalysisHistory() {
+        // Show confirmation dialog
+        const confirmed = confirm('Are you sure you want to clear all analysis history? This action cannot be undone.');
+        if (!confirmed) return;
         
-        history.unshift(newItem); // Add to beginning
-        if (history.length > 10) history.pop(); // Keep only last 10
-        
-        localStorage.setItem('analysisHistory', JSON.stringify(history));
-        addHistoryItem(imageSrc, diagnosis, confidence, newItem.timestamp);
+        try {
+            const response = await fetch('http://localhost:5000/analysis-history/clear', {
+                method: 'POST',
+                credentials: 'include'  // Include session cookie
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    // Reload history (will be empty)
+                    loadAnalysisHistory();
+                    alert('Analysis history cleared successfully.');
+                } else {
+                    alert('Failed to clear history. Please try again.');
+                }
+            } else {
+                alert('Failed to clear history. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error clearing analysis history:', error);
+            alert('Error clearing history. Please try again.');
+        }
+    }
+    
+    // Save analyzed image to gallery with metadata
+    async function saveAnalyzedImageToGallery(imageSrc, disease, confidence) {
+        try {
+            // Convert data URL to blob
+            const response = await fetch(imageSrc);
+            const blob = await response.blob();
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('image', blob, `analyzed_${Date.now()}.jpg`);
+            formData.append('analyzed', 'true');
+            formData.append('disease', disease);
+            formData.append('confidence', confidence.toString());
+            
+            // Upload to desktop server
+            const uploadResponse = await fetch('http://localhost:5001/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (uploadResponse.ok) {
+                const data = await uploadResponse.json();
+                console.log('Analyzed image saved to gallery:', data.filename);
+                return data.filename;
+            } else {
+                console.error('Failed to save analyzed image to gallery');
+            }
+        } catch (error) {
+            console.error('Error saving analyzed image to gallery:', error);
+        }
+        return null;
     }
     
     function addHistoryItem(imageSrc, diagnosis, confidence, timestamp = null) {

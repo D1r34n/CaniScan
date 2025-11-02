@@ -330,6 +330,8 @@
   margin-top: auto;
   padding-top: 1rem;
   border-top: 1px solid #e9ecef;
+  position: relative;
+  z-index: 10;
 }
 
 .input-group {
@@ -344,6 +346,8 @@
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
   transition: border-color 0.3s ease;
+  pointer-events: auto;
+  z-index: 10;
 }
 
 .input-group .form-control:focus {
@@ -489,24 +493,29 @@
 .popup-body {
   padding: 1.5rem;
   display: flex;
+  flex-direction: column;
   gap: 1.5rem;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .popup-image {
-  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .popup-image img {
-  width: 200px;
-  height: 200px;
-  object-fit: cover;
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
   border-radius: 15px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .popup-details {
-  flex: 1;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -561,15 +570,9 @@
 
 /* Responsive popup */
 @media (max-width: 768px) {
-  .popup-body {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-  
   .popup-image img {
-    width: 150px;
-    height: 150px;
+    max-width: 250px;
+    max-height: 250px;
   }
   
   .detail-row {

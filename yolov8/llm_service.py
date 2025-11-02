@@ -71,13 +71,13 @@ Provide a helpful response focusing on practical care recommendations.
             print(f"Error initializing LLM model: {e}")
             self.model = None
     
-    def get_recommendation(self, diagnosis: str, confidence: float, user_question: str = "") -> Dict[str, str]:
+    def get_recommendation(self, diagnosis: str = "", confidence: float = 0, user_question: str = "") -> Dict[str, str]:
         """
-        Get LLM recommendation based on YOLO analysis
+        Get LLM recommendation based on YOLO analysis (analysis is optional)
         
         Args:
-            diagnosis: The disease diagnosis from YOLO
-            confidence: Confidence score (0-100)
+            diagnosis: The disease diagnosis from YOLO (optional)
+            confidence: Confidence score (0-100) (optional)
             user_question: Optional user question
             
         Returns:
@@ -93,12 +93,30 @@ Provide a helpful response focusing on practical care recommendations.
             # Debug: Print the values being passed
             print(f"DEBUG: Chat LLM receiving - Diagnosis: {diagnosis}, Confidence: {confidence}, Question: {user_question}")
             
-            # Create the prompt
-            prompt = self.prompt_template.format(
-                diagnosis=diagnosis,
-                confidence=confidence,
-                user_question=user_question or "General care recommendations"
-            )
+            # Adapt prompt based on whether analysis exists
+            if diagnosis and diagnosis != "No disease detected" and confidence > 0:
+                # Analysis available - use full prompt
+                prompt = self.prompt_template.format(
+                    diagnosis=diagnosis,
+                    confidence=confidence,
+                    user_question=user_question or "General care recommendations"
+                )
+            else:
+                # No analysis - provide general veterinary advice
+                general_prompt = f"""
+You are CaniScan AI, a specialized veterinary assistant for canine skin disease analysis and recommendations.
+
+Your role:
+- Provide helpful, accurate general veterinary advice about canine skin conditions
+- Answer questions about common skin issues, symptoms, and care
+- Always recommend consulting a veterinarian for proper diagnosis and treatment
+- Be empathetic and supportive to pet owners
+
+User Question: {user_question or "General care recommendations"}
+
+Provide helpful veterinary advice. If this relates to a specific condition, recommend consulting a veterinarian for proper diagnosis.
+"""
+                prompt = general_prompt
             
             # Get response from LLM
             response = self.model.invoke(prompt)

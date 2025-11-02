@@ -115,7 +115,7 @@ def get_ip():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    """Handle image uploads from Android app"""
+    """Handle image uploads from Android app or analyzed images"""
     try:
         if 'image' not in request.files:
             return jsonify({
@@ -133,7 +133,7 @@ def upload_file():
         
         if file and allowed_file(file.filename):
             # Generate unique filename
-            file_extension = file.filename.rsplit('.', 1)[1].lower()
+            file_extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
             unique_filename = f"{uuid.uuid4()}.{file_extension}"
             
             # Save file
@@ -143,13 +143,26 @@ def upload_file():
             # Get file info
             file_size = os.path.getsize(file_path)
             
+            # Save metadata if provided (for analyzed images)
+            metadata = {}
+            if request.form.get('analyzed') == 'true':
+                metadata['analyzed'] = True
+                metadata['disease'] = request.form.get('disease', '')
+                metadata['confidence'] = request.form.get('confidence', '0')
+                
+                # Save metadata to JSON file
+                metadata_file = os.path.join(UPLOAD_FOLDER, f"{unique_filename}.meta.json")
+                with open(metadata_file, 'w') as f:
+                    json.dump(metadata, f)
+            
             # Log the upload
             upload_info = {
                 'filename': unique_filename,
                 'original_name': file.filename,
                 'size': file_size,
                 'timestamp': datetime.now().isoformat(),
-                'client_ip': request.remote_addr
+                'client_ip': request.remote_addr,
+                **metadata
             }
             
             print(f"Image uploaded: {upload_info}")
@@ -159,7 +172,8 @@ def upload_file():
                 'message': 'Image uploaded successfully',
                 'filename': unique_filename,
                 'size': file_size,
-                'timestamp': upload_info['timestamp']
+                'timestamp': upload_info['timestamp'],
+                **metadata
             })
         else:
             return jsonify({
@@ -207,11 +221,27 @@ def list_images():
                 file_size = os.path.getsize(item_path)
                 file_time = os.path.getmtime(item_path)
                 
+<<<<<<< Updated upstream
+=======
+                # Check for metadata file
+                metadata_file = os.path.join(current_path, f"{item}.meta.json")
+                metadata = {}
+                if os.path.exists(metadata_file):
+                    try:
+                        with open(metadata_file, 'r') as f:
+                            metadata = json.load(f)
+                    except:
+                        pass
+
+>>>>>>> Stashed changes
                 images.append({
                     'filename': item,
                     'size': file_size,
                     'uploaded_at': datetime.fromtimestamp(file_time).isoformat(),
-                    'path': os.path.join(path, item).replace('\\', '/') if path else item
+                    'path': os.path.join(path, item).replace('\\', '/') if path else item,
+                    'analyzed': metadata.get('analyzed', False),
+                    'disease': metadata.get('disease', ''),
+                    'confidence': metadata.get('confidence', '0')
                 })
         
         # Sort by upload time (newest first)

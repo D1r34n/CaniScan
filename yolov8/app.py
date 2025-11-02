@@ -1,14 +1,45 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from ultralytics import YOLO
-import cv2, base64, numpy as np, re, csv, os, bcrypt
+import cv2, base64, numpy as np, re, csv, os, bcrypt, json
+from datetime import datetime
 from llm_service import llm_service
 
 # ----------------------------
 # Flask App Initialization
 # ----------------------------
 app = Flask(__name__)
+<<<<<<< Updated upstream
 CORS(app)  # Enable Cross-Origin requests, necessary for Electron <-> Flask communication
+=======
+app.secret_key = "skibidi"
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+# Add CORS headers manually for Electron compatibility
+# This approach works better with Electron's file:// protocol
+@app.after_request
+def after_request(response):
+    # Allow common origins (localhost and Electron file://)
+    origin = request.headers.get('Origin')
+    if origin:
+        # Allow any localhost or 127.0.0.1 origin
+        if (origin.startswith('http://localhost') or 
+            origin.startswith('http://127.0.0.1')):
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+    elif not origin or origin == 'null':
+        # Handle requests without Origin header (e.g., file://) - use a default localhost
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5000')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+    
+    # Always add these headers
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    
+    return response
+>>>>>>> Stashed changes
 
 # ----------------------------
 # Load YOLO Model for Disease Detection
@@ -18,13 +49,22 @@ model = YOLO(r"runs\detect\train2\weights\best.pt")  # Path to trained YOLOv8 we
 # ----------------------------
 # User Database Setup
 # ----------------------------
+<<<<<<< Updated upstream
 USERS_CSV = "users.csv"
+=======
+USERS_CSV = "csv/users.csv"
+ANALYSIS_HISTORY_DIR = "csv/analysis_history"
+>>>>>>> Stashed changes
 
 # Ensure the CSV file exists; create with headers if not
 if not os.path.exists(USERS_CSV):
     with open(USERS_CSV, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["first_name", "last_name", "email", "password"])  # CSV headers
+
+# Ensure analysis history directory exists
+if not os.path.exists(ANALYSIS_HISTORY_DIR):
+    os.makedirs(ANALYSIS_HISTORY_DIR)
 
 # ----------------------------
 # Password Utilities
@@ -64,6 +104,64 @@ def find_user_by_email(email):
         if user["email"].strip().lower() == email.strip().lower():
             return user
     return None
+
+# ----------------------------
+# Analysis History Utilities
+# ----------------------------
+def get_user_history_file(email):
+    """Get the path to user's analysis history file."""
+    # Sanitize email for filename
+    safe_email = re.sub(r'[^a-zA-Z0-9@._-]', '_', email.lower())
+    return os.path.join(ANALYSIS_HISTORY_DIR, f"{safe_email}.json")
+
+def load_user_analysis_history(email):
+    """Load analysis history for a specific user."""
+    history_file = get_user_history_file(email)
+    if os.path.exists(history_file):
+        try:
+            with open(history_file, 'r') as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_user_analysis_history(email, history):
+    """Save analysis history for a specific user."""
+    history_file = get_user_history_file(email)
+    try:
+        with open(history_file, 'w') as f:
+            json.dump(history, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving history: {e}")
+        return False
+
+def add_to_user_history(email, image_src, diagnosis, confidence, image_filename=None):
+    """Add a new analysis entry to user's history."""
+    history = load_user_analysis_history(email)
+    new_entry = {
+        "imageSrc": image_src,
+        "diagnosis": diagnosis,
+        "confidence": confidence,
+        "timestamp": datetime.now().isoformat(),
+        "imageFilename": image_filename
+    }
+    history.insert(0, new_entry)  # Add to beginning
+    if len(history) > 50:  # Keep last 50 entries
+        history = history[:50]
+    save_user_analysis_history(email, history)
+    return history
+
+def clear_user_history(email):
+    """Clear all analysis history for a user."""
+    history_file = get_user_history_file(email)
+    if os.path.exists(history_file):
+        try:
+            os.remove(history_file)
+            return True
+        except:
+            return False
+    return True  # Already empty
 
 # ----------------------------
 # Flask Routes
@@ -167,11 +265,11 @@ def analyze():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    """Handle chat messages with LLM for additional recommendations."""
+    """Handle chat messages with LLM for additional recommendations. Analysis is optional."""
     data = request.get_json()
     user_message = data.get('message', '').strip()
-    diagnosis = data.get('diagnosis', '')
-    confidence = data.get('confidence', 0)
+    diagnosis = data.get('diagnosis', '') or ''
+    confidence = data.get('confidence', 0) or 0
     
     # Debug: Print the chat request data
     print(f"DEBUG: Chat request - Message: {user_message}, Diagnosis: {diagnosis}, Confidence: {confidence}")
@@ -179,7 +277,8 @@ def chat():
     if not user_message:
         return jsonify({"success": False, "message": "Message is required"}), 400
     
-    # Get LLM recommendation based on user question and current analysis
+    # Get LLM recommendation - works with or without analysis
+    # If diagnosis/confidence provided, it increases confidence; otherwise provides general advice
     llm_response = llm_service.get_recommendation(diagnosis, confidence, user_message)
     
     return jsonify({
@@ -193,6 +292,54 @@ def health():
     """Simple health check endpoint for Electron to confirm Flask server is running."""
     return jsonify({"status": "ok"}), 200
 
+<<<<<<< Updated upstream
+=======
+@app.route('/status', methods=['GET'])
+def status():
+    if 'email' in session:
+        return jsonify({"logged_in": True, "email": session['email']})
+    else:
+        return jsonify({"logged_in": False})
+
+@app.route('/analysis-history', methods=['GET'])
+def get_analysis_history():
+    """Get analysis history for the current user."""
+    if 'email' not in session:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+    
+    email = session['email']
+    history = load_user_analysis_history(email)
+    return jsonify({"success": True, "history": history})
+
+@app.route('/analysis-history', methods=['POST'])
+def add_analysis_history():
+    """Add an analysis entry to user's history."""
+    if 'email' not in session:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+    
+    data = request.get_json()
+    email = session['email']
+    image_src = data.get('imageSrc', '')
+    diagnosis = data.get('diagnosis', '')
+    confidence = data.get('confidence', '')
+    image_filename = data.get('imageFilename', None)
+    
+    history = add_to_user_history(email, image_src, diagnosis, confidence, image_filename)
+    return jsonify({"success": True, "history": history})
+
+@app.route('/analysis-history/clear', methods=['POST'])
+def clear_analysis_history():
+    """Clear analysis history for the current user."""
+    if 'email' not in session:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+    
+    email = session['email']
+    if clear_user_history(email):
+        return jsonify({"success": True, "message": "History cleared"})
+    else:
+        return jsonify({"success": False, "message": "Failed to clear history"}), 500
+    
+>>>>>>> Stashed changes
 # ----------------------------
 # Start Flask Server
 # ----------------------------
