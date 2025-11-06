@@ -243,12 +243,10 @@ def list_images():
                     'disease': metadata.get('disease', ''),
                     'confidence': metadata.get('confidence', '0')
                 })
-        
-        # Sort by upload time (newest first)
+
         images.sort(key=lambda x: x['uploaded_at'], reverse=True)
-        # Sort folders alphabetically
         folders.sort(key=lambda x: x['name'])
-        
+
         return jsonify({
             'success': True,
             'images': images,
