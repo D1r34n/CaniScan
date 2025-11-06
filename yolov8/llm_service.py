@@ -40,7 +40,6 @@ class CaniScanLLMService:
             self.model = None
     
     def get_recommendation(self, diagnosis: str = "", confidence: float = 0, user_question: str = "") -> Dict[str, str]:
-    def get_recommendation(self, diagnosis: str = "", confidence: float = 0, user_question: str = "") -> Dict[str, str]:
         """
         Get LLM recommendation - works as regular chatbot or with image analysis context
         
