@@ -1,5 +1,5 @@
 // ------------------- Module Imports -------------------
-const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, dialog } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const axios = require('axios');
@@ -86,11 +86,32 @@ function createMainWindow() {
 
     mainWindow.webContents.openDevTools();
 
-    mainWindow.on('close', (event) => {
-        // Prevent closing, hide instead unless quitting
+    mainWindow.on('close', async (event) => {
+        // Prevent closing, show dialog unless quitting
         if (!isQuiting) {
             event.preventDefault();
-            mainWindow.hide();
+            
+            // Show exit confirmation dialog
+            const choice = await dialog.showMessageBox(mainWindow, {
+                type: 'question',
+                buttons: ['Minimize to Tray', 'Exit Application', 'Cancel'],
+                defaultId: 0,
+                cancelId: 2,
+                title: 'Exit CaniScan',
+                message: 'What would you like to do?',
+                detail: 'Choose to minimize the app to the system tray or fully exit the application.',
+                icon: path.join(__dirname, '..', 'images', 'system_tray_icon.png')
+            });
+            
+            if (choice.response === 0) {
+                // Minimize to tray
+                mainWindow.hide();
+            } else if (choice.response === 1) {
+                // Exit application
+                isQuiting = true;
+                app.quit();
+            }
+            // If response === 2 (Cancel), do nothing - window stays open
         }
     });
 
