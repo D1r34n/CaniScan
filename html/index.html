@@ -6,9 +6,9 @@
     <title>CaniScan - Dog Skin Disease Analyzer</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="revised_index.css">
-    <link rel="stylesheet" href="revised_gallery.css">
-    <link rel="stylesheet" href="revised_analysis.css">
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="../css/gallery.css">
+    <link rel="stylesheet" href="../css/analysis.css">
 
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
@@ -26,7 +26,7 @@
         <div class="container-fluid navbar-container">
             <!-- Logo -->
             <div class="navbar-brand logo-wrapper">
-                <img src="images/logo_only_dark.svg" alt="CaniScan Logo" class="logo-img">
+                <img src="../images/logo_only_dark.svg" alt="CaniScan Logo" class="logo-img">
                 <span class="brand-text">CaniScan</span>
             </div>
 
@@ -43,11 +43,52 @@
                 </button>
             </div>
 
-            <!-- User Greeting -->
-            <div class="user-greeting">
-                <i class="user-icon bi bi-person-circle"></i>
-                <span id="userName">Greetings, User!</span>
+            <!-- User Greeting hover to settings -->
+            <div class="user-greeting" id="userGreeting">
+                <div class="avatar-container">
+                    <img id="navbarUserAvatar" src="../images/Earl.png" alt="Avatar" class="navbar-avatar">
+                </div>
+                <span id="userNameContainer">
+                    <span id="userName">Greetings, User!</span>
+                </span>
+
+                <!-- Overlay for hover -->
+                <div class="overlay d-flex align-items-center justify-content-center">
+                    <i class="bi bi-gear-fill me-1"></i>
+                    <span>Settings</span>
+                </div>
             </div>
+
+    <!-- Dropdown Menu -->
+    <div class="user-dropdown" id="userDropdown">
+        <div class="dropdown-header">
+            <div class="user-name" id="dropdownUserName">User</div>
+            <div class="user-email" id="dropdownUserEmail">user@example.com</div>
+        </div>
+        <div class="dropdown-menu-items">
+            <button class="dropdown-item" id="changeProfileBtn">
+                <i class="bi bi-person"></i>
+                <span>Change Avatar</span>
+            </button>
+            <div class="dropdown-item d-flex align-items-center justify-content-start" id="changeAppearanceBtn">
+                <i class="bi bi-circle-half"></i>
+                <span>Apperance</span>
+                <label class="switch mb-0">
+                    <input type="checkbox" id="appearanceToggle">
+                    <span class="slider round">
+                    </span>
+                </label>
+            </div>
+
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item logout" id="logoutBtn">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Log Out</span>
+            </button>
+        </div>
+    </div>
+    <!-- End of dropdown menu -->
+</div>
         </div>
     </nav>
 
@@ -111,7 +152,7 @@
 
                        <!-- Top Row: Server Status -->
                         <div class="top-row server-status">
-                        <img class="connected_icon" src="images/connected_dog.jpg" alt="Server Icon">
+                        <img class="connected_icon" src="../images/connected_dog.jpg" alt="Server Icon">
                         <p id="serverStatusText">
                         <i class="bi bi-wifi"></i> Server is <span id="serverStatus">inactive</span> at
                         </p>
@@ -155,8 +196,8 @@
                 <!-- Left Controls: Sort Dropdown + Show Details -->
                 <div class="left-controls">
                     <div class="gallery-controls">
-                        <div class="sort-dropdown">
-                            <button class="btn btn-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="sort-dropdown-container">
+                            <button class="btn btn-secondary dropdown-toggle sort-dropdown" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-filter-left"></i> Sort image
                             </button>
                             <ul class="dropdown-menu p-2" aria-labelledby="sortDropdown" style="min-width: 200px;">
@@ -204,40 +245,46 @@
                     <button id="minimizeDetail" class="btn btn-light minimize-detail">
                         <i class="bi bi-layout-text-sidebar-reverse"></i> Show Details
                     </button>
+
+                    <button id="refreshButton" class="btn btn-light refresh-button">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh (5s)
+                    </button>
                 </div>
 
-                <!-- Right Control: Upload Button -->
-                <button id="uploadImage" class="btn btn-light upload-image">
-                    <i class="bi bi-box-arrow-in-down"></i> Upload Image
+                <!-- Right Control: Analyze Button -->
+                <button id="analyzeModeButton" class="btn btn-light analyze-mode-button">
+                    <i class="bi bi-box-arrow-in-down"></i> Analyze Images
                 </button>
 
             </div>
+            <!-- End of Left Controls: Sort Dropdown + Show Details -->
 
             <!-- Columns container -->
             <div class="gallery-columns">
                 <!-- Left Column: Image Grid -->
                 <div class="gallery-left">
                     <div id="imageGrid" class="image-grid">
-                <div class="image-item" onclick="showDetails('Dog 1', 'Uploaded on Oct 20, 2025', 'Healthy skin detected')">
-                    <img src="images/dog1.jpg" alt="Dog 1">
-                </div>
-                <div class="image-item" onclick="showDetails('Dog 2', 'Uploaded on Oct 22, 2025', 'Possible skin issue detected')">
-                    <img src="images/dog2.jpg" alt="Dog 2">
-                </div>
-                <!-- More image-item divs will go here -->
+                        <div class="image-item">Image 1</div>
+                        <div class="image-item">Image 2</div>
+                        <div class="image-item">Image 3</div>
+                        <div class="image-item">Image 4</div>
                     </div>
                 </div>
 
                 <!-- Right Column: Detail Pane -->
                 <div class="gallery-right minimized" id="detailPane">
                     <div class="detail-content">
-                        <h3>Image Details</h3>
-                        <p><strong>Name:</strong> <span id="detailName">Select an image</span></p>
-                        <p><strong>Date:</strong> <span id="detailDate">–</span></p>
-                        <p><strong>Remarks:</strong> <span id="detailDesc">–</span></p>
+                        <p>Details of selected image will appear here.</p>
                     </div>
                 </div>
+
+                <!-- Floating Analyze Button -->
+                <button id="analyzeFloatingButton" class="btn btn-primary analyze-floating-button">
+                    <i class="bi bi-search"></i> Analyze Selected
+                </button>
+
             </div>
+            <!-- End of Columns Container -->
         </div>
         <!-- End of Gallery Page -->
 
@@ -249,13 +296,16 @@
                 <div class="floating-box analysis-history-box">
                     <div class="box-header">
                         <h4><i class="bi bi-clock-history"></i> Analysis History</h4>
+                        <button class="btn-clear-history" id="clearHistoryBtn" title="Clear History">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
                     <div class="box-content">
                         <div class="history-list" id="analysisHistoryList">
                             <!-- Analysis history items will be dynamically added here -->
                             <div class="history-item">
                                 <div class="history-image">
-                                    <img src="images/connected_dog.jpg" alt="Analysis Image" class="history-img">
+                                    <img src="../images/connected_dog.jpg" alt="Analysis Image" class="history-img">
                                 </div>
                                 <div class="history-details">
                                     <div class="history-name">sample_image.jpg</div>
@@ -271,6 +321,15 @@
                 <div class="floating-box analyze-image-box dominant">
                     <div class="box-header">
                         <h4><i class="bi bi-search"></i> Analyze Image</h4>
+                        <div class="dropdown">
+                            <button class="dropdown-button" id="dropdownButton">
+                                Select Model <span>▼</span>
+                            </button>
+                            <div class="dropdown-content" id="dropdownMenu">
+                                <div>YoloV8n</div>
+                                <div>YoloV11n</div>
+                            </div>
+                        </div>
                     </div>
                     <div class="box-content">
                         <div class="image-upload-area" id="imageUploadArea">
@@ -335,10 +394,43 @@
     </div>
     </div>
 
+    <!-- Account Selection Modal -->
+    <div id="accountSelectionModal" class="account-modal">
+        <div class="account-modal-overlay"></div>
+        <div class="account-modal-content">
+            <h2>Choose Your Avatar</h2>
+            <div class="accounts-grid">
+                <div class="account-item" data-account="Earl">
+                    <img src="../images/Earl.png" alt="Earl">
+                    <span>LABRADOR</span>
+                </div>
+                <div class="account-item" data-account="Edrian">
+                    <img src="../images/Edrian.png" alt="Edrian">
+                    <span>POMERANIAN</span>
+                </div>
+                <div class="account-item" data-account="Ken">
+                    <img src="../images/Ken2.png" alt="Ken">
+                    <span>KEN</span>
+                </div>
+                <div class="account-item" data-account="Joaquin">
+                    <img src="../images/Joaquin.png" alt="Joaquin">
+                    <span>SHIH TZU</span>
+                </div>
+                <div class="account-item" data-account="Jignesh">
+                    <img src="../images/Jigs.png" alt="Jignesh">
+                    <span>CORGI</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
-    <script src="revised_functions.js"></script>
+    <!-- <script src="../js/main_window_functions.js"></script> -->
+
+    <script type="module" src="../js/main_window_functions.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="gallery_chart.js"></script>
+    <script src="../js/gallery_chart.js"></script>
 </body>
 </html>

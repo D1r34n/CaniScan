@@ -1,7 +1,8 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from ultralytics import YOLO
 import cv2, base64, numpy as np, re, csv, os, bcrypt
+from datetime import datetime
 from llm_service import llm_service
 
 # ----------------------------
@@ -9,6 +10,7 @@ from llm_service import llm_service
 # ----------------------------
 app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin requests, necessary for Electron <-> Flask communication
+app.secret_key = "skibidi"
 
 # ----------------------------
 # Load YOLO Model for Disease Detection
@@ -18,13 +20,26 @@ model = YOLO(r"runs\detect\train2\weights\best.pt")  # Path to trained YOLOv8 we
 # ----------------------------
 # User Database Setup
 # ----------------------------
-USERS_CSV = "users.csv"
+# Get the directory where this script is located
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+USERS_CSV = os.path.join(BASE_DIR, "csv", "users.csv")
+ANALYSIS_CSV = os.path.join(BASE_DIR, "csv", "analysis_results.csv")
+
+# Ensure the CSV directory exists
+csv_dir = os.path.join(BASE_DIR, "csv")
+os.makedirs(csv_dir, exist_ok=True)
 
 # Ensure the CSV file exists; create with headers if not
 if not os.path.exists(USERS_CSV):
     with open(USERS_CSV, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["first_name", "last_name", "email", "password"])  # CSV headers
+
+# Ensure the analysis results CSV file exists; create with headers if not
+if not os.path.exists(ANALYSIS_CSV):
+    with open(ANALYSIS_CSV, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["timestamp", "email", "diagnosis", "confidence"])  # CSV headers
 
 # ----------------------------
 # Password Utilities
@@ -64,6 +79,40 @@ def find_user_by_email(email):
         if user["email"].strip().lower() == email.strip().lower():
             return user
     return None
+
+# ----------------------------
+# Analysis Results CSV Utilities
+# ----------------------------
+def save_analysis_to_csv(email: str, diagnosis: str, confidence: float):
+    """Save analysis results to CSV file."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(ANALYSIS_CSV, mode="a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow([timestamp, email, diagnosis, round(confidence, 2)])
+
+def get_latest_analysis(email: str):
+    """Get the latest analysis result for a user from CSV."""
+    if not os.path.exists(ANALYSIS_CSV):
+        return None
+    
+    latest_analysis = None
+    latest_timestamp = None
+    
+    with open(ANALYSIS_CSV, mode="r") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            if row["email"].strip().lower() == email.strip().lower():
+                timestamp = row["timestamp"]
+                # Compare timestamps to find the latest
+                if latest_timestamp is None or timestamp > latest_timestamp:
+                    latest_timestamp = timestamp
+                    latest_analysis = {
+                        "diagnosis": row["diagnosis"],
+                        "confidence": float(row["confidence"]),
+                        "timestamp": timestamp
+                    }
+    
+    return latest_analysis
 
 # ----------------------------
 # Flask Routes
@@ -112,20 +161,30 @@ def register():
 
 @app.route('/login', methods=['POST'])
 def login():
-    """Handle user login and verify credentials."""
     data = request.get_json()
     email = data.get("email", "").strip()
     password = data.get("password", "").strip()
 
     user = find_user_by_email(email)
     if user and verify_password(password, user["password"]):
+        # Set session
+        session['email'] = user["email"]
+        session['name'] = user['first_name']
         return jsonify({
             "success": True,
             "message": "Login successful",
-            "name": f"{user['first_name']}"
+            "name": user['first_name'],
+            "email": user["email"]
         })
     else:
         return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.clear()  # Remove all session data
+    return jsonify({"success": True, "message": "Logged out successfully"})
+
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -139,12 +198,21 @@ def analyze():
     results = model(img)
     detections = results[0].boxes
 
+    # Get user email from session (or use 'anonymous' if not logged in)
+    user_email = session.get('email', 'anonymous')
+
     if detections is None or len(detections) == 0:
         # No disease detected - get general healthy recommendation
-        llm_response = llm_service.get_initial_recommendation("No disease detected", 0)
+        diagnosis = "No disease detected"
+        confidence = 0
+        
+        # Save to CSV
+        save_analysis_to_csv(user_email, diagnosis, confidence)
+        
+        llm_response = llm_service.get_initial_recommendation(diagnosis, confidence)
         return jsonify({
-            'disease': "No disease detected", 
-            'confidence': 0,
+            'disease': diagnosis, 
+            'confidence': confidence,
             'recommendation': llm_response
         })
 
@@ -155,6 +223,10 @@ def analyze():
 
     # Debug: Print the analysis results
     print(f"DEBUG: Analysis results - Disease: {disease}, Confidence: {confidence}")
+
+    # Save analysis results to CSV
+    save_analysis_to_csv(user_email, disease, confidence)
+    print(f"DEBUG: Saved analysis to CSV - Email: {user_email}, Diagnosis: {disease}, Confidence: {confidence}")
 
     # Get LLM recommendation based on the diagnosis
     llm_response = llm_service.get_initial_recommendation(disease, confidence)
@@ -167,19 +239,30 @@ def analyze():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    """Handle chat messages with LLM for additional recommendations."""
+    """Handle chat messages with LLM - reads diagnosis/confidence from CSV instead of POST data."""
     data = request.get_json()
     user_message = data.get('message', '').strip()
-    diagnosis = data.get('diagnosis', '')
-    confidence = data.get('confidence', 0)
     
-    # Debug: Print the chat request data
-    print(f"DEBUG: Chat request - Message: {user_message}, Diagnosis: {diagnosis}, Confidence: {confidence}")
+    # Get user email from session (or use 'anonymous' if not logged in)
+    user_email = session.get('email', 'anonymous')
+    
+    # Read latest analysis from CSV instead of POST data
+    latest_analysis = get_latest_analysis(user_email)
+    
+    if latest_analysis:
+        diagnosis = latest_analysis['diagnosis']
+        confidence = latest_analysis['confidence']
+        print(f"DEBUG: Chat - Read from CSV - Diagnosis: {diagnosis}, Confidence: {confidence}")
+    else:
+        # Fallback: check if diagnosis/confidence were sent in POST (for backward compatibility)
+        diagnosis = data.get('diagnosis', '').strip() if data.get('diagnosis') else ''
+        confidence = float(data.get('confidence', 0)) if data.get('confidence') else 0
+        print(f"DEBUG: Chat - No CSV data found, using POST data - Diagnosis: {diagnosis}, Confidence: {confidence}")
     
     if not user_message:
         return jsonify({"success": False, "message": "Message is required"}), 400
     
-    # Get LLM recommendation based on user question and current analysis
+    # Get LLM recommendation - works with or without image analysis data
     llm_response = llm_service.get_recommendation(diagnosis, confidence, user_message)
     
     return jsonify({
@@ -188,11 +271,81 @@ def chat():
         "status": llm_response["status"]
     })
 
+@app.route('/get-current-analysis', methods=['GET'])
+def get_current_analysis():
+    """Get the latest analysis results from CSV for the current user."""
+    user_email = session.get('email', 'anonymous')
+    latest_analysis = get_latest_analysis(user_email)
+    
+    if latest_analysis:
+        return jsonify({
+            "success": True,
+            "diagnosis": latest_analysis['diagnosis'],
+            "confidence": latest_analysis['confidence'],
+            "timestamp": latest_analysis['timestamp']
+        })
+    else:
+        return jsonify({
+            "success": False,
+            "message": "No analysis found",
+            "diagnosis": "",
+            "confidence": 0
+        })
+
+@app.route('/clear-analysis-history', methods=['POST'])
+def clear_analysis_history():
+    """Clear analysis history from CSV for the current user."""
+    user_email = session.get('email', 'anonymous')
+    
+    if not os.path.exists(ANALYSIS_CSV):
+        return jsonify({
+            "success": True,
+            "message": "No analysis history found to clear"
+        })
+    
+    try:
+        # Read all rows except those matching the user's email
+        rows_to_keep = []
+        with open(ANALYSIS_CSV, mode="r") as file:
+            reader = csv.DictReader(file)
+            fieldnames = reader.fieldnames
+            for row in reader:
+                # Keep rows that don't match the current user's email
+                if row["email"].strip().lower() != user_email.strip().lower():
+                    rows_to_keep.append(row)
+        
+        # Write back only the rows to keep
+        with open(ANALYSIS_CSV, mode="w", newline="") as file:
+            if fieldnames:
+                writer = csv.DictWriter(file, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows_to_keep)
+        
+        print(f"DEBUG: Cleared analysis history for user: {user_email}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Analysis history cleared for {user_email}"
+        })
+    except Exception as e:
+        print(f"Error clearing analysis history: {e}")
+        return jsonify({
+            "success": False,
+            "message": f"Error clearing analysis history: {str(e)}"
+        }), 500
+
 @app.route('/health', methods=['GET'])
 def health():
     """Simple health check endpoint for Electron to confirm Flask server is running."""
     return jsonify({"status": "ok"}), 200
 
+@app.route('/status', methods=['GET'])
+def status():
+    if 'email' in session:
+        return jsonify({"logged_in": True, "email": session['email']})
+    else:
+        return jsonify({"logged_in": False})
+    
 # ----------------------------
 # Start Flask Server
 # ----------------------------

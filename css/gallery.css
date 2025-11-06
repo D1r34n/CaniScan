@@ -1,0 +1,430 @@
+/* --- Gallery Page --- */
+.gallery-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: calc(100vh - 125px);
+  padding: 1rem 1rem 0 1rem; /* top, right, bottom, left */          
+  box-sizing: border-box;
+  gap: 0;                   
+  overflow: hidden;
+}
+
+/* Top Bar: Title + Controls */
+.gallery-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* distribute left/right */
+  gap: 0.5rem;
+  background-color: #d9b99b;
+  padding: 1rem;
+  border-radius: 16px 16px 0 0;
+  border-bottom: 2px solid #e9ecef;
+  flex-wrap: nowrap;
+}
+
+/* Left Controls Container: Sort + Show Details */
+.left-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 1; /* ADD THIS - allow shrinking if needed */
+  min-width: 0; /* ADD THIS - allow flex items to shrink below content size */
+}
+
+/* Minimize Detail Button */
+.minimize-detail {
+  background-color: #f9f9f9 !important;
+  color: #282624 !important;
+  width: 100% !important;
+  border: none;
+  border-radius: 30px !important;
+  padding: 0.5rem 1rem !important;
+  font-weight: 500;
+  text-align: left !important;             /* text left so arrow shows */
+  transition: all 0.3s ease !important;
+  white-space: nowrap;
+}
+
+.minimize-detail:hover {
+  background-color: #f0e2d2 !important;
+  color: #282624 !important;
+  transform: translateY(-4px);
+}
+
+.refresh-button {
+  background-color: #f9f9f9 !important;
+  color: #282624 !important;
+  width: 100% !important;
+  border: none;
+  border-radius: 30px !important;
+  font-weight: 500;
+  padding: 0.5rem 1rem !important;
+  transition: all 0.3s ease !important;
+  white-space: nowrap;
+}
+
+.refresh-button.fade-out {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+
+.refresh-button:hover {
+  background-color: #f0e2d2 !important; /* light beige hover */
+  color: #282624 !important;
+  transform: translateY(-4px) !important;
+}
+
+.analyze-mode-button {
+  background-color: #f9f9f9 !important;
+  color: #282624 !important;
+  border: none;
+  border-radius: 30px !important;
+  font-weight: 500;
+  padding: 0.5rem 1rem !important;
+  transition: all 0.3s ease !important;
+  width: 200px; /* ✅ keeps button width stable */
+  text-align: center;
+}
+
+.analyze-mode-button:hover {
+  background-color: #f0e2d2 !important; /* light beige hover */
+  color: #282624 !important;
+  transform: translateY(-4px) !important;
+}
+
+/* Active (clicked / Cancel) state */
+.analyze-mode-button.active {
+  background-color: #dc3545 !important; /* Bootstrap red */
+  color: white !important;
+  transform: none !important;
+}
+
+/* Optional: hover on active red button */
+.analyze-mode-button.active:hover {
+  background-color: #bb2d3b !important; /* slightly darker red */
+  transform: translateY(-4px) !important;
+}
+
+/* Controls Container inside left-controls */
+.gallery-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
+}
+
+/* --- Device Dropdown --- */
+.sort-dropdown-container {
+  width: 100% !important;  /* fixed width */
+  position: relative !important;
+}
+
+/* Dropdown Button */
+.sort-dropdown {
+  background-color: white !important;
+  color: #282624 !important;
+  width: 100% !important;
+  border: none;
+  border-radius: 30px !important;
+  padding: 0.5rem 1rem !important;
+  font-weight: 500;
+  text-align: left !important;             /* text left so arrow shows */
+  transition: all 0.3s ease !important;
+  white-space: nowrap;
+}
+
+/* Hover / Focus state */
+#sortDropdown:hover,
+#sortDropdown:focus {
+  background-color: #f0e2d2 !important; /* light beige hover */
+  color: #282624 !important;
+  transform: translateY(-4px);
+}
+
+/* Open dropdown */
+.dropdown.show #sortDropdown {
+  background-color: #f0e2d2 !important;
+  color: #282624 !important;
+}
+
+/* Dropdown Menu */
+#sortDropdown + .dropdown-menu {
+  width: 100% !important;
+  left: 0 !important;
+  border-radius: 6px !important;
+  border: none;
+  background-color: white !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* subtle drop shadow */
+}
+
+/* Dropdown Items */
+#sortDropdown + .dropdown-menu .dropdown-item {
+  background-color: #f0e2d2 !important;
+  color: #282624 !important;
+}
+
+#sortDropdown + .dropdown-menu .dropdown-item:hover {
+  background-color: #d9b99b !important;
+  color: white !important;
+  border-radius: 10px !important;
+}
+
+/* Columns container */
+.gallery-columns {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 1.5rem 1rem;
+  height: 100%;
+  min-height: 0;
+  transition: all 0.3s ease;
+  background-color: white;
+  padding: 1rem;
+  border-radius: 0 0 16px 16px;
+  position: relative;
+}
+
+/* Left Column */
+.gallery-left {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  padding-right: 1.5rem;
+  overflow-y: auto;
+  min-height: 0;
+  transform: scale(1);
+  transition: transform 0.3s ease, flex 0.3s ease; 
+}
+
+/* Image Grid */
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 0.15fr));
+  gap: 1rem;
+}
+
+.image-item {
+  overflow: hidden;
+  background: #ccc;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, width 0.3s ease;
+  position: relative;
+
+  /* Prevent dragging */
+  user-select: none;        /* Prevent text selection */
+  -webkit-user-drag: none; /* Chrome/Safari */
+  -moz-user-drag: none;    /* Firefox (not fully supported) */
+  -ms-user-drag: none;     /* IE/Edge */
+  pointer-events: auto;    /* Ensure clicks still work */
+}
+
+.image-item:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.2);
+}
+
+/* High light items normal */
+/* ==============================
+   NORMAL MODE SELECTION
+   ============================== */
+
+/* Highlight the clicked image (non-analyze mode) */
+.image-item.active::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.4) !important; /* lighter overlay for normal mode */
+  border-radius: 4px;
+  z-index: 1;
+  pointer-events: none;
+  transition: background 0.2s ease;
+}
+
+.image-item.active:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 15px rgba(217, 185, 155, 0.8);
+}
+
+/* Make sure normal selection doesn't show analyze overlay/icons */
+.image-item.active::before,
+.image-item.active::after {
+  content: none !important;
+}
+
+/* Highlight items when in Analyze mode */
+.image-item.selectable {
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Add a top-right Bootstrap icon when selectable */
+.image-item.selectable::after {
+  content: "\f584"; /* Unicode for bi-square */
+  font-family: "bootstrap-icons";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 1.4rem;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  width: 1.4rem;
+  height: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1; /* keeps it perfectly square */
+  pointer-events: none; /* allows clicks to pass through */
+  z-index: 2; /* stays above overlay */
+}
+
+/* Add white overlay when selected */
+.image-item.selected::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7); /* translucent white overlay */
+  z-index: 1;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+/* Change to filled square when selected */
+.image-item.selected::after {
+  content: "\F26C"; /* Unicode for bi-check-square */
+  color: #d9b99b;
+  z-index: 3;
+}
+
+/* Optional: make hover effect stronger in Analyze mode */
+.image-item.selectable:hover {
+  transform: scale(1.08);
+  box-shadow: 0 10px 22px rgba(0, 0, 255, 0.25);
+}
+
+
+.image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ensures it fills container while keeping aspect ratio */
+  border-radius: inherit; /* Optional if you want img to explicitly follow parent's radius */
+
+  -webkit-user-drag: none; /* Specifically prevent image drag */
+  pointer-events: none;    /* Optional if you want only the container clickable */
+}
+
+/* ===============================
+   RIGHT PANE (Detail Panel)
+   =============================== */
+.gallery-right {
+  flex: 1.5 1 0%; /* allow smooth flex resize */
+  margin: -1rem;
+  padding: 0 !important;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border-bottom-right-radius: 16px;
+  transform-origin: right center;
+  opacity: 1;
+  transform: scaleX(1);
+  transition:
+    flex 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth minimized state */
+.gallery-right.minimized {
+  flex: 0 0 0%;
+  transform: scaleX(0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ===============================
+   DETAIL CONTENT
+   =============================== */
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  overflow-y: auto;
+  flex: 1;
+  color: #333;
+  font-size: 0.95rem;
+  transition: opacity 0.3s ease;
+}
+
+/* Fade when minimized */
+.gallery-right.minimized .detail-content {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ===============================
+   INNER ELEMENTS
+   =============================== */
+.detail-content h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #222;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+}
+
+.detail-content img {
+  width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Info text */
+.detail-content p {
+  margin: 0.3rem 0;
+  line-height: 1.4;
+}
+
+.detail-content p strong {
+  color: #444;
+}
+
+/* ===============================
+   SCROLLBAR STYLING (Optional)
+   =============================== */
+.detail-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.detail-content::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+.detail-content::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+
+.analyze-floating-button {
+    position: absolute;
+    bottom: 1rem; /* Aligns with the 1rem padding of .gallery-columns */
+    right: 1.5rem; /* Pushes it slightly inward from the 1rem padding for a better look */
+    z-index: 100;
+    padding: 10px 20px;
+    font-size: 16px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    display: none;
+}
+
