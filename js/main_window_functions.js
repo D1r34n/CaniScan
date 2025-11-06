@@ -598,6 +598,16 @@ if (!window._functionReloadProtected) {
             console.log('Analysis button setup complete');
             setupChatInterface();
             console.log('Chat interface setup complete');
+            
+            // Setup clear history button
+            const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+            if (clearHistoryBtn) {
+                clearHistoryBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    clearAnalysisHistory();
+                });
+            }
+            
             loadAnalysisHistory();
             console.log('Analysis history loaded');
             setupClearHistoryButton();
@@ -774,8 +784,11 @@ if (!window._functionReloadProtected) {
                 resultDiagnosis.textContent = analysisResult.disease;
                 resultConfidence.textContent = `${analysisResult.confidence}%`;
                 
-                // Add to history
-                addToAnalysisHistory(previewImage.src, analysisResult.disease, `${analysisResult.confidence}%`);
+                // Save analyzed image to gallery
+                const savedFilename = await saveAnalyzedImageToGallery(previewImage.src, analysisResult.disease, analysisResult.confidence);
+                
+                // Add to history with filename
+                await addToAnalysisHistory(previewImage.src, analysisResult.disease, `${analysisResult.confidence}%`, savedFilename);
                 
                 // Show initial LLM recommendation in chat
                 showInitialRecommendation(analysisResult.recommendation);
@@ -861,13 +874,14 @@ if (!window._functionReloadProtected) {
         }
         
         async function callLLMAPI(message) {
+            // LLM works with or without analysis - if analysis exists, it enhances the response
             const currentAnalysis = window.currentAnalysis || { diagnosis: '', confidence: 0 };
             
             // Debug: Log the data being sent to the API
             console.log('DEBUG: Sending to chat API:', {
                 message: message,
-                diagnosis: currentAnalysis.diagnosis,
-                confidence: currentAnalysis.confidence
+                diagnosis: currentAnalysis.diagnosis || 'None',
+                confidence: currentAnalysis.confidence || 0
             });
             
             const response = await fetch('http://localhost:5000/chat', {
@@ -875,10 +889,11 @@ if (!window._functionReloadProtected) {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',  // Include session cookie
                 body: JSON.stringify({
                     message: message,
-                    diagnosis: currentAnalysis.diagnosis,
-                    confidence: currentAnalysis.confidence
+                    diagnosis: currentAnalysis.diagnosis || '',
+                    confidence: currentAnalysis.confidence || 0
                 })
             });
             
@@ -929,6 +944,31 @@ if (!window._functionReloadProtected) {
             }
         });
         
+        // Ensure chat input is always focusable
+        chatInput.addEventListener('click', () => {
+            chatInput.focus();
+            if (window.require && window.require('electron')) {
+                const { ipcRenderer } = window.require('electron');
+                if (ipcRenderer) {
+                    ipcRenderer.send('focus-window');
+                }
+            }
+        });
+        
+        // Auto-focus chat input when analysis page is shown
+        const analysisPage = document.getElementById('analysisPage');
+        if (analysisPage) {
+            const observer = new MutationObserver(() => {
+                if (analysisPage.style.display !== 'none') {
+                    // Small delay to ensure page is fully rendered
+                    setTimeout(() => {
+                        chatInput.focus();
+                    }, 100);
+                }
+            });
+            observer.observe(analysisPage, { attributes: true, attributeFilter: ['style'] });
+        }
+        
         function addChatMessage(message, sender) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `chat-message ${sender}-message`;
@@ -940,11 +980,10 @@ if (!window._functionReloadProtected) {
         }
     }
     
-    // Analysis history functionality
-    function loadAnalysisHistory() {
-        // Load from localStorage or server
-        const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+    // Analysis history functionality - now user-specific from server
+    async function loadAnalysisHistory() {
         const historyList = document.getElementById('analysisHistoryList');
+        if (!historyList) return;
         
         // Clear existing items except sample
         const sampleItem = historyList.querySelector('.history-item');

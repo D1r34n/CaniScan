@@ -9,6 +9,7 @@ from llm_service import llm_service
 # Flask App Initialization
 # ----------------------------
 app = Flask(__name__)
+
 CORS(app)  # Enable Cross-Origin requests, necessary for Electron <-> Flask communication
 app.secret_key = "skibidi"
 
@@ -20,6 +21,7 @@ model = YOLO(r"runs\detect\train2\weights\best.pt")  # Path to trained YOLOv8 we
 # ----------------------------
 # User Database Setup
 # ----------------------------
+
 # Get the directory where this script is located
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 USERS_CSV = os.path.join(BASE_DIR, "csv", "users.csv")
@@ -28,6 +30,7 @@ ANALYSIS_CSV = os.path.join(BASE_DIR, "csv", "analysis_results.csv")
 # Ensure the CSV directory exists
 csv_dir = os.path.join(BASE_DIR, "csv")
 os.makedirs(csv_dir, exist_ok=True)
+USERS_CSV = "users.csv"
 
 # Ensure the CSV file exists; create with headers if not
 if not os.path.exists(USERS_CSV):
