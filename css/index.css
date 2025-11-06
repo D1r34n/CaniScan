@@ -54,7 +54,7 @@ html, body {
   justify-content: space-between;
   padding: 1rem 3rem !important;
   margin-top: 1.5rem;
-  position: relative; /* allows absolute positioning for nav-buttons */
+  position: relative;
 }
 
 .logo-wrapper {
@@ -75,10 +75,11 @@ html, body {
 
 .nav-buttons {
   position: absolute;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   background-color: #f9f9f9 !important;
-  padding: 0.75rem !important;
+  padding: 0.5rem !important;
   display: flex !important;
   flex-direction: row !important;
   justify-content: center !important;
@@ -86,6 +87,7 @@ html, body {
   gap: 5rem !important;
   border-radius: 35px;
 }
+
 
 .nav-btn {
   display: flex;
@@ -109,11 +111,14 @@ html, body {
   font-size: 0.85rem;
 }
 
+.nav-btn:hover:not(:disabled) {
+  transform: translateY(-4px);
+}
+
 .nav-btn:hover:not(:disabled),
 .nav-btn.active {
   background-color: #d9b99b;
   color: white;
-  transform: translateY(-2px);
 }
 
 .nav-btn:disabled {
@@ -125,27 +130,102 @@ html, body {
 .user-greeting {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   color: #282624;
   font-weight: 500;
   background-color: #f9f9f9;
-  padding: 0.5rem 2rem;
+  padding: 2rem 1rem;
   border-radius: 35px;
   gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease, transform 0.2s ease;
+  user-select: none;
+  height: 50px;
+  position: relative; /* needed for overlay positioning */
 }
 
-.user-greeting i {
-  font-size: 2rem;
-  color: #d9b99b;
+.user-greeting:hover {
+  transform: translateY(-4px);
 }
+
+/* Overlay for hover */
+.user-greeting .overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+    background-color: #d9b99b;
+  color: white;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-radius: 35px; /* match .user-greeting */
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none; /* overlay won’t block hover */
+}
+
+/* Show overlay on hover */
+.user-greeting:hover .overlay {
+  opacity: 1;
+}
+
+/* Single-spin animation with ease-out */
+@keyframes spin-once {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Gear icon styling */
+.user-greeting i.bi-gear-fill {
+  display: inline-block; /* allow transform */
+  margin-right: 0.5rem;  /* space between icon and text */
+}
+
+/* Trigger spin on hover */
+.user-greeting:hover i.bi-gear-fill {
+  animation: spin-once 2s ease-out forwards; /* spin gradually and keep final state */
+}
+
+.avatar-container {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  transition: width 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+}
+
+.avatar-hidden {
+  width: 0 !important; /* force collapse */
+  opacity: 0;
+}
+
+.navbar-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#userNameContainer {
+  display: inline-block;
+  text-align: center;
+  transition: all 0.3s ease;
+  flex: 1; /* allow it to take remaining space */
+}
+
 
 /* --- Main Container --- */
 .main-container {
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: calc(100vh - 150px); /* navbar height */
+  height: calc(100vh - 150px);
 }
 
 /* --- Home Page --- */
@@ -159,14 +239,14 @@ html, body {
 
 /* --- Server Card --- */
 .server-card {
-    max-width: 600px; /* increased width */
-    width: 90%; /* makes it responsive */
+    max-width: 600px;
+    width: 90%;
     text-align: center;
     box-shadow: 0 6px 18px rgba(0,0,0,0.15);
     border-radius: 16px;
     border: none;
     background-color: #fff;
-    padding: 3rem 2rem; /* more breathing space */
+    padding: 3rem 2rem;
     transform: scale(1);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -177,20 +257,20 @@ html, body {
 }
 
 .server-card .card-body i {
-    font-size: 3rem; /* bigger icon */
+    font-size: 3rem;
     color: #dc3545;
     margin-bottom: 15px;
 }
 
 .server-card .card-title {
-    font-size: 1.75rem; /* bigger title text */
+    font-size: 1.75rem;
     font-weight: 700;
     color: #333;
     margin-bottom: 0.75rem;
 }
 
 .server-card .card-text {
-    font-size: 1.1rem; /* larger message text */
+    font-size: 1.1rem;
     color: #6c757d;
 }
 
@@ -210,8 +290,8 @@ html, body {
 }
 
 .server-card .button:hover {
-    background-color: #c79c7a;
-    transform: translateY(-2px);
+    background-color: #bfa077; /* darker hover */
+    transform: translateY(-4px);
     box-shadow: 0 6px 16px rgba(0,0,0,0.15);
 }
 
@@ -219,12 +299,12 @@ html, body {
 .gallery-overview {
   display: flex;
   width: 100%;
-  height: calc(100vh - 125px); /* Subtract navbar height */
+  height: calc(100vh - 125px);
   margin-top: 0;
   padding: 0.5rem 0rem;
   justify-content: center;
   box-sizing: border-box;
-  overflow: hidden; /* prevent overall overflow */
+  overflow: hidden;
 }
 
 .gallery-overview-container {
@@ -242,13 +322,13 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  flex: 1 1 auto;       /* allow column to grow/shrink */
+  flex: 1 1 auto;
   background: white;
   padding: 1rem;
   border-radius: 15px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   overflow: hidden;
-  min-height: 0;        /* important for flex children to shrink */
+  min-height: 0;
   transform: scale(1);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -267,28 +347,28 @@ html, body {
   display: flex;
   gap: 1.5rem;
   flex-wrap: wrap;
-  justify-content: flex-start; /* left-align chart + cards */
-  align-items: stretch;        /* make children same height */
-  flex: 1 1 auto;              /* take remaining space */
-  min-height: 0;               /* allows proper shrinking */
+  justify-content: flex-start;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* --- Gallery Container Titles --- */
 .container-title {
     font-size: 1.2rem;
     font-weight: 600;
-    margin-bottom: 0.75rem; /* space below title before content */
+    margin-bottom: 0.75rem;
     color: #333;
-    text-align: left; /* aligns with left edge of container */
+    text-align: left;
 }
 
 /* Wrapper for Pie Chart + Title */
 .pie-chart-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;          /* space between title and chart */
-    flex: 1 1 40%;        /* width inside overview-flex */
-    min-height: 250px;    /* optional minimum height */
+    gap: 0.5rem;
+    flex: 1 1 40%;
+    min-height: 250px;
     
     border-radius: 15px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -304,7 +384,7 @@ html, body {
 
 /* Pie chart container keeps chart styling */
 .pie-chart-container {
-    flex: 1 1 auto;       /* fill remaining space inside wrapper */
+    flex: 1 1 auto;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -313,10 +393,10 @@ html, body {
 
 /* Stats Cards Grid Container to include title spacing */
 .stats-cards-grid-container {
-    flex: 2 1 55%; /* take remaining space */
+    flex: 2 1 55%;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem; /* spacing between title and grid */
+    gap: 0.75rem;
     
     background: white;
     border-radius: 15px;
@@ -333,14 +413,14 @@ html, body {
 
 /* Stats Cards Grid */
 .stats-cards-grid {
-  flex: 2 1 55%;         /* take remaining space */
+  flex: 2 1 55%;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(2, 1fr);
   gap: 1rem;
   width: 100%;
-  height: auto;           /* flexible height */
-  min-height: 0;          /* allows proper shrinking */
+  height: auto;
+  min-height: 0;
   padding: 1rem;
   overflow: hidden;
 }
@@ -352,9 +432,9 @@ html, body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* space label at top, number at bottom */
+  justify-content: space-between;
   align-items: flex-start;
-  padding: 1rem;                   /* space inside card */
+  padding: 1rem;
   text-align: left;
   color: white;
   cursor: default;
@@ -367,16 +447,16 @@ html, body {
 /* Label text */
 .stat-card span:first-child {
   font-size: 1rem;
-  line-height: 1.2rem;   /* consistent line spacing */
-  margin-bottom: 0;      /* spacing is handled by flex */
+  line-height: 1.2rem;
+  margin-bottom: 0;
 }
 
 /* Number text - thin */
 .stat-card .number {
   font-size: 1.5rem;
-  font-weight: 300;      /* thin */
+  font-weight: 300;
   display: block;
-  margin: 0;             /* remove extra spacing */
+  margin: 0;
 }
 
 /* Hover effect */
@@ -388,7 +468,7 @@ html, body {
 
 /* Example unique backgrounds & colors */
 .stat-card:nth-child(1) {
-  background-color: rgb(119, 112, 112); /* 0.5 = 50% opacity */
+  background-color: rgb(119, 112, 112);
   background-blend-mode: overlay;
 }
 
@@ -424,7 +504,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  flex: 0 0 300px; /* fixed width for right column */
+  flex: 0 0 300px;
   height: 100%;
 }
 
@@ -473,7 +553,7 @@ html, body {
 .connected_icon {
   width: 45%;
   display: block;
-  margin: 0 auto; /* center the icon */
+  margin: 0 auto;
 }
 
 /* Status text (first line) */
@@ -490,7 +570,7 @@ html, body {
 
 /* Make Wi-Fi icon green */
 #serverStatusText i.bi-wifi {
-    color: #28a745; /* Bootstrap green */
+    color: #28a745;
 }
 
 /* IP + copy button (second line) */
@@ -539,11 +619,12 @@ html, body {
   transition: all 0.3s ease;
   width: 80%;
   display: block;
-  margin: 0.5rem auto 0 auto; /* center the button */
+  margin: 0.5rem auto 0 auto;
 }
 
 .disconnect-btn:hover {
   background-color: #b52a3a;
+  transform: translateY(-4px);
 }
 
 /* Activity Log */
@@ -582,3 +663,293 @@ html, body {
   background: transparent;
 }
 
+/* User Dropdown Styles */
+.user-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    min-width: 250px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.user-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    background: linear-gradient(135deg, #d9b99b, #c4a484);
+    color: white;
+}
+
+.dropdown-header .user-name {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.dropdown-header .user-email {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+.dropdown-menu-items {
+    padding: 0.5rem 0;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    color: #282624;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font-size: 0.95rem;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(217, 185, 155, 0.1);
+    color: #d9b99b;
+}
+
+.dropdown-item i {
+    font-size: 1.1rem;
+    width: 20px;
+    text-align: center;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background-color: #e9ecef;
+    margin: 0.5rem 0;
+}
+
+.dropdown-item.logout {
+    color: #dc3545;
+}
+
+.dropdown-item.logout:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+}
+
+/* Slider for dark / light mode */
+#changeAppearanceBtn {
+    height: 100%; /* fill parent height if parent has set height */
+}
+
+/* Flexible switch to fill height */
+.switch {
+    position: relative;
+    display: flex;
+    width: 40%; /* width relative to dropdown item */
+    height: 100%; /* full height */
+    min-height: 35px; /* optional minimum for visibility */
+}
+
+/* Hide default checkbox */
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Slider styling */
+.slider {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* start position for circle + icon */
+    border: 1px solid #ccc; /* fixed: need 'solid' and proper syntax */
+    background-color: transparent;
+    border-radius: 50px; /* fully pill-shaped */
+    transition: 0.4s;
+    padding: 0 0.25rem;
+}
+
+
+/* Circle inside slider carrying the icon */
+.slider::before {
+    content: "\F5A1"; /* sun icon unicode from Bootstrap Icons */
+    font-family: "bootstrap-icons";
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    height: 70%; /* slightly smaller than slider height */
+    width: 30%;  /* circle width */
+    left: 5%;
+    bottom: 15%; /* vertically center the circle */
+    background-color: #ccc;
+    border-radius: 50%;
+    transition: 0.4s;
+    font-size: 1rem;
+    color:#343a40; /* sun color */
+}
+
+/* Move circle and switch icon on toggle */
+input:checked + .slider::before {
+    transform: translateX(200%);
+    content: "\F494"; /* moon icon unicode from Bootstrap Icons */
+    color: #f1f1f1;   /* moon color */
+    background-color: #343a40;
+}
+
+/* Optional: static background icons on slider (sun and moon at ends) */
+.slider i {
+    z-index: 1;
+    font-size: 1rem;
+    color: #fff;
+}
+
+/* Dark mode background of slider itself */
+input:checked + .slider {
+    border: 1px solid #ccc; /* fixed: need 'solid' and proper syntax */
+}
+
+/* Account Selection Modal */
+.account-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.account-modal.show {
+    display: flex;
+}
+
+.account-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+}
+
+.account-modal-content {
+    position: relative;
+    background: white;
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    max-width: 600px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.account-modal-content h2 {
+    color: #282624;
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+}
+
+.accounts-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    justify-items: center;
+}
+
+.account-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.account-item:hover {
+    transform: scale(1.1);
+}
+
+.account-item img {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid transparent;
+    transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.account-item:nth-child(1) img {
+    background: #F9D549;
+}
+
+.account-item:nth-child(2) img {
+    background: #FF3131;
+}
+
+.account-item:nth-child(3) img {
+    background: #455C67;
+}
+
+.account-item:nth-child(4) img {
+    background: #004AAD;
+}
+
+.account-item:nth-child(5) img {
+    background: #D9B99B;
+}
+
+.account-item:hover img {
+    border-color: white;
+    transform: scale(1.05);
+}
+
+.account-item span {
+    color: #282624;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+/* Responsive for smaller screens */
+@media (max-width: 600px) {
+    .accounts-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .account-item img {
+        width: 100px;
+        height: 100px;
+    }
+}

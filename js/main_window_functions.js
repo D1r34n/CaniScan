@@ -43,16 +43,157 @@ if (!window._functionReloadProtected) {
     let serverConnected = false;
 
     // ================================
-    // DISPLAY LOGGED-IN USER
+    // DISPLAY LOGGED-IN USER & DROPDOWN
     // ================================
     const userNameElement = document.getElementById("userName");
+    const dropdownUserName = document.getElementById("dropdownUserName");
+    const dropdownUserEmail = document.getElementById("dropdownUserEmail");
+
+    let loggedInUserName = ""; // store user name globally
+
     if (ipcRenderer && userNameElement) {
       ipcRenderer.on("user-data", (event, data) => {
+        console.log("%c📧 Full user data received:", "color: yellow;", data);
+
         if (data && data.name) {
-          userNameElement.textContent = `Hello, ${data.name}!`;
-          console.log("%c👤 Logged-in user set to:", "color: cyan;", data.name);
+          loggedInUserName = data.name; // store globally
+          userNameElement.textContent = `Hello, ${loggedInUserName}!`;
+
+          if (dropdownUserName) dropdownUserName.textContent = loggedInUserName;
+          if (dropdownUserEmail && data.email) {
+            console.log("%c✉️ Setting email to:", "color: yellow;", data.email);
+            dropdownUserEmail.textContent = data.email;
+          } else {
+            console.log("%c❌ Email not found in data:", "color: red;", data);
+          }
+          console.log("%c👤 Logged-in user set to:", "color: cyan;", loggedInUserName);
         }
       });
+    }
+
+    // User Dropdown Functionality
+    const userGreeting = document.getElementById('userGreeting');
+    const userDropdown = document.getElementById('userDropdown');
+
+    if (userGreeting && userDropdown) {
+      console.log("%c✅ User dropdown elements found", "color: cyan;");
+
+      // Toggle dropdown on click
+      userGreeting.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userDropdown.classList.toggle('show');
+        userGreeting.classList.toggle('active');
+        console.log("%c👆 Dropdown toggled", "color: cyan;");
+      });
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!userGreeting.contains(e.target)) {
+          userDropdown.classList.remove('show');
+          userGreeting.classList.remove('active');
+        }
+      });
+
+      // Prevent dropdown from closing when clicking inside it
+      userDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+      // Dropdown menu item handlers
+      const changeProfileBtn = document.getElementById('changeProfileBtn');
+      const changeAppearanceBtn = document.getElementById('changeAppearanceBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      if (changeProfileBtn) {
+        changeProfileBtn.addEventListener('click', () => {
+          // Show account selection modal
+          const accountModal = document.getElementById('accountSelectionModal');
+          if (accountModal) {
+            accountModal.classList.add('show');
+            console.log("%c👥 Account selection modal opened", "color: cyan;");
+          }
+
+          // Close dropdown
+          userDropdown.classList.remove('show');
+          userGreeting.classList.remove('active');
+        });
+      }
+
+      if (changeAppearanceBtn) {
+        changeAppearanceBtn.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+        });
+      }
+
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            console.log('Logout clicked');
+            if (confirm('Are you sure you want to log out?')) {
+                if (ipcRenderer) {
+                    console.log('Sending logout to main process...');
+                    ipcRenderer.send('logout');
+                } else {
+                    console.warn('ipcRenderer not available — cannot log out!');
+                }
+            }
+            userDropdown.classList.remove('show');
+            userGreeting.classList.remove('active');
+        });
+      }
+
+      ipcRenderer.on('logout-success', () => {
+        console.log("Logged out, login window should appear");
+      });
+    }
+
+    // ================================
+    // AVATAR SELECTION MODAL LOGIC
+    // ================================
+    const accountModal = document.getElementById('accountSelectionModal');
+    const accountModalOverlay = accountModal?.querySelector('.account-modal-overlay');
+    const accountItems = accountModal?.querySelectorAll('.account-item');
+    const navbarUserAvatar = document.getElementById('navbarUserAvatar');
+
+    // Close modal when clicking overlay
+    if (accountModalOverlay) {
+        accountModalOverlay.addEventListener('click', () => {
+            accountModal.classList.remove('show');
+            console.log("%c❌ Avatar selection modal closed", "color: orange;");
+        });
+    }
+
+    // Handle avatar selection
+    if (accountItems) {
+        accountItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const avatarName = item.getAttribute('data-account');
+                const avatarImg = item.querySelector('img').src;
+                
+                console.log(`%c🖼️ Avatar selected: ${avatarName}`, "color: yellow;");
+                
+                // Update the navbar avatar
+                if (navbarUserAvatar) {
+                    navbarUserAvatar.src = avatarImg;
+                }
+                
+                // Save to localStorage
+                localStorage.setItem('userAvatar', avatarImg);
+                
+                // Close modal
+                accountModal.classList.remove('show');
+                
+                console.log("%c✅ Avatar updated successfully!", "color: limegreen;");
+            });
+        });
+    }
+
+    // Load saved avatar on page load
+    const savedAvatar = localStorage.getItem('userAvatar');
+    if (savedAvatar && navbarUserAvatar) {
+        navbarUserAvatar.src = savedAvatar;
+        console.log("%c🖼️ Loaded saved avatar", "color: cyan;");
     }
 
     // ================================
@@ -193,11 +334,11 @@ if (!window._functionReloadProtected) {
         const isMinimized = detailPane.classList.contains("minimized");
         if (isMinimized) {
           detailPane.classList.remove("minimized");
-          leftColumn.style.flex = "3";
+          // leftColumn.style.flex = "3.5";
           minimizeDetail.innerHTML = "<i class='bi bi-layout-text-sidebar-reverse'></i> Hide Details";
         } else {
           detailPane.classList.add("minimized");
-          leftColumn.style.flex = "4.5";
+          // leftColumn.style.flex = "3.5";
           minimizeDetail.innerHTML = "<i class='bi bi-layout-text-sidebar-reverse'></i> Show Details";
         }
       });
@@ -207,7 +348,15 @@ if (!window._functionReloadProtected) {
     // GALLERY IMAGE LOADING
     // ================================
     const imageGrid = document.querySelector(".gallery-left .image-grid");
+    const refreshButton = document.getElementById('refreshButton');
 
+    let refreshInterval = 60000; // 60 seconds
+    let countdown = refreshInterval / 1000; // in seconds
+    let countdownTimer;
+
+    let analyzeModeActive = false;
+
+    // Load gallery images from server
     async function loadGalleryImages() {
       if (!imageGrid) return;
 
@@ -231,6 +380,14 @@ if (!window._functionReloadProtected) {
 
             div.appendChild(img);
             imageGrid.appendChild(div);
+
+            // When image is clicked, show its details in the right pane
+            div.addEventListener('click', () => {
+              // Clear previous selection
+              document.querySelectorAll('.image-item.active').forEach(el => el.classList.remove('active'));
+              div.classList.add('active');
+              showImageDetails(image);
+            });
           });
         } else {
           imageGrid.innerHTML = '<div class="no-images">No images uploaded yet.</div>';
@@ -241,20 +398,195 @@ if (!window._functionReloadProtected) {
       }
     }
 
+    function showImageDetails(image) {
+      const detailPane = document.getElementById("detailPane");
+      if (!detailPane) return;
+
+      // Example image info: adjust based on your backend data
+      const { filename, uploadDate, sizeKB, width, height } = image;
+
+      detailPane.innerHTML = `
+        <div class="detail-header">
+          <h3>Image Details</h3>
+        </div>
+        <div class="detail-body">
+          <div class="detail-preview">
+            <img src="http://localhost:5001/images/${filename}" alt="${filename}">
+          </div>
+          <div class="detail-info">
+            <p><strong>Name:</strong> ${filename}</p>
+            <p><strong>Resolution:</strong> ${width || '?'} × ${height || '?'}</p>
+            <p><strong>Size:</strong> ${sizeKB ? sizeKB + ' KB' : 'Unknown'}</p>
+            <p><strong>Uploaded:</strong> ${uploadDate ? new Date(uploadDate).toLocaleString() : 'N/A'}</p>
+          </div>
+        </div>
+      `;
+    }
+
+
+    let lastAnalyzeState = false; // remember previous state
+
+    function updateRefreshButtonText() {
+      if (!refreshButton) return;
+
+      // Detect mode change (ON <-> OFF)
+      const modeChanged = analyzeModeActive !== lastAnalyzeState;
+      lastAnalyzeState = analyzeModeActive;
+
+      // Only fade if mode has just changed
+      if (modeChanged) {
+        refreshButton.classList.add('fade-out');
+
+        setTimeout(() => {
+          if (analyzeModeActive) {
+            refreshButton.classList.add('disabled');
+            refreshButton.innerHTML = `<i class="bi bi-pause-circle"></i> Refresh Disabled`;
+          } else {
+            refreshButton.classList.remove('disabled');
+            refreshButton.innerHTML = `<i class="bi bi-arrow-clockwise"></i> Refresh (${countdown}s)`;
+          }
+          refreshButton.classList.remove('fade-out');
+        }, 300);
+      } else {
+        // Normal updates (no fade)
+        if (analyzeModeActive) {
+          refreshButton.innerHTML = `<i class="bi bi-pause-circle"></i> Refresh Disabled`;
+        } else {
+          refreshButton.innerHTML = `<i class="bi bi-arrow-clockwise"></i> Refresh (${countdown}s)`;
+        }
+      }
+    }
+
+    // Manual refresh
+    if (refreshButton) {
+      refreshButton.addEventListener('click', () => {
+        if (analyzeModeActive) {
+          console.log("⚠️ Refresh disabled during Analyze Mode.");
+          return; // 🚫 stop here, no refresh
+        }
+
+        loadGalleryImages();
+        countdown = refreshInterval / 1000;
+        updateRefreshButtonText();
+      });
+    }
+
+    // Auto-refresh every interval (only if not analyzing)
+    setInterval(() => {
+      if (galleryPage && galleryPage.style.display !== 'none' && !analyzeModeActive) {
+        loadGalleryImages();
+        countdown = refreshInterval / 1000; // reset countdown after refresh
+      }
+    }, refreshInterval);
+
+    // Countdown timer, updates every second
+    countdownTimer = setInterval(() => {
+      if (galleryPage && galleryPage.style.display !== 'none') {
+        if (!analyzeModeActive && countdown > 0) {
+          countdown--;
+        }
+        updateRefreshButtonText();
+      }
+    }, 1000);
+
+    // Initial load when gallery button is clicked
     if (galleryBtn) {
       galleryBtn.addEventListener('click', () => {
         showPage(galleryPage);
         loadGalleryImages();
+        countdown = refreshInterval / 1000;
+        updateRefreshButtonText();
       });
     }
 
-    setInterval(() => {
-      if (galleryPage && galleryPage.style.display !== 'none') {
-        loadGalleryImages();
-      }
-    }, 5000);
+    // Initialize button text
+    updateRefreshButtonText();
 
-     // Initialize analysis page when it's shown
+    // Enable Analyze mode
+    const analyzeModeButton = document.getElementById('analyzeModeButton');
+    const analyzeSelected = document.getElementById('analyzeFloatingButton');
+    const galleryColumn = document.querySelector('.gallery-columns');
+    let lastSelectedIndex = null;
+
+    analyzeModeButton.addEventListener('click', () => {
+        analyzeModeActive = !analyzeModeActive;
+
+        const images = Array.from(imageGrid.querySelectorAll('.image-item'));
+
+        if (analyzeModeActive == true) {
+            // Change button to cancel mode
+            analyzeModeButton.innerHTML = `<i class="bi bi-x-lg"></i> Cancel`;
+            analyzeModeButton.classList.add('active');
+            analyzeSelected.style.display = "block";
+
+            // Make images selectable
+            images.forEach(img => {
+                img.classList.add('selectable');
+                img.addEventListener('click', selectImage);
+            });
+
+            // Clear selection if empty space is clicked
+            galleryColumn.addEventListener('click', clearSelectionOnEmpty);
+
+        } else {
+            // Restore button text
+            analyzeModeButton.innerHTML = '<i class="bi bi-box-arrow-in-down"></i> Analyze Images';
+            analyzeModeButton.classList.remove('active');
+            analyzeSelected.style.display = "none";
+            updateRefreshButtonText();
+
+            // Remove selectable behavior
+            images.forEach(img => {
+                img.classList.remove('selectable', 'selected', 'last-selected');
+                img.removeEventListener('click', selectImage);
+            });
+
+            // Remove empty-space click listener
+            galleryColumn.removeEventListener('click', clearSelectionOnEmpty);
+
+            // Reset state
+            lastSelectedIndex = null;
+        }
+    });
+
+    // Function to handle click selection with Shift/Ctrl
+    function selectImage(e) {
+        e.stopPropagation(); // prevent triggering empty space click
+        const images = Array.from(imageGrid.querySelectorAll('.image-item'));
+        const currentIndex = images.indexOf(e.currentTarget);
+
+        if (e.ctrlKey || e.metaKey) {
+            // Toggle selection
+            e.currentTarget.classList.toggle('selected');
+            if (e.currentTarget.classList.contains('selected')) {
+                images.forEach(img => img.classList.remove('last-selected'));
+                e.currentTarget.classList.add('last-selected');
+                lastSelectedIndex = currentIndex;
+            }
+        } else if (e.shiftKey && lastSelectedIndex !== null) {
+            // Range selection
+            const [start, end] = currentIndex > lastSelectedIndex ? [lastSelectedIndex, currentIndex] : [currentIndex, lastSelectedIndex];
+            for (let i = start; i <= end; i++) {
+                images[i].classList.add('selected');
+            }
+        } else {
+            // Single selection
+            images.forEach(img => img.classList.remove('selected', 'last-selected'));
+            e.currentTarget.classList.add('selected', 'last-selected');
+            lastSelectedIndex = currentIndex;
+        }
+    }
+
+    // Clear selection when clicking empty space
+    function clearSelectionOnEmpty(e) {
+        if (!e.target.closest('.image-item')) {
+            const images = Array.from(imageGrid.querySelectorAll('.image-item'));
+            images.forEach(img => img.classList.remove('selected', 'last-selected'));
+            lastSelectedIndex = null;
+        }
+    }
+
+    // Initialize analysis page when it's shown
     function initializeAnalysisPage() {
         console.log('Initializing analysis page components...');
         try {
@@ -432,16 +764,28 @@ if (!window._functionReloadProtected) {
             analyzeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
             
             try {
-                // Simulate YOLOv8 analysis (replace with actual API call)
-                await simulateAnalysis();
+                // Call real YOLO analysis API
+                const analysisResult = await performRealAnalysis(previewImage.src);
                 
                 // Show results
                 analysisResults.style.display = 'block';
-                resultDiagnosis.textContent = 'Fungal Infection';
-                resultConfidence.textContent = '87%';
+                resultDiagnosis.textContent = analysisResult.disease;
+                resultConfidence.textContent = `${analysisResult.confidence}%`;
                 
                 // Add to history
-                addToAnalysisHistory(previewImage.src, 'Fungal Infection', '87%');
+                addToAnalysisHistory(previewImage.src, analysisResult.disease, `${analysisResult.confidence}%`);
+                
+                // Show initial LLM recommendation in chat
+                showInitialRecommendation(analysisResult.recommendation);
+                
+                // Store current analysis data for chat context
+                window.currentAnalysis = {
+                    diagnosis: analysisResult.disease,
+                    confidence: analysisResult.confidence
+                };
+                
+                // Debug: Log the stored analysis data
+                console.log('DEBUG: Stored analysis data:', window.currentAnalysis);
                 
             } catch (error) {
                 console.error('Analysis failed:', error);
@@ -453,9 +797,28 @@ if (!window._functionReloadProtected) {
             }
         });
         
-        async function simulateAnalysis() {
-            // Simulate processing time
-            return new Promise(resolve => setTimeout(resolve, 2000));
+        async function performRealAnalysis(imageSrc) {
+            try {
+                const response = await fetch('http://localhost:5000/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        frame: imageSrc
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                console.error('Error calling analysis API:', error);
+                throw error;
+            }
         }
     }
     
@@ -473,17 +836,88 @@ if (!window._functionReloadProtected) {
             addChatMessage(message, 'user');
             chatInput.value = '';
             
-            // Simulate bot response
-            setTimeout(() => {
-                const responses = [
-                    "Based on the analysis, I recommend consulting with a veterinarian for proper treatment.",
-                    "For fungal infections, keep the affected area clean and dry. Avoid scratching.",
-                    "Consider using antifungal treatments as prescribed by your vet.",
-                    "Monitor your dog's condition and watch for any changes in behavior or symptoms."
-                ];
-                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-                addChatMessage(randomResponse, 'bot');
-            }, 1000);
+            // Show typing indicator
+            const typingIndicator = addTypingIndicator();
+            
+            // Call LLM API for response
+            callLLMAPI(message)
+                .then(response => {
+                    // Remove typing indicator
+                    removeTypingIndicator(typingIndicator);
+                    
+                    // Add bot response
+                    addChatMessage(response.response, 'bot');
+                })
+                .catch(error => {
+                    console.error('Error getting LLM response:', error);
+                    // Remove typing indicator
+                    removeTypingIndicator(typingIndicator);
+                    
+                    // Add error message
+                    addChatMessage("I apologize, but I'm having trouble processing your request right now. Please try again or consult a veterinarian for immediate assistance.", 'bot');
+                });
+        }
+        
+        async function callLLMAPI(message) {
+            const currentAnalysis = window.currentAnalysis || { diagnosis: '', confidence: 0 };
+            
+            // Debug: Log the data being sent to the API
+            console.log('DEBUG: Sending to chat API:', {
+                message: message,
+                diagnosis: currentAnalysis.diagnosis,
+                confidence: currentAnalysis.confidence
+            });
+            
+            const response = await fetch('http://localhost:5000/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: message,
+                    diagnosis: currentAnalysis.diagnosis,
+                    confidence: currentAnalysis.confidence
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        }
+        
+        function addTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'chat-message bot-message typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="message-content">
+                    <span class="typing-dots">
+                        <span>.</span><span>.</span><span>.</span>
+                    </span>
+                </div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return typingDiv;
+        }
+        
+        function removeTypingIndicator(typingDiv) {
+            if (typingDiv && typingDiv.parentNode) {
+                typingDiv.parentNode.removeChild(typingDiv);
+            }
+        }
+        
+        function showInitialRecommendation(recommendation) {
+            // Clear existing messages except the welcome message
+            const welcomeMessage = chatMessages.querySelector('.bot-message');
+            chatMessages.innerHTML = '';
+            if (welcomeMessage) {
+                chatMessages.appendChild(welcomeMessage);
+            }
+            
+            // Add the initial recommendation
+            addChatMessage(recommendation, 'bot');
         }
         
         sendMessageBtn.addEventListener('click', sendMessage);
@@ -636,6 +1070,9 @@ if (!window._functionReloadProtected) {
     const navButtons = [homeBtn, galleryBtn, analysisBtn];
 
     function showPage(pageToShow) {
+      // Prevent re-showing the page if it’s already visible
+      if (pageToShow.style.display !== "none") return;
+
       if (!serverConnected && (pageToShow === galleryPage || pageToShow === analysisPage)) {
         alert("⚠️ You must connect to the server first!");
         return;
@@ -686,3 +1123,49 @@ if (!window._functionReloadProtected) {
 } else {
   console.log("%c⚠️ functions.js already initialized — skipping duplicate load.", "color: orange;");
 }
+
+  // ============================================
+  // CUSTOM DROPDOWN MENU FOR ANALYSIS PAGE LOGIC
+  // ============================================
+  const dropdownButton = document.getElementById('dropdownButton');
+  const dropdownMenu = document.getElementById('dropdownMenu');
+
+  if (dropdownButton && dropdownMenu) {
+    // Toggle dropdown on button click
+    dropdownButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdownMenu.classList.toggle('show');
+      console.log('Dropdown toggled');
+    });
+
+    // Handle dropdown item selection
+    const dropdownItems = dropdownMenu.querySelectorAll('div');
+    dropdownItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        const selectedValue = e.target.textContent.trim();
+        
+        // Update button text (keep the arrow)
+        dropdownButton.innerHTML = `${selectedValue} <span>▼</span>`;
+        
+        // Close dropdown
+        dropdownMenu.classList.remove('show');
+        
+        // Store selected model
+        window.selectedModel = selectedValue;
+        
+        console.log('Selected model:', selectedValue);
+        
+        // You can trigger any additional logic here
+        // For example, update the analysis function to use this model
+      });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!dropdownButton.contains(e.target) && !dropdownMenu.contains(e.target)) {
+        dropdownMenu.classList.remove('show');
+      }
+    });
+    
+    console.log('%c✅ Simple dropdown initialized', 'color: limegreen;');
+  }
