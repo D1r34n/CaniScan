@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(76, 175, 80, 0.3);
+        }
+
+        #video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .scanning-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+        }
+
+        .scanning-overlay.active {
+            display: block;
+        }
+
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #4CAF50, transparent);
+            box-shadow: 0 0 10px #4CAF50;
+            animation: scan 2s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        .corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #4CAF50;
+        }
+
+        .corner.top-left {
+            top: 20px;
+            left: 20px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .corner.top-right {
+            top: 20px;
+            right: 20px;
+            border-left: none;
+            border-bottom: none;
+        }
+
+        .corner.bottom-left {
+            bottom: 20px;
+            left: 20px;
+            border-right: none;
+            border-top: none;
+        }
+
+        .corner.bottom-right {
+            bottom: 20px;
+            right: 20px;
+            border-left: none;
+            border-top: none;
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(76, 175, 80, 0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .status-badge.active {
+            display: block;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .results {
+            margin-top: 20px;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            min-height: 100px;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #3a3a3a;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .disease-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .confidence {
+            font-size: 16px;
+            color: #aaa;
+        }
+
+        .no-result {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .analyzing {
+            background: #ff9800 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 YOLO Disease Detection</h1>
+        
+        <div class="video-container">
+            <video id="video" autoplay></video>
+            <canvas id="canvas" style="display:none;"></canvas>
+            
+            <div id="scanningOverlay" class="scanning-overlay">
+                <div class="scan-line"></div>
+                <div class="corner top-left"></div>
+                <div class="corner top-right"></div>
+                <div class="corner bottom-left"></div>
+                <div class="corner bottom-right"></div>
+                <div class="status-badge">SCANNING...</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn">Start Camera</button>
+            <button id="analyzeBtn" disabled>Analyze Frame</button>
+        </div>
+
+        <div class="results">
+            <div id="resultContent" class="no-result">
+                Click "Analyze Frame" to detect diseases
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:5000';
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const startBtn = document.getElementById('startBtn');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const scanningOverlay = document.getElementById('scanningOverlay');
+        const resultContent = document.getElementById('resultContent');
+
+        let stream = null;
+        let isAnalyzing = false;
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 1280, height: 720 } 
+                });
+                video.srcObject = stream;
+                startBtn.textContent = 'Camera Active';
+                startBtn.disabled = true;
+                analyzeBtn.disabled = false;
+            } catch (error) {
+                alert('Cannot access camera: ' + error.message);
+            }
+        });
+
+        analyzeBtn.addEventListener('click', async () => {
+            if (isAnalyzing) return;
+            
+            isAnalyzing = true;
+            analyzeBtn.textContent = 'Analyzing...';
+            analyzeBtn.classList.add('analyzing');
+            analyzeBtn.disabled = true;
+            
+            // Show scanning animation
+            scanningOverlay.classList.add('active');
+            const statusBadge = scanningOverlay.querySelector('.status-badge');
+            statusBadge.classList.add('active');
+
+            try {
+                // Capture frame
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                const frameData = canvas.toDataURL('image/jpeg');
+
+                // Send to Flask
+                const response = await fetch(`${API_URL}/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frame: frameData })
+                });
+
+                const result = await response.json();
+                displayResult(result);
+
+            } catch (error) {
+                resultContent.innerHTML = `
+                    <div style="color: #f44336; text-align: center;">
+                        Error: ${error.message}
+                    </div>
+                `;
+            } finally {
+                setTimeout(() => {
+                    scanningOverlay.classList.remove('active');
+                    statusBadge.classList.remove('active');
+                    isAnalyzing = false;
+                    analyzeBtn.textContent = 'Analyze Frame';
+                    analyzeBtn.classList.remove('analyzing');
+                    analyzeBtn.disabled = false;
+                }, 1500);
+            }
+        });
+
+        function displayResult(result) {
+            const { disease, confidence } = result;
+            const timestamp = new Date().toLocaleTimeString();
+            
+            resultContent.innerHTML = `
+                <div class="result-item">
+                    <div>
+                        <div class="disease-name">${disease}</div>
+                        <div style="color: #888; font-size: 12px; margin-top: 5px;">${timestamp}</div>
+                    </div>
+                    <div class="confidence">${confidence.toFixed(1)}%</div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
