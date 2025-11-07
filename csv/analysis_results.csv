@@ -6,3 +6,5 @@ timestamp,email,diagnosis,confidence
 2025-11-07 12:26:01,anonymous,ringworm,25.52
 2025-11-07 12:32:16,anonymous,ringworm,50.1
 2025-11-07 12:35:47,anonymous,ringworm,25.52
+2025-11-07 16:17:09,anonymous,No disease detected,0
+2025-11-07 16:41:13,anonymous,ringworm,25.52
