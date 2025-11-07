@@ -15,6 +15,45 @@ let tray;                  // System tray reference
 let isQuiting = false;     // Flag to track app quitting
 const DESKTOP_SERVER_URL = 'http://127.0.0.1:5001';
 
+// ------------------- Helper Functions -------------------
+async function handleExitRequest(win) {
+    if (!win || win.isDestroyed()) return;
+
+    if (isQuiting) {
+        win.destroy();
+        return;
+    }
+
+    if (win.__exitDialogOpen) {
+        return;
+    }
+
+    win.__exitDialogOpen = true;
+
+    try {
+        const choice = await dialog.showMessageBox(win, {
+            type: 'question',
+            buttons: ['Minimize to Tray', 'Exit Application', 'Cancel'],
+            defaultId: 0,
+            cancelId: 2,
+            title: 'Exit CaniScan',
+            message: 'What would you like to do?',
+            detail: 'Choose to minimize the app to the system tray or fully exit the application.',
+            icon: path.join(__dirname, '..', 'images', 'system_tray_icon.png')
+        });
+
+        if (choice.response === 0) {
+            win.hide();
+        } else if (choice.response === 1) {
+            isQuiting = true;
+            app.quit();
+        }
+        // Cancel does nothing
+    } finally {
+        win.__exitDialogOpen = false;
+    }
+}
+
 // ------------------- Window Creation Functions -------------------
 function createSplashWindow() {
     splashWindow = new BrowserWindow({
@@ -72,7 +111,12 @@ function createMainWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 720,
+        minWidth: 1024,
+        minHeight: 640,
         frame: false,
+        resizable: true,
+        maximizable: true,
+        fullscreenable: true,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
@@ -87,32 +131,18 @@ function createMainWindow() {
     mainWindow.webContents.openDevTools();
 
     mainWindow.on('close', async (event) => {
-        // Prevent closing, show dialog unless quitting
         if (!isQuiting) {
             event.preventDefault();
-            
-            // Show exit confirmation dialog
-            const choice = await dialog.showMessageBox(mainWindow, {
-                type: 'question',
-                buttons: ['Minimize to Tray', 'Exit Application', 'Cancel'],
-                defaultId: 0,
-                cancelId: 2,
-                title: 'Exit CaniScan',
-                message: 'What would you like to do?',
-                detail: 'Choose to minimize the app to the system tray or fully exit the application.',
-                icon: path.join(__dirname, '..', 'images', 'system_tray_icon.png')
-            });
-            
-            if (choice.response === 0) {
-                // Minimize to tray
-                mainWindow.hide();
-            } else if (choice.response === 1) {
-                // Exit application
-                isQuiting = true;
-                app.quit();
-            }
-            // If response === 2 (Cancel), do nothing - window stays open
+            await handleExitRequest(mainWindow);
         }
+    });
+
+    mainWindow.on('maximize', () => {
+        mainWindow.webContents.send('window-maximize-changed', true);
+    });
+
+    mainWindow.on('unmaximize', () => {
+        mainWindow.webContents.send('window-maximize-changed', false);
     });
 
     mainWindow.webContents.on('did-finish-load', () => {
@@ -123,6 +153,7 @@ function createMainWindow() {
                 email: global.userEmail
             });
         }
+        mainWindow.webContents.send('window-maximize-changed', mainWindow.isMaximized());
     });
 }
 
@@ -215,7 +246,32 @@ ipcMain.on('minimize-window', (event) => {
 });
 ipcMain.on('close-window', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (win && !win.isDestroyed()) win.hide();
+    if (win && !win.isDestroyed()) {
+        handleExitRequest(win);
+    }
+});
+ipcMain.on('request-app-exit', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isDestroyed()) {
+        handleExitRequest(win);
+    }
+});
+ipcMain.on('toggle-maximize', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed()) return;
+
+    if (win.isMaximized()) {
+        win.unmaximize();
+        event.sender.send('window-maximize-changed', false);
+    } else {
+        win.maximize();
+        event.sender.send('window-maximize-changed', true);
+    }
+});
+ipcMain.on('get-maximize-state', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed()) return;
+    event.sender.send('window-maximize-changed', win.isMaximized());
 });
 
 // Logout user
