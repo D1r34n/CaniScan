@@ -1,14 +1,17 @@
-# Dataset paths (use forward slashes to avoid Windows escape issues)
-path: C:/Users/Edrian/Documents/VSCodeProjects/CaniScan/yolov8/dataset
+# Dataset paths
+path: C:/Users/Edrian/Documents/VSCodeProjects/CaniScan/dataset
 
 # Training images
-train: C:/Users/Edrian/Documents/VSCodeProjects/CaniScan/yolov8/dataset/train
+train: ../train/images
 
 # Validation images
-val: C:/Users/Edrian/Documents/VSCodeProjects/CaniScan/yolov8/dataset/train
+val: ../valid/images
+
+# Test images (optional but recommended)
+test: ../test/images
 
 # Number of classes
-nc: 3
+nc: 4
 
 # Class names
-names: ["ringworm", "hotspot", "mange"]
+names: ['allergic dermatitis', 'fungal infection', 'hotspot', 'mange']

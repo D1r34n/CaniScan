@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 4
+names: ['allergic dermatitis', 'fungal infection', 'hotspot', 'mange']
+
+roboflow:
+  workspace: dog-skin-disease-detection
+  project: all-skin-diseases-owq2m
+  version: 2
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/dog-skin-disease-detection/all-skin-diseases-owq2m/dataset/2

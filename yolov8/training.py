@@ -1,14 +1,21 @@
 import multiprocessing
 from ultralytics import YOLO
 import torch
-torch.cuda.empty_cache()
+
 def main():
+    # Clear GPU cache before training
+    torch.cuda.empty_cache()
+
     # Create a new YOLO model from scratch using YOLOv8 Nano or smallest version
     model = YOLO("yolov8n.pt")  # or "yolov8s.pt"
 
-    # Use GPU CUDA NVIDIA FOR 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    print("Training on device:", device)
+    # Detect GPU availability, use GPU for training if available else CPU
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print(f"🔥 GPU is available: {torch.cuda.get_device_name(0)}")
+    else:
+        device = torch.device("cpu")
+        print("⚠️ GPU not detected — using CPU instead.")
 
     # Train the model using the 'config.yaml' dataset for 3 epochs
 
@@ -26,14 +33,21 @@ def main():
 
     # Now what is the best number of epoch for training data? (we need research or reference)
     # for this one.
+    # ✅ Train the model
     results = model.train(
-        data=r"C:\Users\Edrian\Documents\VSCodeProjects\CaniScan\yolov8\config.yaml",
-        epochs=30,
-        imgsz=640,          # Reduce image size if needed (e.g., 512)
-        batch=-1,            # This will trigger the autobatch feature, which calculates the maximum batch size that can run on your device.
+        data="yolov8/config.yaml",
+        epochs=30,           # You can increase this (e.g., 50–100) for better results
+        imgsz=640,           # Resize images to 640x640
+        batch=-1,            # Auto batch size (based on available VRAM)
         device=device,
-        workers=4
+        workers=4,           # Number of CPU workers for loading data
+        verbose=True         # Show detailed progress
     )
+
+    # ✅ Print training summary
+    print("\n✅ Training Complete!")
+    print(results)
+
 
 # Required for Windows multiprocessing
 if __name__ == "__main__":
