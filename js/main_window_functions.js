@@ -370,6 +370,11 @@ if (!window._functionReloadProtected) {
           data.images.forEach(image => {
             const div = document.createElement('div');
             div.classList.add('image-item');
+            
+            // Add analyzed class if image has been analyzed
+            if (image.analyzed) {
+              div.classList.add('analyzed');
+            }
 
             const img = document.createElement('img');
             img.src = `http://localhost:5001/images/${image.filename}`;
@@ -379,6 +384,16 @@ if (!window._functionReloadProtected) {
             img.style.objectFit = 'cover';
 
             div.appendChild(img);
+            
+            // Add analyzed badge if image has been analyzed
+            if (image.analyzed) {
+              const badge = document.createElement('div');
+              badge.className = 'analyzed-badge';
+              badge.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
+              badge.title = `Analyzed: ${image.disease || 'N/A'} (${image.confidence || '0'}%)`;
+              div.appendChild(badge);
+            }
+
             imageGrid.appendChild(div);
 
             // When image is clicked, show its details in the right pane
@@ -401,26 +416,70 @@ if (!window._functionReloadProtected) {
     function showImageDetails(image) {
       const detailPane = document.getElementById("detailPane");
       if (!detailPane) return;
+      
+      // Remove minimized class to show details
+      detailPane.classList.remove('minimized');
 
-      // Example image info: adjust based on your backend data
-      const { filename, uploadDate, sizeKB, width, height } = image;
+      // Parse date and time from uploaded_at
+      const uploadedDate = image.uploaded_at ? new Date(image.uploaded_at) : null;
+      const dateStr = uploadedDate ? uploadedDate.toLocaleDateString() : 'N/A';
+      const timeStr = uploadedDate ? uploadedDate.toLocaleTimeString() : 'N/A';
+      
+      // Format file size
+      const sizeKB = image.size ? Math.round(image.size / 1024) : 0;
+      const sizeStr = sizeKB > 0 ? `${sizeKB} KB` : 'Unknown';
+      
+      // Check if analyzed
+      const isAnalyzed = image.analyzed || false;
+      const diagnosis = image.disease || 'N/A';
+      const confidence = image.confidence || '0';
+      
+      // Create analysis status badge
+      const analysisStatus = isAnalyzed 
+        ? `<span class="status-badge analyzed-status"><i class="bi bi-check-circle-fill"></i> Analyzed</span>`
+        : `<span class="status-badge raw-status"><i class="bi bi-circle"></i> Raw (Not Analyzed)</span>`;
 
-      detailPane.innerHTML = `
-        <div class="detail-header">
+      const detailContent = detailPane.querySelector('.detail-content');
+      if (detailContent) {
+        // Use diagnosis name if analyzed, otherwise show "Not Analyzed"
+        const displayName = isAnalyzed ? diagnosis : 'Not Analyzed';
+        const displayNameClass = isAnalyzed ? 'diagnosis-value' : '';
+        
+        detailContent.innerHTML = `
           <h3>Image Details</h3>
-        </div>
-        <div class="detail-body">
           <div class="detail-preview">
-            <img src="http://localhost:5001/images/${filename}" alt="${filename}">
+            <img src="http://localhost:5001/images/${image.filename}" alt="${image.filename}">
           </div>
           <div class="detail-info">
-            <p><strong>Name:</strong> ${filename}</p>
-            <p><strong>Resolution:</strong> ${width || '?'} × ${height || '?'}</p>
-            <p><strong>Size:</strong> ${sizeKB ? sizeKB + ' KB' : 'Unknown'}</p>
-            <p><strong>Uploaded:</strong> ${uploadDate ? new Date(uploadDate).toLocaleString() : 'N/A'}</p>
+            <div class="detail-row">
+              <span class="detail-label"><i class="bi bi-heart-pulse"></i> Diagnosis:</span>
+              <span class="detail-value ${displayNameClass}">${displayName}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label"><i class="bi bi-calendar"></i> Date:</span>
+              <span class="detail-value">${dateStr}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label"><i class="bi bi-clock"></i> Time:</span>
+              <span class="detail-value">${timeStr}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label"><i class="bi bi-hdd"></i> Size:</span>
+              <span class="detail-value">${sizeStr}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label"><i class="bi bi-info-circle"></i> Status:</span>
+              <span class="detail-value">${analysisStatus}</span>
+            </div>
+            ${isAnalyzed ? `
+            <div class="detail-row analysis-info">
+              <span class="detail-label"><i class="bi bi-graph-up"></i> Confidence:</span>
+              <span class="detail-value confidence-value">${confidence}%</span>
+            </div>
+            ` : ''}
           </div>
-        </div>
-      `;
+        `;
+      }
     }
 
 
@@ -760,6 +819,48 @@ if (!window._functionReloadProtected) {
         });
     }
     
+    // Save analyzed image to gallery with metadata
+    async function saveAnalyzedImageToGallery(imageSrc, disease, confidence) {
+        try {
+            // Convert data URL to blob
+            const response = await fetch(imageSrc);
+            const blob = await response.blob();
+            
+            // Create FormData
+            const formData = new FormData();
+            formData.append('image', blob, 'analyzed_image.jpg');
+            formData.append('analyzed', 'true');
+            formData.append('disease', disease);
+            formData.append('confidence', confidence.toString());
+            
+            // Upload to desktop server
+            const uploadResponse = await fetch('http://localhost:5001/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!uploadResponse.ok) {
+                throw new Error('Failed to upload image');
+            }
+            
+            const result = await uploadResponse.json();
+            console.log('Image saved to gallery:', result);
+            
+            // Refresh gallery if on gallery page
+            const galleryPage = document.getElementById('galleryPage');
+            if (galleryPage && galleryPage.style.display !== 'none') {
+                setTimeout(() => {
+                    loadGalleryImages();
+                }, 500);
+            }
+            
+            return result.filename;
+        } catch (error) {
+            console.error('Error saving image to gallery:', error);
+            throw error;
+        }
+    }
+    
     // Analysis button functionality
     function setupAnalysisButton() {
         const analyzeBtn = document.getElementById('analyzeBtn');
@@ -801,6 +902,11 @@ if (!window._functionReloadProtected) {
                 
                 // Debug: Log the stored analysis data
                 console.log('DEBUG: Stored analysis data:', window.currentAnalysis);
+                
+                // Ensure chat input is clickable and focused after analysis
+                setTimeout(() => {
+                    restoreChatInputClickability();
+                }, 100);
                 
             } catch (error) {
                 console.error('Analysis failed:', error);
@@ -980,6 +1086,56 @@ if (!window._functionReloadProtected) {
         }
     }
     
+    // Function to restore chat input clickability
+    function restoreChatInputClickability() {
+        const chatInput = document.getElementById('chatInput');
+        const chatInputArea = document.querySelector('.chat-input-area');
+        const recommendationsBox = document.querySelector('.recommendations-box');
+        
+        if (chatInput) {
+            // Remove any disabled state
+            chatInput.disabled = false;
+            chatInput.style.pointerEvents = 'auto';
+            chatInput.style.zIndex = '20';
+            // Focus the input to ensure it's interactive
+            chatInput.focus();
+        }
+        
+        if (chatInputArea) {
+            chatInputArea.style.pointerEvents = 'auto';
+            chatInputArea.style.zIndex = '20';
+        }
+        
+        if (recommendationsBox) {
+            recommendationsBox.style.zIndex = '2';
+            recommendationsBox.style.pointerEvents = 'auto';
+        }
+        
+        // Remove any lingering popup overlays
+        const blockingOverlays = document.querySelectorAll('.popup-overlay:not(.analysis-details-popup .popup-overlay), .analysis-details-popup');
+        blockingOverlays.forEach(overlay => {
+            // Only remove if it's not part of an active popup
+            const popup = overlay.closest('.analysis-details-popup');
+            if (!popup || !document.body.contains(popup)) {
+                if (overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+            }
+        });
+        
+        console.log('DEBUG: Chat input clickability restored');
+    }
+    
+    // Global handler to restore clickability after alerts
+    const originalAlert = window.alert;
+    window.alert = function(message) {
+        const result = originalAlert.call(window, message);
+        setTimeout(() => {
+            restoreChatInputClickability();
+        }, 100);
+        return result;
+    };
+    
     // Analysis history functionality - now user-specific from server
     async function loadAnalysisHistory() {
         const historyList = document.getElementById('analysisHistoryList');
@@ -1135,7 +1291,13 @@ if (!window._functionReloadProtected) {
         
         // Close functionality
         const closePopup = () => {
-            document.body.removeChild(popup);
+            if (popup && popup.parentNode) {
+                document.body.removeChild(popup);
+            }
+            // Ensure chat input is clickable after popup closes
+            setTimeout(() => {
+                restoreChatInputClickability();
+            }, 50);
         };
         
         popup.querySelector('.popup-close-btn').addEventListener('click', closePopup);
