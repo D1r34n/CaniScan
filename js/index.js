@@ -72,6 +72,7 @@ function createMainWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 720,
+        resizable: false,
         frame: false,
         webPreferences: {
             nodeIntegration: true,
@@ -163,7 +164,7 @@ function createTray() {
 // ------------------- App Ready Logic -------------------
 app.whenReady().then(async () => {
     // Start YOLOv8 Python process
-    const yoloScriptPath = path.join(__dirname, '..', 'yolov8', 'app.py');
+    const yoloScriptPath = path.join(__dirname, '..', 'py', 'app.py');
     yoloProcess = spawn('python', [yoloScriptPath]);
     yoloProcess.stdout.on('data', (data) => console.log(`[YOLOv8] ${data}`));
     yoloProcess.stderr.on('data', (data) => console.error(`[YOLOv8 Error] ${data}`));

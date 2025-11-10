@@ -5,18 +5,40 @@ import cv2, base64, numpy as np, re, csv, os, bcrypt
 from datetime import datetime
 from llm_service import llm_service
 
+from supabase import create_client, Client
+from dotenv import load_dotenv
+import os
+# ----------------------------
+# Supabase Configuration
+# ----------------------------
+load_dotenv()
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+print("URL:", SUPABASE_URL)
+print("KEY:", SUPABASE_KEY)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 # ----------------------------
 # Flask App Initialization
 # ----------------------------
 app = Flask(__name__)
 
-CORS(app)  # Enable Cross-Origin requests, necessary for Electron <-> Flask communication
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+}, supports_credentials=True)
 app.secret_key = "skibidi"
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True if using HTTPS
 
 # ----------------------------
 # Load YOLO Model for Disease Detection
 # ----------------------------
-model = YOLO(r"runs\detect\train2\weights\best.pt")  # Path to trained YOLOv8 weights
+model = YOLO(r"runs\v8\n\train_results2\weights\best.pt")  # Path to trained YOLOv8 weights
+# actual path: C:\Users\Edrian\Documents\VSCodeProjects\CaniScan\runs\v8\n\train_results2\weights\best.pt
 
 # ----------------------------
 # User Database Setup
@@ -24,19 +46,7 @@ model = YOLO(r"runs\detect\train2\weights\best.pt")  # Path to trained YOLOv8 we
 
 # Get the directory where this script is located
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-USERS_CSV = os.path.join(BASE_DIR, "csv", "users.csv")
 ANALYSIS_CSV = os.path.join(BASE_DIR, "csv", "analysis_results.csv")
-
-# Ensure the CSV directory exists
-csv_dir = os.path.join(BASE_DIR, "csv")
-os.makedirs(csv_dir, exist_ok=True)
-USERS_CSV = "users.csv"
-
-# Ensure the CSV file exists; create with headers if not
-if not os.path.exists(USERS_CSV):
-    with open(USERS_CSV, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["first_name", "last_name", "email", "password"])  # CSV headers
 
 # Ensure the analysis results CSV file exists; create with headers if not
 if not os.path.exists(ANALYSIS_CSV):
@@ -58,30 +68,28 @@ def verify_password(password, hashed):
 # ----------------------------
 # User Data Utilities
 # ----------------------------
-def save_user_to_csv(first_name, last_name, email, password):
-    """Save a new user to the CSV file with hashed password."""
-    hashed_password = hash_password(password)
-    with open(USERS_CSV, mode="a", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow([first_name, last_name, email, hashed_password])
-
-def load_users_from_csv():
-    """Load all users from CSV and return as a list of dictionaries."""
-    users = []
-    if os.path.exists(USERS_CSV):
-        with open(USERS_CSV, mode="r") as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                users.append(row)
-    return users
-
 def find_user_by_email(email):
-    """Find a user by their email (case-insensitive)."""
-    users = load_users_from_csv()
-    for user in users:
-        if user["email"].strip().lower() == email.strip().lower():
-            return user
-    return None
+    """Find user in Supabase by email."""
+    response = supabase.table("users").select("*").eq("email", email).execute()
+    return response.data[0] if response.data else None
+
+def save_user_to_supabase(first_name, last_name, email, password):
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    response = supabase.table("users").insert({
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": email,
+        "password": hashed_password
+    }).execute()
+
+    print("Supabase insert response:", response)
+
+    # Check for errors
+    if response.status_code != 201:  # 201 Created is the success code for insert
+        raise Exception(f"Supabase insert failed: {response.data}")
+
+    return response.data
+
 
 # ----------------------------
 # Analysis Results CSV Utilities
@@ -123,65 +131,115 @@ def get_latest_analysis(email: str):
 
 @app.route('/register', methods=['POST'])
 def register():
-    """Handle user registration."""
-    data = request.get_json()
-    first_name = data.get("firstName", "").strip()
-    last_name = data.get("lastName", "").strip()
-    email = data.get("email", "").strip()
-    password = data.get("password", "").strip()
+    print("=== REGISTER ENDPOINT HIT ===")
+    print(f"Request method: {request.method}")
+    print(f"Request headers: {request.headers}")
 
-    # Ensure all fields are provided
-    if not all([first_name, last_name, email, password]):
-        return jsonify({"success": False, "message": "All fields are required."}), 400
+    try:
+        data = request.get_json()
+        # print("DEBUG /register received data:", data)
 
-    # Validate names (letters, spaces, hyphens, accents allowed)
-    name_pattern = r"^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$"
-    if not re.match(name_pattern, first_name):
-        return jsonify({"success": False, "message": "Invalid first name format."}), 400
-    elif not re.match(name_pattern, last_name):
-        return jsonify({"success": False, "message": "Invalid last name format."}), 400
+        # Extract fields
+        first_name = data.get("first_name", "").strip()
+        last_name = data.get("last_name", "").strip()
+        email = data.get("email", "").strip()
+        password = data.get("password", "").strip()
 
-    # Validate email format
-    email_pattern = r"^[^\s@]+@[^\s@]+\.[^\s@]+$"
-    if not re.match(email_pattern, email):
-        return jsonify({"success": False, "message": "Invalid email format."}), 400
+        # Validate required fields
+        if not all([first_name, last_name, email, password]):
+            return jsonify({"success": False, "message": "All fields are required."}), 400
 
-    # Validate password strength
-    password_pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$"
-    if not re.match(password_pattern, password):
-        return jsonify({
-            "success": False,
-            "message": "Password must be at least 8 characters long, include uppercase, lowercase, and a number."
-        }), 400
+        # Name validation
+        name_pattern = r"^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$"
+        if not re.match(name_pattern, first_name):
+            return jsonify({"success": False, "message": "Invalid first name format."}), 400
+        if not re.match(name_pattern, last_name):
+            return jsonify({"success": False, "message": "Invalid last name format."}), 400
 
-    # Check if email already exists
-    if find_user_by_email(email):
-        return jsonify({"success": False, "message": "Email is already registered."}), 400
+        # Email validation
+        email_pattern = r"^[^\s@]+@[^\s@]+\.[^\s@]+$"
+        if not re.match(email_pattern, email):
+            return jsonify({"success": False, "message": "Invalid email format."}), 400
 
-    # Save new user
-    save_user_to_csv(first_name, last_name, email, password)
-    return jsonify({"success": True, "message": "Registration successful."})
+        # Password strength
+        password_pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$"
+        if not re.match(password_pattern, password):
+            return jsonify({
+                "success": False,
+                "message": "Password must be at least 8 characters, include uppercase, lowercase, and a number."
+            }), 400
+
+        # Check if email already exists
+        existing_user = find_user_by_email(email)
+        print("DEBUG: existing_user:", existing_user)
+        if existing_user:
+            return jsonify({"success": False, "message": "Email is already registered."}), 400
+
+        # Attempt to save user to Supabase
+        try:
+            # print("DEBUG: Attempting to insert user into Supabase...")
+            response = supabase.table("users").insert({
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+                "password": bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            }).execute()
+
+            print("DEBUG Supabase response:", response)
+
+            if response.error:
+                # Supabase returned an error
+                return jsonify({
+                    "success": False,
+                    "message": f"Supabase insert error: {response.error}"
+                }), 500
+
+        except Exception as supabase_error:
+            print(f"Supabase Exception: {supabase_error}")
+            return jsonify({
+                "success": False,
+                "message": f"Supabase exception: {supabase_error}"
+            }), 500
+
+        return jsonify({"success": True, "message": "Registration successful."})
+
+    except Exception as e:
+        print(f"REGISTER ERROR: {e}")
+        return jsonify({"success": False, "message": f"Server error occurred: {e}"}), 500
+
 
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
-    email = data.get("email", "").strip()
-    password = data.get("password", "").strip()
+    try:
+        data = request.get_json()
+        email = data.get("email", "").strip()
+        password = data.get("password", "").strip()
 
-    user = find_user_by_email(email)
-    if user and verify_password(password, user["password"]):
-        # Set session
+        if not email or not password:
+            return jsonify({"success": False, "message": "Email and password are required."}), 400
+
+        user = find_user_by_email(email)
+        if not user or "password" not in user:
+            return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
+        hashed_password = user["password"]
+        if not bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
+            return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
+        # Successful login: set session
         session['email'] = user["email"]
         session['name'] = user['first_name']
+
         return jsonify({
             "success": True,
             "message": "Login successful",
             "name": user['first_name'],
             "email": user["email"]
         })
-    else:
-        return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
+    except Exception as e:
+        print(f"LOGIN ERROR: {e}")
+        return jsonify({"success": False, "message": "Server error occurred"}), 500
 
 @app.route('/logout', methods=['POST'])
 def logout():

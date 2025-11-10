@@ -167,10 +167,16 @@ document.addEventListener('DOMContentLoaded', () => {
         setFormLoading(registerForm, true);
 
         try {
+            // ✅ Send keys matching Flask backend
             const res = await fetchWithTimeout("http://127.0.0.1:5000/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ firstName, lastName, email, password }),
+                body: JSON.stringify({ 
+                    first_name: firstName, 
+                    last_name: lastName, 
+                    email: email, 
+                    password: password 
+                }),
             });
 
             const data = await res.json();
