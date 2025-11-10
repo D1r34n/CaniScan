@@ -147,6 +147,8 @@
 .analyze-image-box {  
   flex: 2;
   min-width: 500px;
+  position: relative;
+  z-index: 1;
 }
 
 .image-upload-area {
@@ -214,10 +216,12 @@
   gap: 1rem;
   opacity: 0;
   transition: opacity 0.3s ease;
+  pointer-events: none;
 }
 
 .image-preview:hover .image-overlay {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .analysis-results {
@@ -260,7 +264,7 @@
 
 /* Recommendations Box */
 .recommendations-box {
-  z-index: 1000;
+  z-index: 2;
   flex: 1;
   min-width: 300px;
   position: relative;
@@ -364,7 +368,8 @@
   padding-top: 1rem;
   border-top: 1px solid #e9ecef;
   position: relative;
-  z-index: 1001;
+  z-index: 20;
+  pointer-events: auto;
 }
 
 .input-group {
@@ -379,6 +384,9 @@
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
   transition: border-color 0.3s ease;
+  position: relative;
+  z-index: 20;
+  pointer-events: auto;
 }
 
 .input-group .form-control:focus {
@@ -457,6 +465,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
 }
 
 .popup-overlay {
@@ -466,6 +475,7 @@
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.7);
+  pointer-events: auto;
 }
 
 .popup-content {
@@ -478,6 +488,8 @@
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   animation: popupSlideIn 0.3s ease-out;
+  z-index: 10000;
+  pointer-events: auto;
 }
 
 @keyframes popupSlideIn {
