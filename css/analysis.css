@@ -264,7 +264,7 @@
 
 /* Recommendations Box */
 .recommendations-box {
-  z-index: 2;
+  z-index: 1000;
   flex: 1;
   min-width: 300px;
   position: relative;
@@ -368,8 +368,7 @@
   padding-top: 1rem;
   border-top: 1px solid #e9ecef;
   position: relative;
-  z-index: 20;
-  pointer-events: auto;
+  z-index: 1001;
 }
 
 .input-group {
