@@ -232,11 +232,27 @@ app.whenReady().then(async () => {
 
 // Handle login success
 ipcMain.on('login-success', (event, userData) => {
-    global.userName = userData.name;
-    global.userEmail = userData.email; // Must store email globally
-    if (loginWindow) loginWindow.hide();
-    if (!mainWindow) createMainWindow();
-    else mainWindow.show();
+  global.userName = userData.name;
+  global.userEmail = userData.email;
+
+  if (loginWindow) loginWindow.hide();
+
+  // Create or show main window
+  if (!mainWindow) {
+    createMainWindow();
+
+    // Once it's ready, send user data
+    mainWindow.webContents.once('did-finish-load', () => {
+      mainWindow.webContents.send('user-data', userData);
+    });
+  } else {
+    // If already exists (e.g. after logout), just reload and send data again
+    mainWindow.webContents.reload();
+    mainWindow.webContents.once('did-finish-load', () => {
+    mainWindow.show();
+    mainWindow.webContents.send('user-data', userData);
+    });
+  }
 });
 
 // Minimize / Close window requests
@@ -282,7 +298,10 @@ ipcMain.on('logout', async (event) => {
         global.userEmail = null;
         console.log("Trying to logout");
 
-        if (mainWindow) mainWindow.hide();
+       if (mainWindow) {
+        mainWindow.hide();
+        mainWindow.webContents.reload();
+        }
 
         if (!loginWindow) createLoginWindow();
         loginWindow.webContents.send('reset-login-fields');

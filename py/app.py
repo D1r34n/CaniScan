@@ -246,7 +246,33 @@ def logout():
     session.clear()  # Remove all session data
     return jsonify({"success": True, "message": "Logged out successfully"})
 
+@app.route('/update-user', methods=['POST'])
+def update_user():
+    email = session.get('email')
+    if not email:
+        return jsonify({'success': False, 'message': 'Not logged in'}), 401
 
+    data = request.get_json()
+    first_name = data.get('first_name', None)
+    last_name = data.get('last_name', None)
+
+    update_data = {}
+    if first_name and first_name.strip():
+        update_data["first_name"] = first_name.strip()
+    if last_name and last_name.strip():
+        update_data["last_name"] = last_name.strip()
+
+    if not update_data:
+        return jsonify({'success': False, 'message': 'No changes to update'}), 400
+
+    try:
+        response = supabase.table("users").update(update_data).eq("email", email).execute()
+        if response.error:
+            return jsonify({'success': False, 'message': f"Supabase error: {response.error}"}), 500
+        return jsonify({'success': True, 'message': 'Profile updated successfully', 'data': update_data})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    
 @app.route('/analyze', methods=['POST'])
 def analyze():
     """Analyze an image frame for disease using YOLOv8 and provide LLM recommendations."""

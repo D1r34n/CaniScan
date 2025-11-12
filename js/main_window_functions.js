@@ -32,9 +32,7 @@ if (!window._functionReloadProtected) {
     // ================================
     // SERVER CONNECTION LOGIC
     // ================================
-    const serverCardContainer = document.getElementById("serverCardContainer");
-    const connectButton = document.getElementById("connectServerButton");
-    const disconnectButton = document.getElementById("disconnectServerButton");
+    const loadingScreenContainer = document.getElementById("loadingScreenContainer");
     const galleryOverview = document.getElementById("galleryOverview");
 
     const galleryBtn = document.getElementById("galleryBtn");
@@ -68,6 +66,62 @@ if (!window._functionReloadProtected) {
           }
           console.log("%c👤 Logged-in user set to:", "color: cyan;", loggedInUserName);
         }
+        
+        //Connect to local server of gallery
+        console.log("%c🖧 Connecting to server...", "color: limegreen;");
+
+        if (!ipcRenderer) {
+          console.warn("ipcRenderer not available. Running outside Electron?");
+          return;
+        }
+
+        ipcRenderer.send('connect-desktop-server');
+
+        ipcRenderer.once('desktop-server-status', (event, status) => {
+          if (status.success) {
+            console.log("%c✅ Desktop server started successfully.", "color: limegreen;");
+
+            fadeOut(loadingScreenContainer, 400, () => fadeIn(galleryOverview, 400));
+            serverConnected = true;
+            if (galleryBtn) galleryBtn.disabled = false;
+            if (analysisBtn) analysisBtn.disabled = false;
+
+            // ================================
+            // SHOW LOCAL SERVER IP & COPY
+            // ================================
+            const statusSpan = document.getElementById("serverStatus");
+            const ipSpan = document.getElementById("serverIP");
+            const copyIPBtn = document.getElementById("copyIPBtn");
+
+            if (statusSpan && ipSpan && status.ip) {
+              statusSpan.textContent = "active";
+              const originalIP = `${status.ip}:5001`;
+              ipSpan.textContent = originalIP;
+
+              if (copyIPBtn) {
+                copyIPBtn.addEventListener("click", () => {
+                  const ipText = ipSpan.textContent.trim();
+                  if (!ipText) return;
+
+                  navigator.clipboard.writeText(originalIP).then(() => {
+                    // Temporarily change IP text
+                    ipSpan.textContent = "IP copied!";
+                    ipSpan.style.color = "limegreen";
+
+                    setTimeout(() => {
+                      ipSpan.textContent = originalIP;    // revert back
+                      ipSpan.style.color = "#333";        // reset color
+                    }, 1500);
+                  }).catch(err => console.error("Failed to copy IP:", err));
+                });
+              }
+            }
+          } else {
+            console.error("%c❌ Failed to start desktop server:", "color: red;", status.message);
+            alert("Failed to connect to server: " + status.message);
+          }
+        });
+
       });
     }
 
@@ -134,6 +188,19 @@ if (!window._functionReloadProtected) {
                 if (ipcRenderer) {
                     console.log('Sending logout to main process...');
                     ipcRenderer.send('logout');
+                    ipcRenderer.send('disconnect-desktop-server');
+                          
+                    ipcRenderer.once('desktop-server-disconnected', () => {
+                      fadeOut(galleryOverview, 400, () => {
+                        fadeIn(loadingScreenContainer, 400);
+                        let loggedInUserName = "";
+                        serverConnected = false;
+                        if (galleryBtn) galleryBtn.disabled = true;
+                        if (analysisBtn) analysisBtn.disabled = true;
+
+                        console.log("%c✅ Server card displayed again. Buttons disabled.", "color: red;");
+                      });
+                    });
                 } else {
                     console.warn('ipcRenderer not available — cannot log out!');
                 }
@@ -149,52 +216,106 @@ if (!window._functionReloadProtected) {
     }
 
     // ================================
-    // AVATAR SELECTION MODAL LOGIC
+    // AVATAR + NAME MODAL LOGIC
     // ================================
+    const axios = require('axios'); // Node-style import for Electron renderer
+
     const accountModal = document.getElementById('accountSelectionModal');
     const accountModalOverlay = accountModal?.querySelector('.account-modal-overlay');
-    const accountItems = accountModal?.querySelectorAll('.account-item');
     const navbarUserAvatar = document.getElementById('navbarUserAvatar');
+    const navbarUserName = document.getElementById('navbarUserName'); // optional element for showing name
+    const prevBtn = document.getElementById('prevAvatar');
+    const nextBtn = document.getElementById('nextAvatar');
+    const currentAvatarImg = document.getElementById('currentAvatar');
+    const avatarLabel = document.getElementById('avatarLabel');
+    const applyBtn = document.getElementById('applyAvatarChanges');
+    const firstNameInput = document.getElementById('firstName');
+    const lastNameInput = document.getElementById('lastName');
 
-    // Close modal when clicking overlay
-    if (accountModalOverlay) {
-        accountModalOverlay.addEventListener('click', () => {
-            accountModal.classList.remove('show');
-            console.log("%c❌ Avatar selection modal closed", "color: orange;");
-        });
+    // Avatar list
+    const avatars = [
+      { src: '../images/Earl.png', label: 'LABRADOR' },
+      { src: '../images/Edrian.png', label: 'POMERANIAN' },
+      { src: '../images/Ken2.png', label: 'KEN' },
+      { src: '../images/Joaquin.png', label: 'SHIH TZU' },
+      { src: '../images/Jigs.png', label: 'CORGI' },
+    ];
+
+    let currentIndex = 0;
+
+    // Show avatar in modal
+    function updateModalAvatar() {
+      const avatar = avatars[currentIndex];
+      currentAvatarImg.src = avatar.src;
+      avatarLabel.textContent = avatar.label;
     }
 
-    // Handle avatar selection
-    if (accountItems) {
-        accountItems.forEach(item => {
-            item.addEventListener('click', () => {
-                const avatarName = item.getAttribute('data-account');
-                const avatarImg = item.querySelector('img').src;
-                
-                console.log(`%c🖼️ Avatar selected: ${avatarName}`, "color: yellow;");
-                
-                // Update the navbar avatar
-                if (navbarUserAvatar) {
-                    navbarUserAvatar.src = avatarImg;
-                }
-                
-                // Save to localStorage
-                localStorage.setItem('userAvatar', avatarImg);
-                
-                // Close modal
-                accountModal.classList.remove('show');
-                
-                console.log("%c✅ Avatar updated successfully!", "color: limegreen;");
-            });
-        });
-    }
+    // Carousel arrows
+    prevBtn.addEventListener('click', () => {
+      currentIndex = (currentIndex - 1 + avatars.length) % avatars.length;
+      updateModalAvatar();
+    });
+    nextBtn.addEventListener('click', () => {
+      currentIndex = (currentIndex + 1) % avatars.length;
+      updateModalAvatar();
+    });
 
-    // Load saved avatar on page load
-    const savedAvatar = localStorage.getItem('userAvatar');
-    if (savedAvatar && navbarUserAvatar) {
-        navbarUserAvatar.src = savedAvatar;
-        console.log("%c🖼️ Loaded saved avatar", "color: cyan;");
-    }
+    // Close modal on overlay click
+    accountModalOverlay.addEventListener('click', () => {
+      accountModal.classList.remove('show');
+    });
+
+    // Apply changes (update database + UI + localStorage)
+    applyBtn.addEventListener('click', async () => {
+      const avatar = avatars[currentIndex];
+      const firstName = firstNameInput.value.trim();
+      const lastName = lastNameInput.value.trim();
+
+      // Prepare payload with only non-empty fields
+      const payload = {};
+      if (firstName) payload.first_name = firstName;
+      if (lastName) payload.last_name = lastName;
+      payload.avatar = avatar.src; // optional: backend may ignore if no column
+
+      try {
+        // Send update to backend (Flask)
+        await axios.post('http://127.0.0.1:5000/update-user', payload, { withCredentials: true });
+
+        console.log('✅ User updated successfully');
+
+        // Update navbar avatar immediately
+        if (navbarUserAvatar) navbarUserAvatar.src = avatar.src;
+        // Update navbar name if available
+        if (navbarUserName) {
+          if (firstName) navbarUserName.textContent = firstName;
+          if (lastName) navbarUserName.textContent += lastName ? ' ' + lastName : '';
+        }
+
+        // Save to localStorage
+        localStorage.setItem('userAvatar', avatar.src);
+        if (firstName) localStorage.setItem('userFirstName', firstName);
+        if (lastName) localStorage.setItem('userLastName', lastName);
+
+        // Close modal
+        accountModal.classList.remove('show');
+      } catch (err) {
+        console.error('❌ Failed to update user in DB:', err);
+        alert('Failed to save changes. Please try again.');
+      }
+    });
+
+    // Load saved avatar and names on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedAvatar = localStorage.getItem('userAvatar');
+      if (savedAvatar && navbarUserAvatar) navbarUserAvatar.src = savedAvatar;
+
+      const savedFirst = localStorage.getItem('userFirstName');
+      const savedLast = localStorage.getItem('userLastName');
+      if (savedFirst && firstNameInput) firstNameInput.value = savedFirst;
+      if (savedLast && lastNameInput) lastNameInput.value = savedLast;
+
+      updateModalAvatar();
+    });
 
     // ================================
     // FADE UTILITY FUNCTIONS
@@ -226,100 +347,6 @@ if (!window._functionReloadProtected) {
           if (callback) callback();
         }
       }, interval);
-    }
-
-    // ================================
-    // CONNECT/DISCONNECT BUTTON LOGIC
-    // ================================
-    if (serverCardContainer && connectButton && disconnectButton && galleryOverview) {
-
-      // Connect button
-      connectButton.addEventListener("click", async () => {
-        console.log("%c🖧 Connecting to server...", "color: limegreen;");
-        connectButton.textContent = "Connecting...";
-        connectButton.disabled = true;
-
-        if (!ipcRenderer) {
-          console.warn("ipcRenderer not available. Running outside Electron?");
-          return;
-        }
-
-        ipcRenderer.send('connect-desktop-server');
-
-        ipcRenderer.once('desktop-server-status', (event, status) => {
-          if (status.success) {
-            console.log("%c✅ Desktop server started successfully.", "color: limegreen;");
-
-            fadeOut(serverCardContainer, 400, () => fadeIn(galleryOverview, 400));
-            serverConnected = true;
-            if (galleryBtn) galleryBtn.disabled = false;
-            if (analysisBtn) analysisBtn.disabled = false;
-
-            // ================================
-            // SHOW LOCAL SERVER IP & COPY
-            // ================================
-            const statusSpan = document.getElementById("serverStatus");
-            const ipSpan = document.getElementById("serverIP");
-            const copyIPBtn = document.getElementById("copyIPBtn");
-
-            if (statusSpan && ipSpan && status.ip) {
-              statusSpan.textContent = "active";
-              const originalIP = `${status.ip}:5001`;
-              ipSpan.textContent = originalIP;
-
-              if (copyIPBtn) {
-                copyIPBtn.addEventListener("click", () => {
-                  const ipText = ipSpan.textContent.trim();
-                  if (!ipText) return;
-
-                  navigator.clipboard.writeText(originalIP).then(() => {
-                    // Temporarily change IP text
-                    ipSpan.textContent = "IP copied!";
-                    ipSpan.style.color = "limegreen";
-
-                    setTimeout(() => {
-                      ipSpan.textContent = originalIP;    // revert back
-                      ipSpan.style.color = "#333";        // reset color
-                    }, 1500);
-                  }).catch(err => console.error("Failed to copy IP:", err));
-                });
-              }
-            }
-          } else {
-            console.error("%c❌ Failed to start desktop server:", "color: red;", status.message);
-            alert("Failed to connect to server: " + status.message);
-            connectButton.textContent = "Connect to server";
-            connectButton.disabled = false;
-          }
-        });
-      });
-
-      // Disconnect button
-      disconnectButton.addEventListener("click", () => {
-        console.log("%c🛑 Disconnecting from server...", "color: red;");
-        disconnectButton.textContent = "Disconnecting...";
-        disconnectButton.disabled = true;
-
-        if (ipcRenderer) {
-          ipcRenderer.send('disconnect-desktop-server');
-
-          ipcRenderer.once('desktop-server-disconnected', () => {
-            fadeOut(galleryOverview, 400, () => {
-              fadeIn(serverCardContainer, 400);
-              serverConnected = false;
-              if (galleryBtn) galleryBtn.disabled = true;
-              if (analysisBtn) analysisBtn.disabled = true;
-
-              disconnectButton.textContent = "Disconnect";
-              disconnectButton.disabled = false;
-              connectButton.textContent = "Connect to server";
-              connectButton.disabled = false;
-
-              console.log("%c✅ Server card displayed again. Buttons disabled.", "color: red;");
-            });
-          });
-        }
-      });
     }
 
     // ================================
