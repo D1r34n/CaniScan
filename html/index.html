@@ -124,7 +124,7 @@
 
                             <!-- Pie Chart Container with Outer Wrapper for Title -->
                             <div class="pie-chart-wrapper">
-                                <h4 class="container-title">Gallery Image Distribution</h4>
+                                <h4 class="container-title">Image Distribution</h4>
                                 <div class="pie-chart-container">
                                     <canvas id="statsPieChart"></canvas>
                                 </div>
@@ -150,35 +150,7 @@
                     <!-- Right Column -->
                     <div class="right-column">
 
-                       <!-- Top Row: Server Status -->
-                        <div class="top-row server-status">
-                        <img class="connected_icon" src="../images/connected_dog.jpg" alt="Server Icon">
-                        <p id="serverStatusText">
-                        <i class="bi bi-wifi"></i> Server is <span id="serverStatus">inactive</span> at
-                        </p>
-                        <div id="serverIPWrapper">
-                        <span id="serverIP">Loading...</span>
-                        <button id="copyIPBtn" title="Copy IP"><i class="bi bi-clipboard"></i></button>
-                        </div>
-
-
-
                         <button id="disconnectServerButton" class="disconnect-btn">Disconnect</button>
-                        </div>
-
-
-
-                        <!-- Bottom Row: Activity Log -->
-                        <div class="bottom-row activity-log">
-                            <h4>Activity Log</h4>
-                            <ul class="activity-list">
-                                <li>Device connected at 10:32 AM</li>
-                                <li>Data synced successfully</li>
-                                <li>Device disconnected at 11:00 AM</li>
-                                <li>Device connected at 10:32 AM</li>
-                                <li>Data synced successfully</li>
-                                <li>Device disconnected at 11:30 AM</li>
-                            </ul>
                         </div>
 
                     </div> <!-- end of right-column -->
@@ -292,34 +264,9 @@
                 <!-- Analysis Page -->
         <div id="analysisPage" class="page-content" style="display:none;">
             <div class="analysis-container">
-                <!-- Analysis History Floating Box -->
-                <div class="floating-box analysis-history-box">
-                    <div class="box-header">
-                        <h4><i class="bi bi-clock-history"></i> Analysis History</h4>
-                        <button class="btn-clear-history" id="clearHistoryBtn" title="Clear History">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                    <div class="box-content">
-                        <div class="history-list" id="analysisHistoryList">
-                            <!-- Analysis history items will be dynamically added here -->
-                            <div class="history-item">
-                                <div class="history-image">
-                                    <img src="../images/connected_dog.jpg" alt="Analysis Image" class="history-img">
-                                </div>
-                                <div class="history-details">
-                                    <div class="history-name">sample_image.jpg</div>
-                                    <div class="history-diagnosis">Fungal Infection</div>
-                                    <div class="history-confidence">87%</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Analyze Image Floating Box (Dominant) -->
                 <div class="floating-box analyze-image-box dominant">
-                    <div class="box-header">
+                    <div class="box-header box-header--analyze-image">
                         <h4><i class="bi bi-search"></i> Analyze Image</h4>
                         <div class="dropdown">
                             <button class="dropdown-button" id="dropdownButton">
@@ -364,34 +311,59 @@
                     </div>
                 </div>
 
-                <!-- Recommendations Floating Box -->
-                <div class="floating-box recommendations-box">
-                    <div class="box-header">
-                        <h4><i class="bi bi-chat-dots"></i> Recommendations</h4>
+    <div class="floating-box recommendations-box">
+
+    <!-- History and Analysis Combined-->
+    <!-- Tab Header -->
+        <div class="box-header box-header--recommendations">
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="recommendations">
+                    <i class="bi bi-chat-dots"></i> Recommendations
+                </button>
+                <button class="tab-btn" data-tab="history">
+                    <i class="bi bi-clock-history"></i> Analysis History
+                </button>
+            </div>
+        </div>
+    
+        <div class="box-content">
+            <!-- Recommendations Tab Content -->
+            <div class="tab-content active" id="recommendationsTab">
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-message bot-message">
+                            <div class="message-content">
+                                Hello! I'm here to help with recommendations for your dog's skin condition. How can I assist you today?
+                            </div>
+                        </div>
                     </div>
-                    <div class="box-content">
-                        <div class="chat-container">
-                            <div class="chat-messages" id="chatMessages">
-                                <div class="chat-message bot-message">
-                                    <div class="message-content">
-                                        Hello! I'm here to help with recommendations for your dog's skin condition. How can I assist you today?
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="chat-input-area">
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="chatInput" placeholder="Ask about treatments, symptoms, or care...">
-                                    <button class="btn btn-primary" id="sendMessageBtn">
-                                        <i class="bi bi-send"></i>
-                                    </button>
-                                </div>
-                            </div>
+                    <div class="chat-input-area">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="chatInput" placeholder="Ask about treatments, symptoms, or care...">
+                            <button class="btn btn-primary" id="sendMessageBtn">
+                                <i class="bi bi-send"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <!-- Analysis History Tab Content -->
+            <div class="tab-content" id="historyTab">
+                <div class="history-header">
+                    <button class="btn-clear-history" id="clearHistoryBtn">
+                        <i class="bi bi-trash"></i> Clear History
+                    </button>
+                </div>
+                <div class="history-list" id="historyList">
+                    <!-- History items will be dynamically added here -->
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <p>No analysis history yet</p>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
     </div>
 
     <!-- Account Selection Modal -->

@@ -33,13 +33,6 @@ CORS(app, resources={
 app.secret_key = "skibidi"
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_SECURE'] = False  # Set to True if using HTTPS
-
-# ----------------------------
-# Load YOLO Model for Disease Detection
-# ----------------------------
-model = YOLO(r"runs\v8\n\train_results2\weights\best.pt")  # Path to trained YOLOv8 weights
-# actual path: C:\Users\Edrian\Documents\VSCodeProjects\CaniScan\runs\v8\n\train_results2\weights\best.pt
-
 # ----------------------------
 # User Database Setup
 # ----------------------------
@@ -246,15 +239,31 @@ def logout():
     session.clear()  # Remove all session data
     return jsonify({"success": True, "message": "Logged out successfully"})
 
+# ----------------------------
+# Load YOLO Model for Disease Detection
+# ----------------------------
+Yolov8 = YOLO(r"runs\v8\n\train_results2\weights\best.pt")  # Path to trained YOLOv8 weights
+Yolov11 = YOLO(r"runs\11\n\train_results\weights\best.pt")
+# actual path: C:\Users\Edrian\Documents\VSCodeProjects\CaniScan\runs\v8\n\train_results2\weights\best.pt
+
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
     """Analyze an image frame for disease using YOLOv8 and provide LLM recommendations."""
     data = request.get_json()
     frame_data = data.get('frame').split(',')[1]  # Remove data URL prefix
+    model_name = data.get('model', 'Yolov8')  # Default to Yolov8 if not provided
+
     frame_bytes = base64.b64decode(frame_data)
     np_arr = np.frombuffer(frame_bytes, np.uint8)
     img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+    if model_name == 'YoloV11n':
+        model = Yolov11
+        print(f"Using YOLOv11n model for analysis")
+    else:  # Default to YoloV8n
+        model = Yolov8
+        print(f"Using YOLOv8n model for analysis")
 
     results = model(img)
     detections = results[0].boxes
@@ -268,7 +277,7 @@ def analyze():
         confidence = 0
         
         # Save to CSV
-        save_analysis_to_csv(user_email, diagnosis, confidence)
+        save_analysis_to_csv(user_email, diagnosis, confidence, model_name)
         
         llm_response = llm_service.get_initial_recommendation(diagnosis, confidence)
         return jsonify({

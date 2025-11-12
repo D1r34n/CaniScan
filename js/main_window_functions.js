@@ -1197,6 +1197,49 @@ if (!window._functionReloadProtected) {
         }
     }
     
+  // ============================================
+  // CUSTOM DROPDOWN MENU FOR ANALYSIS PAGE LOGIC
+  // ============================================
+  const dropdownButton = document.getElementById('dropdownButton');
+  const dropdownMenu = document.getElementById('dropdownMenu');
+
+  if (dropdownButton && dropdownMenu) {
+    // Toggle dropdown on button click
+    dropdownButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdownMenu.classList.toggle('show');
+      console.log('Dropdown toggled');
+    });
+
+    // Handle dropdown item selection
+    const dropdownItems = dropdownMenu.querySelectorAll('div');
+    dropdownItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        const selectedValue = e.target.textContent.trim();
+        
+        // Update button text (keep the arrow)
+        dropdownButton.innerHTML = `${selectedValue} <span>▼</span>`;
+        
+        // Close dropdown
+        dropdownMenu.classList.remove('show');
+        
+        // Store selected model
+        window.selectedModel = selectedValue;
+        
+        console.log('Selected model:', selectedValue);
+      });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!dropdownButton.contains(e.target) && !dropdownMenu.contains(e.target)) {
+        dropdownMenu.classList.remove('show');
+      }
+    });
+    
+    console.log('%c✅ Simple dropdown initialized', 'color: limegreen;');
+  }
+
     // Analysis button functionality
     function setupAnalysisButton() {
         const analyzeBtn = document.getElementById('analyzeBtn');
@@ -1205,6 +1248,12 @@ if (!window._functionReloadProtected) {
         const resultConfidence = document.getElementById('resultConfidence');
         
         analyzeBtn.addEventListener('click', async () => {
+
+          if (!window.selectedModel) {
+            alert('Please select a model first (YoloV8n or YoloV11n)');
+            return;
+            }
+
             const previewImage = document.getElementById('previewImage');
             if (!previewImage.src) return;
             
@@ -1213,8 +1262,9 @@ if (!window._functionReloadProtected) {
             analyzeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
             
             try {
+
                 // Call real YOLO analysis API
-                const analysisResult = await performRealAnalysis(previewImage.src);
+                const analysisResult = await performRealAnalysis(previewImage.src, window.selectedModel);
                 
                 // Show results
                 analysisResults.style.display = 'block';
@@ -1222,10 +1272,19 @@ if (!window._functionReloadProtected) {
                 resultConfidence.textContent = `${analysisResult.confidence}%`;
                 
                 // Save analyzed image to gallery
-                const savedFilename = await saveAnalyzedImageToGallery(previewImage.src, analysisResult.disease, analysisResult.confidence);
+                const savedFilename = await saveAnalyzedImageToGallery(
+                  previewImage.src, 
+                  analysisResult.disease, 
+                  analysisResult.confidence
+                ); 
                 
                 // Add to history with filename
-                await addToAnalysisHistory(previewImage.src, analysisResult.disease, `${analysisResult.confidence}%`, savedFilename);
+                await addToAnalysisHistory(
+                  previewImage.src, 
+                  analysisResult.disease, 
+                  `${analysisResult.confidence}%`, 
+                  savedFilename
+                );
                 
                 // Show initial LLM recommendation in chat
                 showInitialRecommendation(analysisResult.recommendation);
@@ -1233,7 +1292,8 @@ if (!window._functionReloadProtected) {
                 // Store current analysis data for chat context
                 window.currentAnalysis = {
                     diagnosis: analysisResult.disease,
-                    confidence: analysisResult.confidence
+                    confidence: analysisResult.confidence,
+                    model: window.selectedModel
                 };
                 
                 // Debug: Log the stored analysis data
@@ -1254,7 +1314,7 @@ if (!window._functionReloadProtected) {
             }
         });
         
-        async function performRealAnalysis(imageSrc) {
+        async function performRealAnalysis(imageSrc, modelName) {
             try {
                 const response = await fetch('http://localhost:5000/analyze', {
                     method: 'POST',
@@ -1262,7 +1322,8 @@ if (!window._functionReloadProtected) {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        frame: imageSrc
+                        frame: imageSrc,
+                        model: modelName
                     })
                 });
                 
@@ -1492,97 +1553,192 @@ if (!window._functionReloadProtected) {
     
     // Clear history functionality
     function setupClearHistoryButton() {
-        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-        if (!clearHistoryBtn) return;
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    if (!clearHistoryBtn) return;
+    
+    clearHistoryBtn.addEventListener('click', async () => {
+        // Confirm before clearing
+        const confirmed = confirm(
+            'Are you sure you want to clear all analysis history? This will delete:\n\n' +
+            '- All analysis history in the app\n' +
+            '- All diagnosis records in the CSV file\n\n' +
+            'This action cannot be undone.'
+        );
         
-        clearHistoryBtn.addEventListener('click', async () => {
-            // Confirm before clearing
-            const confirmed = confirm('Are you sure you want to clear all analysis history? This will delete:\n\n- All analysis history in the app\n- All diagnosis records in the CSV file\n\nThis action cannot be undone.');
-            
-            if (confirmed) {
-                try {
-                    // Clear localStorage
-                    localStorage.removeItem('analysisHistory');
+        if (confirmed) {
+            try {
+                // Clear localStorage
+                localStorage.removeItem('analysisHistory');
+                
+                // Clear from CSV via API
+                const response = await fetch('http://localhost:5000/clear-analysis-history', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('History cleared:', result);
                     
-                    // Clear from CSV via API
-                    const response = await fetch('http://localhost:5000/clear-analysis-history', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        credentials: 'include'
-                    });
+                    // Reload history display (will show empty state)
+                    loadAnalysisHistory();
                     
-                    if (response.ok) {
-                        const result = await response.json();
-                        console.log('History cleared:', result);
-                        
-                        // Reload history display (will be empty)
-                        loadAnalysisHistory();
-                        
-                        // Show success message
-                        alert('Analysis history has been cleared successfully.');
-                    } else {
-                        throw new Error('Failed to clear history from server');
-                    }
-                } catch (error) {
-                    console.error('Error clearing history:', error);
-                    alert('Error clearing history. Please try again.');
+                    // Show success message
+                    alert('Analysis history has been cleared successfully.');
+                } else {
+                    throw new Error('Failed to clear history from server');
                 }
+            } catch (error) {
+                console.error('Error clearing history:', error);
+                alert('Error clearing history. Please try again.');
             }
-        });
+        }
+    });
+}
+    
+    function addToAnalysisHistory(imageSrc, diagnosis, confidence, filename) {
+    // Get existing history from localStorage
+    const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+    
+    // Create new history item
+    const newItem = {
+        imageSrc,
+        diagnosis,
+        confidence,
+        filename: filename || 'Analysis Result',
+        timestamp: new Date().toISOString()
+    };
+    
+    // Add to beginning of array
+    history.unshift(newItem);
+    
+    // Keep only last 10 items
+    if (history.length > 10) {
+        history.pop();
     }
     
-    function addToAnalysisHistory(imageSrc, diagnosis, confidence) {
-        const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
-        const newItem = {
-            imageSrc,
-            diagnosis,
-            confidence,
-            timestamp: new Date().toISOString()
-        };
-        
-        history.unshift(newItem); // Add to beginning
-        if (history.length > 10) history.pop(); // Keep only last 10
-        
-        localStorage.setItem('analysisHistory', JSON.stringify(history));
-        addHistoryItem(imageSrc, diagnosis, confidence, newItem.timestamp);
+    // Save back to localStorage
+    localStorage.setItem('analysisHistory', JSON.stringify(history));
+    
+    // Update the display using your existing function
+    addHistoryItem(imageSrc, diagnosis, confidence, newItem.timestamp);
+    
+    console.log('Added to history:', newItem);
     }
     
     function addHistoryItem(imageSrc, diagnosis, confidence, timestamp = null) {
-        const historyList = document.getElementById('analysisHistoryList');
-        const historyItem = document.createElement('div');
-        historyItem.className = 'history-item';
-        historyItem.style.cursor = 'pointer';
-        
-        const displayDate = timestamp ? new Date(timestamp).toLocaleDateString() : new Date().toLocaleDateString();
-        
-        historyItem.innerHTML = `
-            <div class="history-image">
-                <img src="${imageSrc}" alt="Analysis Image" class="history-img">
-            </div>
-            <div class="history-details">
-                <div class="history-name">${displayDate}</div>
-                <div class="history-diagnosis">${diagnosis}</div>
-                <div class="history-confidence">${confidence}</div>
-            </div>
-        `;
-        
-        // Add click event to show details popup
-        historyItem.addEventListener('click', () => {
-            showAnalysisDetailsPopup(imageSrc, diagnosis, confidence, timestamp);
-        });
-        
-        // Insert after sample item or at beginning
-        const sampleItem = historyList.querySelector('.history-item');
-        if (sampleItem) {
-            historyList.insertBefore(historyItem, sampleItem.nextSibling);
-        } else {
-            historyList.appendChild(historyItem);
-        }
+    const historyList = document.getElementById('historyList');
+    
+    // Remove empty state if it exists
+    const emptyState = historyList.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.remove();
     }
     
-    function showAnalysisDetailsPopup(imageSrc, diagnosis, confidence, timestamp) {
+    const historyItem = document.createElement('div');
+    historyItem.className = 'history-item';
+    historyItem.style.cursor = 'pointer';
+    
+    const displayDate = timestamp ? new Date(timestamp).toLocaleDateString() : new Date().toLocaleDateString();
+    
+    historyItem.innerHTML = `
+        <div class="history-image">
+            <img src="${imageSrc}" alt="Analysis Image" class="history-img">
+        </div>
+        <div class="history-details">
+            <div class="history-name">${displayDate}</div>
+            <div class="history-diagnosis">${diagnosis}</div>
+            <div class="history-confidence">${confidence}</div>
+        </div>
+    `;
+    
+    // Add click event to show details popup
+    historyItem.addEventListener('click', () => {
+        showAnalysisDetailsPopup(imageSrc, diagnosis, confidence, timestamp);
+    });
+    
+    // Add to top of list
+    historyList.insertBefore(historyItem, historyList.firstChild);
+}
+
+// Load all history items from localStorage
+function loadAnalysisHistory() {
+    const historyList = document.getElementById('historyList');
+    const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+    
+    // Clear current display
+    historyList.innerHTML = '';
+    
+    if (history.length === 0) {
+        // Show empty state
+        historyList.innerHTML = `
+            <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <p>No analysis history yet</p>
+            </div>
+        `;
+    } else {
+        // Display all history items
+        history.forEach(item => {
+            addHistoryItem(item.imageSrc, item.diagnosis, item.confidence, item.timestamp);
+        });
+    }
+    
+    console.log(`Loaded ${history.length} history items`);
+}
+
+// Clear History Functionality (integrated with your backend)
+function setupClearHistoryButton() {
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    if (!clearHistoryBtn) return;
+    
+    clearHistoryBtn.addEventListener('click', async () => {
+        // Confirm before clearing
+        const confirmed = confirm(
+            'Are you sure you want to clear all analysis history? This will delete:\n\n' +
+            '- All analysis history in the app\n' +
+            '- All diagnosis records in the CSV file\n\n' +
+            'This action cannot be undone.'
+        );
+        
+        if (confirmed) {
+            try {
+                // Clear localStorage
+                localStorage.removeItem('analysisHistory');
+                
+                // Clear from CSV via API
+                const response = await fetch('http://localhost:5000/clear-analysis-history', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('History cleared:', result);
+                    
+                    // Reload history display (will show empty state)
+                    loadAnalysisHistory();
+                    
+                    // Show success message
+                    alert('Analysis history has been cleared successfully.');
+                } else {
+                    throw new Error('Failed to clear history from server');
+                }
+            } catch (error) {
+                console.error('Error clearing history:', error);
+                alert('Error clearing history. Please try again.');
+            }
+        }
+    });
+}
+    
+    /*function showAnalysisDetailsPopup(imageSrc, diagnosis, confidence, timestamp) {
         const displayDate = timestamp ? new Date(timestamp).toLocaleString() : new Date().toLocaleString();
         
         const popup = document.createElement('div');
@@ -1640,6 +1796,8 @@ if (!window._functionReloadProtected) {
         popup.querySelector('#closePopupBtn').addEventListener('click', closePopup);
         popup.querySelector('.popup-overlay').addEventListener('click', closePopup);
     }
+
+    */
 
     // ================================
     // PAGE SWITCHING WITH FADE
@@ -1711,48 +1869,47 @@ if (!window._functionReloadProtected) {
   console.log("%c⚠️ functions.js already initialized — skipping duplicate load.", "color: orange;");
 }
 
-  // ============================================
-  // CUSTOM DROPDOWN MENU FOR ANALYSIS PAGE LOGIC
-  // ============================================
-  const dropdownButton = document.getElementById('dropdownButton');
-  const dropdownMenu = document.getElementById('dropdownMenu');
-
-  if (dropdownButton && dropdownMenu) {
-    // Toggle dropdown on button click
-    dropdownButton.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dropdownMenu.classList.toggle('show');
-      console.log('Dropdown toggled');
-    });
-
-    // Handle dropdown item selection
-    const dropdownItems = dropdownMenu.querySelectorAll('div');
-    dropdownItems.forEach(item => {
-      item.addEventListener('click', (e) => {
-        const selectedValue = e.target.textContent.trim();
-        
-        // Update button text (keep the arrow)
-        dropdownButton.innerHTML = `${selectedValue} <span>▼</span>`;
-        
-        // Close dropdown
-        dropdownMenu.classList.remove('show');
-        
-        // Store selected model
-        window.selectedModel = selectedValue;
-        
-        console.log('Selected model:', selectedValue);
-        
-        // You can trigger any additional logic here
-        // For example, update the analysis function to use this model
-      });
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!dropdownButton.contains(e.target) && !dropdownMenu.contains(e.target)) {
-        dropdownMenu.classList.remove('show');
-      }
-    });
+// Tab Switching Functionality
+function setupTabs() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const recommendationsTab = document.getElementById('recommendationsTab');
+    const historyTab = document.getElementById('historyTab');
     
-    console.log('%c✅ Simple dropdown initialized', 'color: limegreen;');
-  }
+    tabButtons.forEach((button, index) => {
+        button.addEventListener('click', () => {
+            const tabName = button.getAttribute('data-tab');
+            
+            // Remove active class from all buttons and tabs
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // Add active class to clicked button
+            button.classList.add('active');
+            
+            // Show/hide appropriate tab content
+            if (tabName === 'recommendations') {
+                recommendationsTab.classList.add('active');
+                historyTab.classList.remove('active');
+            } else if (tabName === 'history') {
+                historyTab.classList.add('active');
+                recommendationsTab.classList.remove('active');
+                // Reload history when switching to history tab
+                loadAnalysisHistory();
+            }
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupTabs();
+    setupClearHistoryButton();
+    loadAnalysisHistory(); // Load history on page load
+});
+
+// Also try to initialize immediately if DOM is already loaded
+if (document.readyState === 'loading') {
+    console.log('Waiting for DOM to load...');
+} else {
+    setupTabs();
+    setupClearHistoryButton();
+    loadAnalysisHistory();
+}
