@@ -166,43 +166,8 @@ if (!window._functionReloadProtected) {
 
   const navButtons = [homeBtn, galleryBtn, analysisBtn];
 
-  function showPage(pageToShow) {
-    // Prevent re-showing the page if it’s already visible
-    if (pageToShow.style.display !== "none") return;
-
-    if (!serverConnected && (pageToShow === galleryPage || pageToShow === analysisPage)) {
-      alert("⚠️ You must connect to the server first!");
-      return;
-    }
-
-    const pages = [homePage, galleryPage, analysisPage];
-
-    const fadeOutPromises = pages.map(page => {
-      if (!page || page === pageToShow) return Promise.resolve();
-      return new Promise(resolve => fadeOut(page, 100, resolve));
-    });
-
-    Promise.all(fadeOutPromises).then(() => {
-      fadeIn(pageToShow, 100);
-
-      if (pageToShow !== galleryPage && analyzeModeActive) {
-        exitAnalyzeMode();
-      }
-
-      navButtons.forEach(btn => {
-        if (!btn) return;
-        btn.classList.toggle("active", (
-          (btn === homeBtn && pageToShow === homePage) ||
-          (btn === galleryBtn && pageToShow === galleryPage) ||
-          (btn === analysisBtn && pageToShow === analysisPage)
-        ));
-      });
-    });
-  }
-
   function openAnalysisPage(afterOpen) {
     showPage(analysisPage);
-    initializeAnalysisPage();
     if (typeof afterOpen === 'function') {
       setTimeout(() => {
         afterOpen();
@@ -225,6 +190,12 @@ if (!window._functionReloadProtected) {
     });
   });
   
+  // Setup Analysis Page Functions
+    setupImageUpload();
+    setupAnalysisButton();
+    setupChatInterface();
+    setupGallerySelection();
+
   // User Dropdown Functionality
   if (userGreeting && userDropdown) {
 
@@ -421,48 +392,14 @@ if (!window._functionReloadProtected) {
   // Start with home page
   showPage(homePage);
 
-  //CHECK IF UI HAS FULLY LOADED
-  document.addEventListener("DOMContentLoaded", () => {
-    console.log("%c📄 DOM fully loaded.", "color: green;");    
+    //CHECK IF UI HAS FULLY LOADED
+    document.addEventListener("DOMContentLoaded", () => {
+        console.log("%c📄 DOM fully loaded.", "color: green;");  
+        setupTabs();
+        setupClearHistoryButton();
+        loadAnalysisHistory();  
+    });
 
-    
-
-    // Initialize analysis page when it's shown
-    function initializeAnalysisPage() {
-        if (analysisPageInitialized) {
-            loadAnalysisHistory();
-            return;
-        }
-        analysisPageInitialized = true;
-        console.log('Initializing analysis page components...');
-        try {
-            setupImageUpload();
-            console.log('Image upload setup complete');
-            setupGallerySelection();
-            console.log('Gallery selection setup complete');
-            setupAnalysisButton();
-            console.log('Analysis button setup complete');
-            setupChatInterface();
-            console.log('Chat interface setup complete');
-            
-            // Setup clear history button
-            const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-            if (clearHistoryBtn) {
-                clearHistoryBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    clearAnalysisHistory();
-                });
-            }
-            
-            loadAnalysisHistory();
-            console.log('Analysis history loaded');
-            setupClearHistoryButton();
-            console.log('Clear history button setup complete');
-        } catch (error) {
-            console.error('Error in initializeAnalysisPage:', error);
-        }
-    }
-    
     // Shared image handling function
     function handleImageFile(file) {
         if (!file || !file.type.startsWith('image/')) {
@@ -590,6 +527,7 @@ if (!window._functionReloadProtected) {
         const selectFromGalleryBtn = document.getElementById('selectFromGalleryBtn');
         
         selectFromGalleryBtn.addEventListener('click', (e) => {
+            console.log('Select from gallery button clicked');
             e.preventDefault();
             e.stopPropagation();
             
@@ -1074,72 +1012,6 @@ if (!window._functionReloadProtected) {
         return result;
     };
     
-    // Analysis history functionality - now user-specific from server
-    async function loadAnalysisHistory() {
-        const historyList = document.getElementById('analysisHistoryList');
-        if (!historyList) return;
-        
-        // Clear existing items except sample
-        const sampleItem = historyList.querySelector('.history-item');
-        historyList.innerHTML = '';
-        if (sampleItem) {
-            historyList.appendChild(sampleItem);
-        }
-        
-        // Add history items
-        history.forEach(item => {
-            addHistoryItem(item.imageSrc, item.diagnosis, item.confidence);
-        });
-    }
-    
-    // Clear history functionality
-    function setupClearHistoryButton() {
-    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-    if (!clearHistoryBtn) return;
-    
-    clearHistoryBtn.addEventListener('click', async () => {
-        // Confirm before clearing
-        const confirmed = confirm(
-            'Are you sure you want to clear all analysis history? This will delete:\n\n' +
-            '- All analysis history in the app\n' +
-            '- All diagnosis records in the CSV file\n\n' +
-            'This action cannot be undone.'
-        );
-        
-        if (confirmed) {
-            try {
-                // Clear localStorage
-                localStorage.removeItem('analysisHistory');
-                
-                // Clear from CSV via API
-                const response = await fetch('http://localhost:5000/clear-analysis-history', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include'
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('History cleared:', result);
-                    
-                    // Reload history display (will show empty state)
-                    loadAnalysisHistory();
-                    
-                    // Show success message
-                    alert('Analysis history has been cleared successfully.');
-                } else {
-                    throw new Error('Failed to clear history from server');
-                }
-            } catch (error) {
-                console.error('Error clearing history:', error);
-                alert('Error clearing history. Please try again.');
-            }
-        }
-    });
-}
-    
     function addToAnalysisHistory(imageSrc, diagnosis, confidence, filename) {
     // Get existing history from localStorage
     const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
@@ -1343,23 +1215,6 @@ function setupClearHistoryButton() {
     // ================================
     // PAGE SWITCHING WITH FADE
     // ================================
-    const homeBtn = document.getElementById("homeBtn");
-    const galleryPage = document.getElementById("galleryPage");
-    const analysisPage = document.getElementById("analysisPage");
-    const homePage = document.getElementById("homePage");
-
-    const navButtons = [homeBtn, galleryBtn, analysisBtn];
-
-    function openAnalysisPage(afterOpen) {
-      showPage(analysisPage);
-      initializeAnalysisPage();
-      if (typeof afterOpen === 'function') {
-        setTimeout(() => {
-          afterOpen();
-        }, 150);
-      }
-    }
-
     function showPage(pageToShow) {
       // Prevent re-showing the page if it’s already visible
       if (pageToShow.style.display !== "none") return;
@@ -1403,12 +1258,7 @@ function setupClearHistoryButton() {
 
     showPage(homePage);
 
-  }); // end DOMContentLoaded
-
-  console.log("%c✅ functions.js initialization complete.", "color: limegreen;");
-} else {
-  console.log("%c⚠️ functions.js already initialized — skipping duplicate load.", "color: orange;");
-}
+  }; // end DOMContentLoaded
 
 // Tab Switching Functionality
 function setupTabs() {
@@ -1433,24 +1283,50 @@ function setupTabs() {
             } else if (tabName === 'history') {
                 historyTab.classList.add('active');
                 recommendationsTab.classList.remove('active');
-                // Reload history when switching to history tab
-                loadAnalysisHistory();
             }
         });
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    setupTabs();
-    setupClearHistoryButton();
-    loadAnalysisHistory(); // Load history on page load
-});
-
-// Also try to initialize immediately if DOM is already loaded
-if (document.readyState === 'loading') {
-    console.log('Waiting for DOM to load...');
-} else {
-    setupTabs();
-    setupClearHistoryButton();
-    loadAnalysisHistory();
-}
+// Clear history functionality
+    function setupClearHistoryButton() {
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        if (!clearHistoryBtn) return;
+        
+        clearHistoryBtn.addEventListener('click', async () => {
+            // Confirm before clearing
+            const confirmed = confirm('Are you sure you want to clear all analysis history? This will delete:\n\n- All analysis history in the app\n- All diagnosis records in the CSV file\n\nThis action cannot be undone.');
+            
+            if (confirmed) {
+                try {
+                    // Clear localStorage
+                    localStorage.removeItem('analysisHistory');
+                    
+                    // Clear from CSV via API
+                    const response = await fetch('http://localhost:5000/clear-analysis-history', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('History cleared:', result);
+                        
+                        // Reload history display (will be empty)
+                        loadAnalysisHistory();
+                        
+                        // Show success message
+                        alert('Analysis history has been cleared successfully.');
+                    } else {
+                        throw new Error('Failed to clear history from server');
+                    }
+                } catch (error) {
+                    console.error('Error clearing history:', error);
+                    alert('Error clearing history. Please try again.');
+                }
+            }
+        });
+    }
