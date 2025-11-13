@@ -376,7 +376,7 @@ if (!window._functionReloadProtected) {
       const currentName = navbarUserName.textContent;
       const newName = `${firstName || ''} ${lastName || ''}`.trim();
       navbarUserAvatar.src = avatar.src;
-      if (loggedInUserName) loggedInUserName = user.name || 'User';
+      if (loggedInUserName) loggedInUserName = newName || currentName || 'User';
 
       // Save locally for instant reload
       localStorage.setItem('userAvatar', avatar.src);
