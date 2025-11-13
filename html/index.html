@@ -247,7 +247,7 @@
                     </button>
 
                     <button id="refreshButton" class="btn btn-light refresh-button">
-                        <i class="bi bi-arrow-clockwise"></i> Refresh (5s)
+                        <i class="bi bi-arrow-clockwise"></i>
                     </button>
                 </div>
 
@@ -428,9 +428,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
-    <!-- <script src="../js/main_window_functions.js"></script> -->
 
-    <script type="module" src="../js/main_window_functions.js"></script>
+    <!-- Defer added so function only loads once DOM Content loaded -->
+    <script type="module" src="../js/main_window_functions.js" defer></script> 
+    <script type="module" src="../js/gallery_page.js" defer></script> 
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="../js/gallery_chart.js"></script>

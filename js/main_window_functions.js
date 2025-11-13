@@ -1,922 +1,431 @@
-// ========================================
-// functions.js
-// ========================================
-
+// Home Page Functions
+import { loadGalleryImages, analyzeModeActive, exitAnalyzeMode } from './gallery_page.js';
 // Protect against multiple loads of this script
 if (!window._functionReloadProtected) {
+  
   window._functionReloadProtected = true;
 
   console.log("%c⚙️ Initializing functions.js...", "color: cyan; font-weight: bold;");
 
-  document.addEventListener("DOMContentLoaded", () => {
-    console.log("%c📄 DOM fully loaded.", "color: green;");
+  // Variables
+  const minimizeBtn = document.getElementById('minimize');
+  const closeBtn = document.getElementById('close');  
 
-    // ================================
-    // ELECTRON WINDOW CONTROLS
-    // ================================
-    let ipcRenderer;
+  const loadingScreenContainer = document.getElementById("loadingScreenContainer");
+  const galleryOverview = document.getElementById("galleryOverview");
+
+  const galleryBtn = document.getElementById("galleryBtn");
+  const analysisBtn = document.getElementById("analysisBtn");
+
+  let serverConnected = false;
+
+  const userNameElement = document.getElementById("userName");
+  const dropdownUserName = document.getElementById("dropdownUserName");
+  const dropdownUserEmail = document.getElementById("dropdownUserEmail");
+
+  const userGreeting = document.getElementById('userGreeting');
+  const userDropdown = document.getElementById('userDropdown');
+
+  let loggedInUserName = ""; // store user name globally
+  
+  // Minimize and Close Button
+  let ipcRenderer;
+  try {
+    const electron = require('electron');
+    ipcRenderer = electron.ipcRenderer;
+    console.log("Electron detected, ipcRenderer loaded.");
+  } catch (err) {
+    console.log("Not running in Electron, skipping ipcRenderer.");
+  }
+
+  if (minimizeBtn) minimizeBtn.addEventListener('click', () => ipcRenderer.send('minimize-window'));
+  if (closeBtn) closeBtn.addEventListener('click', () => ipcRenderer.send('close-window'));
+  
+  // Check Log-in session and connect to gallery server
+  async function initUserSession() {
+    if (!userNameElement) return;
+
     try {
-      const electron = require('electron');
-      ipcRenderer = electron.ipcRenderer;
-      console.log("Electron detected, ipcRenderer loaded.");
-    } catch (err) {
-      console.log("Not running in Electron, skipping ipcRenderer.");
-    }
+        // Fetch session info from Flask
+        const res = await fetch("http://127.0.0.1:5000/status", {
+            method: "GET",
+            credentials: "include" // send cookies for session
+        });
 
-    const minimizeBtn = document.getElementById('minimize');
-    const closeBtn = document.getElementById('close');
+        const data = await res.json();
 
-    if (minimizeBtn) minimizeBtn.addEventListener('click', () => ipcRenderer.send('minimize-window'));
-    if (closeBtn) closeBtn.addEventListener('click', () => ipcRenderer.send('close-window'));
+        if (data.logged_in) {
+            console.log("%c📧 Logged in user data from session:", "color: yellow;", data);
 
-    // ================================
-    // SERVER CONNECTION LOGIC
-    // ================================
-    const loadingScreenContainer = document.getElementById("loadingScreenContainer");
-    const galleryOverview = document.getElementById("galleryOverview");
+            loggedInUserName = data.name || "User"; // fallback if name not sent
+            userNameElement.textContent = `Hello, ${loggedInUserName}!`;
 
-    const galleryBtn = document.getElementById("galleryBtn");
-    const analysisBtn = document.getElementById("analysisBtn");
-
-    let serverConnected = false;
-
-    // ================================
-    // DISPLAY LOGGED-IN USER & DROPDOWN
-    // ================================
-    const userNameElement = document.getElementById("userName");
-    const dropdownUserName = document.getElementById("dropdownUserName");
-    const dropdownUserEmail = document.getElementById("dropdownUserEmail");
-
-    let loggedInUserName = ""; // store user name globally
-
-    if (ipcRenderer && userNameElement) {
-      ipcRenderer.on("user-data", (event, data) => {
-        console.log("%c📧 Full user data received:", "color: yellow;", data);
-
-        if (data && data.name) {
-          loggedInUserName = data.name; // store globally
-          userNameElement.textContent = `Hello, ${loggedInUserName}!`;
-
-          if (dropdownUserName) dropdownUserName.textContent = loggedInUserName;
-          if (dropdownUserEmail && data.email) {
-            console.log("%c✉️ Setting email to:", "color: yellow;", data.email);
-            dropdownUserEmail.textContent = data.email;
-          } else {
-            console.log("%c❌ Email not found in data:", "color: red;", data);
-          }
-          console.log("%c👤 Logged-in user set to:", "color: cyan;", loggedInUserName);
-        }
-        
-        //Connect to local server of gallery
-        console.log("%c🖧 Connecting to server...", "color: limegreen;");
-
-        if (!ipcRenderer) {
-          console.warn("ipcRenderer not available. Running outside Electron?");
-          return;
-        }
-
-        ipcRenderer.send('connect-desktop-server');
-
-        ipcRenderer.once('desktop-server-status', (event, status) => {
-          if (status.success) {
-            console.log("%c✅ Desktop server started successfully.", "color: limegreen;");
-
-            fadeOut(loadingScreenContainer, 400, () => fadeIn(galleryOverview, 400));
-            serverConnected = true;
-            if (galleryBtn) galleryBtn.disabled = false;
-            if (analysisBtn) analysisBtn.disabled = false;
-
-            // ================================
-            // SHOW LOCAL SERVER IP & COPY
-            // ================================
-            const statusSpan = document.getElementById("serverStatus");
-            const ipSpan = document.getElementById("serverIP");
-            const copyIPBtn = document.getElementById("copyIPBtn");
-
-            if (statusSpan && ipSpan && status.ip) {
-              statusSpan.textContent = "active";
-              const originalIP = `${status.ip}:5001`;
-              ipSpan.textContent = originalIP;
-
-              if (copyIPBtn) {
-                copyIPBtn.addEventListener("click", () => {
-                  const ipText = ipSpan.textContent.trim();
-                  if (!ipText) return;
-
-                  navigator.clipboard.writeText(originalIP).then(() => {
-                    // Temporarily change IP text
-                    ipSpan.textContent = "IP copied!";
-                    ipSpan.style.color = "limegreen";
-
-                    setTimeout(() => {
-                      ipSpan.textContent = originalIP;    // revert back
-                      ipSpan.style.color = "#333";        // reset color
-                    }, 1500);
-                  }).catch(err => console.error("Failed to copy IP:", err));
-                });
-              }
+            if (dropdownUserName) dropdownUserName.textContent = loggedInUserName;
+            if (dropdownUserEmail && data.email) {
+                dropdownUserEmail.textContent = data.email;
             }
-          } else {
-            console.error("%c❌ Failed to start desktop server:", "color: red;", status.message);
-            alert("Failed to connect to server: " + status.message);
-          }
-        });
 
-      });
-    }
+            console.log("%c👤 Logged-in user set to:", "color: cyan;", loggedInUserName);
 
-    // User Dropdown Functionality
-    const userGreeting = document.getElementById('userGreeting');
-    const userDropdown = document.getElementById('userDropdown');
+            // Connect to local desktop server
+            console.log("%c🖧 Connecting to server...", "color: limegreen;");
 
-    if (userGreeting && userDropdown) {
-      console.log("%c✅ User dropdown elements found", "color: cyan;");
-
-      // Toggle dropdown on click
-      userGreeting.addEventListener('click', (e) => {
-        e.stopPropagation();
-        userDropdown.classList.toggle('show');
-        userGreeting.classList.toggle('active');
-        console.log("%c👆 Dropdown toggled", "color: cyan;");
-      });
-
-      // Close dropdown when clicking outside
-      document.addEventListener('click', (e) => {
-        if (!userGreeting.contains(e.target)) {
-          userDropdown.classList.remove('show');
-          userGreeting.classList.remove('active');
-        }
-      });
-
-      // Prevent dropdown from closing when clicking inside it
-      userDropdown.addEventListener('click', (e) => e.stopPropagation());
-
-      // Dropdown menu item handlers
-      const changeProfileBtn = document.getElementById('changeProfileBtn');
-      const changeAppearanceBtn = document.getElementById('changeAppearanceBtn');
-      const logoutBtn = document.getElementById('logoutBtn');
-
-      if (changeProfileBtn) {
-        changeProfileBtn.addEventListener('click', () => {
-          // Show account selection modal
-          const accountModal = document.getElementById('accountSelectionModal');
-          if (accountModal) {
-            accountModal.classList.add('show');
-            console.log("%c👥 Account selection modal opened", "color: cyan;");
-          }
-
-          // Close dropdown
-          userDropdown.classList.remove('show');
-          userGreeting.classList.remove('active');
-        });
-      }
-
-      if (changeAppearanceBtn) {
-        changeAppearanceBtn.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                document.body.classList.add('dark-mode');
-            } else {
-                document.body.classList.remove('dark-mode');
+            if (!ipcRenderer) {
+                console.warn("ipcRenderer not available. Running outside Electron?");
+                return;
             }
-        });
-      }
 
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            console.log('Logout clicked');
-            if (confirm('Are you sure you want to log out?')) {
-                if (ipcRenderer) {
-                    console.log('Sending logout to main process...');
-                    ipcRenderer.send('logout');
-                    ipcRenderer.send('disconnect-desktop-server');
-                          
-                    ipcRenderer.once('desktop-server-disconnected', () => {
-                      fadeOut(galleryOverview, 400, () => {
-                        fadeIn(loadingScreenContainer, 400);
-                        let loggedInUserName = "";
-                        serverConnected = false;
-                        if (galleryBtn) galleryBtn.disabled = true;
-                        if (analysisBtn) analysisBtn.disabled = true;
+            ipcRenderer.send('connect-desktop-server');
 
-                        console.log("%c✅ Server card displayed again. Buttons disabled.", "color: red;");
-                      });
-                    });
+            ipcRenderer.once('desktop-server-status', (event, status) => {
+                if (status.success) {
+                    console.log("%c✅ Desktop server started successfully.", "color: limegreen;");
+
+                    fadeOut(loadingScreenContainer, 400, () => fadeIn(galleryOverview, 400));
+                    serverConnected = true;
+                    if (galleryBtn) galleryBtn.disabled = false;
+                    if (analysisBtn) analysisBtn.disabled = false;
+
+                    // Show server IP
+                    const statusSpan = document.getElementById("serverStatus");
+                    const ipSpan = document.getElementById("serverIP");
+                    const copyIPBtn = document.getElementById("copyIPBtn");
+
+                    if (statusSpan && ipSpan && status.ip) {
+                        statusSpan.textContent = "active";
+                        const originalIP = `${status.ip}:5001`;
+                        ipSpan.textContent = originalIP;
+
+                        if (copyIPBtn) {
+                            copyIPBtn.addEventListener("click", () => {
+                                navigator.clipboard.writeText(originalIP)
+                                    .then(() => {
+                                        ipSpan.textContent = "IP copied!";
+                                        ipSpan.style.color = "limegreen";
+
+                                        setTimeout(() => {
+                                            ipSpan.textContent = originalIP;
+                                            ipSpan.style.color = "#333";
+                                        }, 1500);
+                                    })
+                                    .catch(err => console.error("Failed to copy IP:", err));
+                            });
+                        }
+                    }
                 } else {
-                    console.warn('ipcRenderer not available — cannot log out!');
-                }
-            }
-            userDropdown.classList.remove('show');
-            userGreeting.classList.remove('active');
-        });
-      }
-
-      ipcRenderer.on('logout-success', () => {
-        console.log("Logged out, login window should appear");
-      });
-    }
-
-    // ================================
-    // AVATAR + NAME MODAL LOGIC
-    // ================================
-    const axios = require('axios'); // Node-style import for Electron renderer
-
-    const accountModal = document.getElementById('accountSelectionModal');
-    const accountModalOverlay = accountModal?.querySelector('.account-modal-overlay');
-    const navbarUserAvatar = document.getElementById('navbarUserAvatar');
-    const navbarUserName = document.getElementById('navbarUserName'); // optional element for showing name
-    const prevBtn = document.getElementById('prevAvatar');
-    const nextBtn = document.getElementById('nextAvatar');
-    const currentAvatarImg = document.getElementById('currentAvatar');
-    const avatarLabel = document.getElementById('avatarLabel');
-    const applyBtn = document.getElementById('applyAvatarChanges');
-    const firstNameInput = document.getElementById('firstName');
-    const lastNameInput = document.getElementById('lastName');
-
-    // Avatar list
-    const avatars = [
-      { src: '../images/Earl.png', label: 'LABRADOR' },
-      { src: '../images/Edrian.png', label: 'POMERANIAN' },
-      { src: '../images/Ken2.png', label: 'KEN' },
-      { src: '../images/Joaquin.png', label: 'SHIH TZU' },
-      { src: '../images/Jigs.png', label: 'CORGI' },
-    ];
-
-    let currentIndex = 0;
-
-    // Show avatar in modal
-    function updateModalAvatar() {
-      const avatar = avatars[currentIndex];
-      currentAvatarImg.src = avatar.src;
-      avatarLabel.textContent = avatar.label;
-    }
-
-    // Carousel arrows
-    prevBtn.addEventListener('click', () => {
-      currentIndex = (currentIndex - 1 + avatars.length) % avatars.length;
-      updateModalAvatar();
-    });
-    nextBtn.addEventListener('click', () => {
-      currentIndex = (currentIndex + 1) % avatars.length;
-      updateModalAvatar();
-    });
-
-    // Close modal on overlay click
-    accountModalOverlay.addEventListener('click', () => {
-      accountModal.classList.remove('show');
-    });
-
-    // Apply changes (update database + UI + localStorage)
-    applyBtn.addEventListener('click', async () => {
-      const avatar = avatars[currentIndex];
-      const firstName = firstNameInput.value.trim();
-      const lastName = lastNameInput.value.trim();
-
-      // Prepare payload with only non-empty fields
-      const payload = {};
-      if (firstName) payload.first_name = firstName;
-      if (lastName) payload.last_name = lastName;
-      payload.avatar = avatar.src; // optional: backend may ignore if no column
-
-      try {
-        // Send update to backend (Flask)
-        await axios.post('http://127.0.0.1:5000/update-user', payload, { withCredentials: true });
-
-        console.log('✅ User updated successfully');
-
-        // Update navbar avatar immediately
-        if (navbarUserAvatar) navbarUserAvatar.src = avatar.src;
-        // Update navbar name if available
-        if (navbarUserName) {
-          if (firstName) navbarUserName.textContent = firstName;
-          if (lastName) navbarUserName.textContent += lastName ? ' ' + lastName : '';
-        }
-
-        // Save to localStorage
-        localStorage.setItem('userAvatar', avatar.src);
-        if (firstName) localStorage.setItem('userFirstName', firstName);
-        if (lastName) localStorage.setItem('userLastName', lastName);
-
-        // Close modal
-        accountModal.classList.remove('show');
-      } catch (err) {
-        console.error('❌ Failed to update user in DB:', err);
-        alert('Failed to save changes. Please try again.');
-      }
-    });
-
-    // Load saved avatar and names on page load
-    window.addEventListener('DOMContentLoaded', () => {
-      const savedAvatar = localStorage.getItem('userAvatar');
-      if (savedAvatar && navbarUserAvatar) navbarUserAvatar.src = savedAvatar;
-
-      const savedFirst = localStorage.getItem('userFirstName');
-      const savedLast = localStorage.getItem('userLastName');
-      if (savedFirst && firstNameInput) firstNameInput.value = savedFirst;
-      if (savedLast && lastNameInput) lastNameInput.value = savedLast;
-
-      updateModalAvatar();
-    });
-
-    // ================================
-    // FADE UTILITY FUNCTIONS
-    // ================================
-    function fadeIn(element, duration = 400) {
-      element.style.display = "flex";
-      element.style.opacity = 0;
-      let opacity = 0;
-      const interval = 20;
-      const increment = interval / duration;
-      const fade = setInterval(() => {
-        opacity += increment;
-        element.style.opacity = opacity;
-        if (opacity >= 1) clearInterval(fade);
-      }, interval);
-    }
-
-    function fadeOut(element, duration = 400, callback) {
-      element.style.opacity = 1;
-      let opacity = 1;
-      const interval = 20;
-      const decrement = interval / duration;
-      const fade = setInterval(() => {
-        opacity -= decrement;
-        element.style.opacity = opacity;
-        if (opacity <= 0) {
-          clearInterval(fade);
-          element.style.display = "none";
-          if (callback) callback();
-        }
-      }, interval);
-    }
-
-    // ================================
-    // GALLERY DETAIL MINIMIZE TOGGLE
-    // ================================
-    const detailPane = document.getElementById("detailPane");
-    const minimizeDetail = document.getElementById("minimizeDetail");
-    const leftColumn = document.querySelector(".gallery-left");
-
-    if (detailPane && minimizeDetail && leftColumn) {
-      minimizeDetail.addEventListener("click", () => {
-        const isMinimized = detailPane.classList.contains("minimized");
-        if (isMinimized) {
-          detailPane.classList.remove("minimized");
-          // leftColumn.style.flex = "3.5";
-          minimizeDetail.innerHTML = "<i class='bi bi-layout-text-sidebar-reverse'></i> Hide Details";
-        } else {
-          detailPane.classList.add("minimized");
-          // leftColumn.style.flex = "3.5";
-          minimizeDetail.innerHTML = "<i class='bi bi-layout-text-sidebar-reverse'></i> Show Details";
-        }
-      });
-    }
-
-    // ================================
-    // GALLERY IMAGE LOADING
-    // ================================
-    const imageGrid = document.querySelector(".gallery-left .image-grid");
-    const refreshButton = document.getElementById('refreshButton');
-    const sortAnalyzed = document.getElementById('sortAnalyzed');
-    const sortRaw = document.getElementById('sortRaw');
-    const sortDermatitis = document.getElementById('sortDermatitis');
-    const sortMange = document.getElementById('sortMange');
-    const sortHotspot = document.getElementById('sortHotspot');
-    const sortHealthy = document.getElementById('sortHealthy');
-    const sortCheckboxes = [
-      sortAnalyzed,
-      sortRaw,
-      sortDermatitis,
-      sortMange,
-      sortHotspot,
-      sortHealthy
-    ].filter(Boolean);
-
-    sortCheckboxes.forEach(checkbox => {
-      checkbox.addEventListener('change', () => {
-        renderGalleryImages();
-      });
-    });
-
-    let refreshInterval = 60000; // 60 seconds
-    let countdown = refreshInterval / 1000; // in seconds
-    let countdownTimer;
-
-    let analyzeModeActive = false;
-    let allGalleryImages = [];
-    let filteredGalleryImages = [];
-    let selectedImageFilenames = new Set();
-    let lastSelectedFilename = null;
-    let lastSelectedIndex = null;
-    let lastActiveFilename = null;
-    let analysisPageInitialized = false;
-
-    window.currentAnalysisSource = null;
-
-    // Load gallery images from server
-    async function loadGalleryImages() {
-      if (!imageGrid) return;
-
-      try {
-        const response = await fetch('http://localhost:5001/images');
-        const data = await response.json();
-
-        if (data.success) {
-          allGalleryImages = Array.isArray(data.images) ? data.images : [];
-          renderGalleryImages();
-        } else {
-          allGalleryImages = [];
-          filteredGalleryImages = [];
-          clearSelection();
-          imageGrid.innerHTML = '<div class="no-images">No images uploaded yet.</div>';
-        }
-      } catch (error) {
-        console.error('Error loading gallery images:', error);
-        allGalleryImages = [];
-        filteredGalleryImages = [];
-        clearSelection();
-        imageGrid.innerHTML = '<div class="no-images">Failed to load images from server.</div>';
-      }
-    }
-
-    function getActiveGalleryFilters() {
-      const statuses = [];
-      const diseases = [];
-
-      if (sortAnalyzed?.checked) statuses.push('analyzed');
-      if (sortRaw?.checked) statuses.push('raw');
-      if (sortDermatitis?.checked) diseases.push('dermatitis');
-      if (sortMange?.checked) diseases.push('mange');
-      if (sortHotspot?.checked) diseases.push('hotspot');
-      if (sortHealthy?.checked) diseases.push('healthy');
-
-      return { statuses, diseases };
-    }
-
-    function applyGalleryFilters(images, filters) {
-      if (!filters.statuses.length && !filters.diseases.length) {
-        return [...images];
-      }
-
-      return images.filter(image => {
-        const imageStatus = image.analyzed ? 'analyzed' : 'raw';
-        const imageDisease = (image.disease || '').toLowerCase();
-
-        const statusMatches = !filters.statuses.length || filters.statuses.includes(imageStatus);
-        const diseaseMatches = !filters.diseases.length || filters.diseases.includes(imageDisease);
-
-        return statusMatches && diseaseMatches;
-      });
-    }
-
-    function renderGalleryImages() {
-      if (!imageGrid) return;
-
-      const filters = getActiveGalleryFilters();
-      const filtered = applyGalleryFilters(allGalleryImages, filters);
-      filteredGalleryImages = filtered;
-
-      Array.from(selectedImageFilenames).forEach(filename => {
-        if (!filtered.some(img => img.filename === filename)) {
-          selectedImageFilenames.delete(filename);
-        }
-      });
-
-      if (lastSelectedFilename && !filtered.some(img => img.filename === lastSelectedFilename)) {
-        lastSelectedFilename = null;
-        lastSelectedIndex = null;
-      }
-
-      if (lastActiveFilename && !filtered.some(img => img.filename === lastActiveFilename)) {
-        lastActiveFilename = null;
-      }
-
-        imageGrid.innerHTML = '';
-
-      if (!filtered.length) {
-        selectedImageFilenames.clear();
-        lastSelectedFilename = null;
-        lastSelectedIndex = null;
-        lastActiveFilename = null;
-        imageGrid.innerHTML = '<div class="no-images">No images match the current filters.</div>';
-        return;
-      }
-
-      filtered.forEach((image, index) => {
-            const div = document.createElement('div');
-            div.classList.add('image-item');
-        div.dataset.filename = image.filename;
-        div.dataset.disease = image.disease || '';
-        div.dataset.analyzed = image.analyzed ? 'true' : 'false';
-        div.dataset.confidence = image.confidence || '';
-        div.dataset.uploadedAt = image.uploaded_at || '';
-        if (typeof image.size !== 'undefined') {
-          div.dataset.size = image.size;
-        }
-
-            if (image.analyzed) {
-              div.classList.add('analyzed');
-            }
-
-            const img = document.createElement('img');
-            img.src = `http://localhost:5001/images/${image.filename}`;
-            img.alt = image.filename;
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'cover';
-
-            div.appendChild(img);
-            
-            if (image.analyzed) {
-              const badge = document.createElement('div');
-              badge.className = 'analyzed-badge';
-              badge.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
-              badge.title = `Analyzed: ${image.disease || 'N/A'} (${image.confidence || '0'}%)`;
-              div.appendChild(badge);
-            }
-
-        if (selectedImageFilenames.has(image.filename)) {
-          div.classList.add('selected');
-        }
-
-        if (image.filename === lastSelectedFilename) {
-          div.classList.add('last-selected');
-          lastSelectedIndex = index;
-        }
-
-        if (image.filename === lastActiveFilename) {
-              div.classList.add('active');
-        }
-
-        div.addEventListener('click', (event) => handleImageItemClick(event, image));
-
-        imageGrid.appendChild(div);
-      });
-
-      applyAnalyzeModeStyles();
-
-      if (analyzeModeActive && lastSelectedFilename) {
-        const imageData = filtered.find(img => img.filename === lastSelectedFilename);
-        if (imageData) {
-          showImageDetails(imageData);
-        }
-      } else if (!analyzeModeActive && lastActiveFilename) {
-        const imageData = filtered.find(img => img.filename === lastActiveFilename);
-        if (imageData) {
-          showImageDetails(imageData);
-        }
-      }
-
-      syncSelectedState();
-    }
-
-    function applyAnalyzeModeStyles() {
-      if (!imageGrid) return;
-      const items = Array.from(imageGrid.querySelectorAll('.image-item'));
-      items.forEach(item => {
-        if (analyzeModeActive) {
-          item.classList.add('selectable');
-        } else {
-          item.classList.remove('selectable');
-        }
-      });
-    }
-
-    function handleImageItemClick(event, image) {
-      event.stopPropagation();
-
-      if (analyzeModeActive) {
-        selectImage(event, image);
-        } else {
-        document.querySelectorAll('.image-item.active').forEach(el => el.classList.remove('active'));
-        event.currentTarget.classList.add('active');
-        lastActiveFilename = image.filename;
-        showImageDetails(image);
-      }
-    }
-
-    function clearSelection() {
-      if (!imageGrid) return;
-      Array.from(imageGrid.querySelectorAll('.image-item')).forEach(img => {
-        img.classList.remove('selected', 'last-selected', 'active');
-      });
-      selectedImageFilenames = new Set();
-      lastSelectedFilename = null;
-      lastSelectedIndex = null;
-      lastActiveFilename = null;
-    }
-
-    function syncSelectedState() {
-      if (!imageGrid) return;
-      selectedImageFilenames = new Set(
-        Array.from(imageGrid.querySelectorAll('.image-item.selected')).map(el => el.dataset.filename)
-      );
-    }
-
-    function showImageDetails(image) {
-      const detailPane = document.getElementById("detailPane");
-      if (!detailPane || !image) return;
-
-      lastActiveFilename = image.filename || null;
-      
-      // Remove minimized class to show details
-      detailPane.classList.remove('minimized');
-
-      // Parse date and time from uploaded_at
-      const uploadedDate = image.uploaded_at ? new Date(image.uploaded_at) : null;
-      const dateStr = uploadedDate ? uploadedDate.toLocaleDateString() : 'N/A';
-      const timeStr = uploadedDate ? uploadedDate.toLocaleTimeString() : 'N/A';
-      
-      // Format file size
-      const sizeKB = image.size ? Math.round(image.size / 1024) : 0;
-      const sizeStr = sizeKB > 0 ? `${sizeKB} KB` : 'Unknown';
-      
-      // Check if analyzed
-      const isAnalyzed = image.analyzed || false;
-      const diagnosis = image.disease || 'N/A';
-      const confidence = image.confidence || '0';
-      
-      // Create analysis status badge
-      const analysisStatus = isAnalyzed 
-        ? `<span class="status-badge analyzed-status"><i class="bi bi-check-circle-fill"></i> Analyzed</span>`
-        : `<span class="status-badge raw-status"><i class="bi bi-circle"></i> Raw (Not Analyzed)</span>`;
-
-      const detailContent = detailPane.querySelector('.detail-content');
-      if (detailContent) {
-        // Use diagnosis name if analyzed, otherwise show "Not Analyzed"
-        const displayName = isAnalyzed ? diagnosis : 'Not Analyzed';
-        const displayNameClass = isAnalyzed ? 'diagnosis-value' : '';
-        
-        detailContent.innerHTML = `
-          <h3>Image Details</h3>
-          <div class="detail-preview">
-            <img src="http://localhost:5001/images/${image.filename}" alt="${image.filename}">
-          </div>
-          <div class="detail-info">
-            <div class="detail-row">
-              <span class="detail-label"><i class="bi bi-heart-pulse"></i> Diagnosis:</span>
-              <span class="detail-value ${displayNameClass}">${displayName}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label"><i class="bi bi-calendar"></i> Date:</span>
-              <span class="detail-value">${dateStr}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label"><i class="bi bi-clock"></i> Time:</span>
-              <span class="detail-value">${timeStr}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label"><i class="bi bi-hdd"></i> Size:</span>
-              <span class="detail-value">${sizeStr}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label"><i class="bi bi-info-circle"></i> Status:</span>
-              <span class="detail-value">${analysisStatus}</span>
-            </div>
-            ${isAnalyzed ? `
-            <div class="detail-row analysis-info">
-              <span class="detail-label"><i class="bi bi-graph-up"></i> Confidence:</span>
-              <span class="detail-value confidence-value">${confidence}%</span>
-            </div>
-            ` : ''}
-          </div>
-        `;
-      }
-    }
-
-
-    let lastAnalyzeState = false; // remember previous state
-
-    function updateRefreshButtonText() {
-      if (!refreshButton) return;
-
-      // Detect mode change (ON <-> OFF)
-      const modeChanged = analyzeModeActive !== lastAnalyzeState;
-      lastAnalyzeState = analyzeModeActive;
-
-      // Only fade if mode has just changed
-      if (modeChanged) {
-        refreshButton.classList.add('fade-out');
-
-        setTimeout(() => {
-          if (analyzeModeActive) {
-            refreshButton.classList.add('disabled');
-            refreshButton.innerHTML = `<i class="bi bi-pause-circle"></i> Refresh Disabled`;
-          } else {
-            refreshButton.classList.remove('disabled');
-            refreshButton.innerHTML = `<i class="bi bi-arrow-clockwise"></i> Refresh (${countdown}s)`;
-          }
-          refreshButton.classList.remove('fade-out');
-        }, 300);
-      } else {
-        // Normal updates (no fade)
-        if (analyzeModeActive) {
-          refreshButton.innerHTML = `<i class="bi bi-pause-circle"></i> Refresh Disabled`;
-        } else {
-          refreshButton.innerHTML = `<i class="bi bi-arrow-clockwise"></i> Refresh (${countdown}s)`;
-        }
-      }
-    }
-
-    // Manual refresh
-    if (refreshButton) {
-      refreshButton.addEventListener('click', () => {
-        if (analyzeModeActive) {
-          console.log("⚠️ Refresh disabled during Analyze Mode.");
-          return; // 🚫 stop here, no refresh
-        }
-
-        loadGalleryImages();
-        countdown = refreshInterval / 1000;
-        updateRefreshButtonText();
-      });
-    }
-
-    // Auto-refresh every interval (only if not analyzing)
-    setInterval(() => {
-      if (galleryPage && galleryPage.style.display !== 'none' && !analyzeModeActive) {
-        loadGalleryImages();
-        countdown = refreshInterval / 1000; // reset countdown after refresh
-      }
-    }, refreshInterval);
-
-    // Countdown timer, updates every second
-    countdownTimer = setInterval(() => {
-      if (galleryPage && galleryPage.style.display !== 'none') {
-        if (!analyzeModeActive && countdown > 0) {
-          countdown--;
-        }
-        updateRefreshButtonText();
-      }
-    }, 1000);
-
-    // Initial load when gallery button is clicked
-    if (galleryBtn) {
-      galleryBtn.addEventListener('click', () => {
-        showPage(galleryPage);
-        loadGalleryImages();
-        countdown = refreshInterval / 1000;
-        updateRefreshButtonText();
-      });
-    }
-
-    // Initialize button text
-    updateRefreshButtonText();
-
-    const analyzeModeButton = document.getElementById('analyzeModeButton');
-    const analyzeSelected = document.getElementById('analyzeFloatingButton');
-    const galleryColumn = document.querySelector('.gallery-columns');
-
-    function enterAnalyzeMode() {
-        analyzeModeActive = true;
-        if (analyzeModeButton) {
-            analyzeModeButton.innerHTML = `<i class="bi bi-x-lg"></i> Cancel`;
-            analyzeModeButton.classList.add('active');
-        }
-        if (analyzeSelected) {
-            analyzeSelected.style.display = "block";
-        }
-        applyAnalyzeModeStyles();
-        if (galleryColumn) {
-            galleryColumn.addEventListener('click', clearSelectionOnEmpty);
-        }
-        updateRefreshButtonText();
-    }
-
-    function exitAnalyzeMode(options = { clearSelection: true }) {
-        analyzeModeActive = false;
-        if (analyzeModeButton) {
-            analyzeModeButton.innerHTML = '<i class="bi bi-box-arrow-in-down"></i> Analyze Images';
-            analyzeModeButton.classList.remove('active');
-        }
-        if (analyzeSelected) {
-            analyzeSelected.style.display = "none";
-        }
-        applyAnalyzeModeStyles();
-        if (galleryColumn) {
-            galleryColumn.removeEventListener('click', clearSelectionOnEmpty);
-        }
-        if (options.clearSelection) {
-            clearSelection();
-        }
-            updateRefreshButtonText();
-    }
-
-    if (analyzeModeButton) {
-        analyzeModeButton.addEventListener('click', () => {
-            if (analyzeModeActive) {
-                exitAnalyzeMode();
-            } else {
-                enterAnalyzeMode();
-            }
-        });
-    }
-
-    if (analyzeSelected) {
-        analyzeSelected.addEventListener('click', async (event) => {
-            event.stopPropagation();
-
-            if (!selectedImageFilenames.size) {
-                alert('Please select at least one image to analyze.');
-                return;
-            }
-
-            const filenames = Array.from(selectedImageFilenames);
-            const imagesToAnalyze = filenames
-                .map(filename => filteredGalleryImages.find(img => img.filename === filename) || allGalleryImages.find(img => img.filename === filename))
-                .filter(Boolean);
-
-            if (!imagesToAnalyze.length) {
-                alert('Selected images are no longer available.');
-                exitAnalyzeMode();
-                return;
-            }
-
-            if (imagesToAnalyze.length > 1) {
-                console.warn('Multiple images selected; only the first image will be prepared for analysis.');
-            }
-
-            const targetImage = imagesToAnalyze[0];
-
-            exitAnalyzeMode();
-
-            openAnalysisPage(async () => {
-                try {
-                    await displayImageFromGallery(targetImage);
-                    setTimeout(() => {
-                        autoAnalyzeSelectedImage();
-                    }, 200);
-                } catch (error) {
-                    console.error('Failed to prepare selected image for analysis:', error);
-                    alert('Unable to load the selected image for analysis. Please try again.');
+                    console.error("%c❌ Failed to start desktop server:", "color: red;", status.message);
+                    console.log(`Retrying in ${retryDelay / 1000} seconds...`);
+                    setTimeout(() => tryConnectDesktopServer(retryDelay), retryDelay);
                 }
             });
+
+        } else {
+            console.log("%c❌ No user logged in.", "color: red;");
+            // Optionally redirect to login page or show login form
+        }
+    } catch (err) {
+        console.error("Failed to check Flask session:", err);
+    }
+  }
+
+  // Fade in and out function
+  function fadeIn(element, duration = 400) {
+    element.style.display = "flex";
+    element.style.opacity = 0;
+    let opacity = 0;
+    const interval = 20;
+    const increment = interval / duration;
+    const fade = setInterval(() => {
+      opacity += increment;
+      element.style.opacity = opacity;
+      if (opacity >= 1) clearInterval(fade);
+    }, interval);
+  }
+
+  function fadeOut(element, duration = 400, callback) {
+    element.style.opacity = 1;
+    let opacity = 1;
+    const interval = 20;
+    const decrement = interval / duration;
+    const fade = setInterval(() => {
+      opacity -= decrement;
+      element.style.opacity = opacity;
+      if (opacity <= 0) {
+        clearInterval(fade);
+        element.style.display = "none";
+        if (callback) callback();
+      }
+    }, interval);
+  }
+
+  // Page Switching Using Fade
+  const homeBtn = document.getElementById("homeBtn");
+  const galleryPage = document.getElementById("galleryPage");
+  const analysisPage = document.getElementById("analysisPage");
+  const homePage = document.getElementById("homePage");
+
+  const navButtons = [homeBtn, galleryBtn, analysisBtn];
+
+  function showPage(pageToShow) {
+    // Prevent re-showing the page if it’s already visible
+    if (pageToShow.style.display !== "none") return;
+
+    if (!serverConnected && (pageToShow === galleryPage || pageToShow === analysisPage)) {
+      alert("⚠️ You must connect to the server first!");
+      return;
+    }
+
+    const pages = [homePage, galleryPage, analysisPage];
+
+    const fadeOutPromises = pages.map(page => {
+      if (!page || page === pageToShow) return Promise.resolve();
+      return new Promise(resolve => fadeOut(page, 100, resolve));
+    });
+
+    Promise.all(fadeOutPromises).then(() => {
+      fadeIn(pageToShow, 100);
+
+      if (pageToShow !== galleryPage && analyzeModeActive) {
+        exitAnalyzeMode();
+      }
+
+      navButtons.forEach(btn => {
+        if (!btn) return;
+        btn.classList.toggle("active", (
+          (btn === homeBtn && pageToShow === homePage) ||
+          (btn === galleryBtn && pageToShow === galleryPage) ||
+          (btn === analysisBtn && pageToShow === analysisPage)
+        ));
+      });
+    });
+  }
+
+  function openAnalysisPage(afterOpen) {
+    showPage(analysisPage);
+    initializeAnalysisPage();
+    if (typeof afterOpen === 'function') {
+      setTimeout(() => {
+        afterOpen();
+      }, 150);
+    }
+  }
+
+  if (homeBtn) homeBtn.addEventListener("click", () => showPage(homePage));
+
+  if (galleryBtn) {
+      galleryBtn.addEventListener('click', () => {
+      showPage(galleryPage);
+      loadGalleryImages();
+      });
+  }
+
+  if (analysisBtn) analysisBtn.addEventListener("click", () => {
+    openAnalysisPage(() => {
+      console.log('%c🔬 Analysis page ready', 'color: cyan;');
+    });
+  });
+  
+  // User Dropdown Functionality
+  if (userGreeting && userDropdown) {
+
+    // Toggle dropdown on click
+    userGreeting.addEventListener('click', (e) => {
+      e.stopPropagation();
+      userDropdown.classList.toggle('show');
+      userGreeting.classList.toggle('active');
+      console.log("%c👆 Dropdown toggled", "color: cyan;");
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!userGreeting.contains(e.target)) {
+        userDropdown.classList.remove('show');
+        userGreeting.classList.remove('active');
+      }
+    });
+
+    // Prevent dropdown from closing when clicking inside it
+    userDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+    // Dropdown menu item handlers
+    const changeProfileBtn = document.getElementById('changeProfileBtn');
+    const changeAppearanceBtn = document.getElementById('changeAppearanceBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    if (changeProfileBtn) {
+      changeProfileBtn.addEventListener('click', () => {
+        // Show account selection modal
+        const accountModal = document.getElementById('accountSelectionModal');
+        if (accountModal) {
+          accountModal.classList.add('show');
+          console.log("%c👥 Account selection modal opened", "color: cyan;");
+        }
+
+        // Close dropdown
+        userDropdown.classList.remove('show');
+        userGreeting.classList.remove('active');
+      });
+    }
+
+    if (changeAppearanceBtn) {
+      changeAppearanceBtn.addEventListener('change', (e) => {
+          if (e.target.checked) {
+              document.body.classList.add('dark-mode');
+          } else {
+              document.body.classList.remove('dark-mode');
+          }
+      });
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        console.log('Logout clicked');
+
+        if (!confirm('Are you sure you want to log out?')) return;
+
+        if (!ipcRenderer) {
+            console.warn('ipcRenderer not available — cannot log out!');
+            return;
+        }
+
+        // Send single logout request; this now handles server disconnect & window destroy
+        ipcRenderer.send('logout');
+
+        // Optionally, listen for logout success/failure
+        ipcRenderer.once('logout-success', (event, data) => {
+            console.log(data.message);
+            // No need to fadeOut/fadeIn anything; main window destroyed and login window shown
         });
+
+        ipcRenderer.once('logout-failed', (event, data) => {
+            console.error('Logout failed:', data.message);
+            alert('Logout failed. Please try again.');
+        });
+
+        // Close the dropdown immediately
+        userDropdown.classList.remove('show');
+        userGreeting.classList.remove('active');
+      });
     }
+  }
 
-    // Function to handle click selection with Shift/Ctrl
-    function selectImage(e, imageDataOverride = null) {
-        if (!imageGrid) return;
-        e.stopPropagation();
+  // AVATAR + NAME MODAL LOGIC
+  const axios = require('axios'); // Node-style import for Electron renderer
 
-        const images = Array.from(imageGrid.querySelectorAll('.image-item'));
-        const currentIndex = images.indexOf(e.currentTarget);
+  const accountModal = document.getElementById('accountSelectionModal');
+  const accountModalOverlay = accountModal?.querySelector('.account-modal-overlay');
+  const navbarUserAvatar = document.getElementById('navbarUserAvatar');
+  const navbarUserName = document.getElementById('userName'); // optional element for showing name
+  const prevBtn = document.getElementById('prevAvatar');
+  const nextBtn = document.getElementById('nextAvatar');
+  const currentAvatarImg = document.getElementById('currentAvatar');
+  const avatarLabel = document.getElementById('avatarLabel');
+  const applyBtn = document.getElementById('applyAvatarChanges');
+  const firstNameInput = document.getElementById('firstName');
+  const lastNameInput = document.getElementById('lastName');
 
-        if (currentIndex === -1) return;
+  // Avatar list
+  const avatars = [
+    { id: 0, src: '../images/Earl.png', label: 'LABRADOR' },
+    { id: 1, src: '../images/Edrian.png', label: 'POMERANIAN' },
+    { id: 2, src: '../images/Joaquin.png', label: 'SHIH TZU' },
+    { id: 3, src: '../images/Jigs.png', label: 'CORGI' },
+  ];
 
-        if (e.ctrlKey || e.metaKey) {
-            e.currentTarget.classList.toggle('selected');
-            if (e.currentTarget.classList.contains('selected')) {
-                images.forEach(img => img.classList.remove('last-selected'));
-                e.currentTarget.classList.add('last-selected');
-                lastSelectedIndex = currentIndex;
-                lastSelectedFilename = e.currentTarget.dataset.filename || null;
-            } else {
-                e.currentTarget.classList.remove('last-selected');
-                if ((e.currentTarget.dataset.filename || null) === lastSelectedFilename) {
-                    lastSelectedIndex = null;
-                    lastSelectedFilename = null;
-                }
-            }
-        } else if (e.shiftKey && lastSelectedIndex !== null) {
-            const [start, end] = currentIndex > lastSelectedIndex ? [lastSelectedIndex, currentIndex] : [currentIndex, lastSelectedIndex];
-            images.forEach(img => img.classList.remove('last-selected'));
-            for (let i = start; i <= end; i++) {
-                images[i].classList.add('selected');
-            }
-            const lastElement = images[currentIndex];
-            lastElement.classList.add('last-selected');
-            lastSelectedIndex = currentIndex;
-            lastSelectedFilename = lastElement.dataset.filename || null;
-        } else {
-            images.forEach(img => img.classList.remove('selected', 'last-selected'));
-            e.currentTarget.classList.add('selected', 'last-selected');
-            lastSelectedIndex = currentIndex;
-            lastSelectedFilename = e.currentTarget.dataset.filename || null;
-        }
+  let currentIndex = 0;
 
-        syncSelectedState();
+  // Show avatar in modal
+  function updateModalAvatar() {
+    const avatar = avatars[currentIndex];
+    currentAvatarImg.src = avatar.src;
+    avatarLabel.textContent = avatar.label;
+  }
 
-        document.querySelectorAll('.image-item.active').forEach(el => el.classList.remove('active'));
-        const lastSelectedElement = imageGrid.querySelector('.image-item.last-selected');
-        if (lastSelectedElement) {
-            lastSelectedElement.classList.add('active');
-            lastActiveFilename = lastSelectedElement.dataset.filename || null;
-            const filename = lastSelectedElement.dataset.filename;
-            const imageData = imageDataOverride || filteredGalleryImages.find(img => img.filename === filename) || allGalleryImages.find(img => img.filename === filename);
-            if (imageData) {
-                showImageDetails(imageData);
-            }
-        } else {
-            lastActiveFilename = null;
-        }
+  // Carousel arrows
+  prevBtn.addEventListener('click', () => {
+    currentIndex = (currentIndex - 1 + avatars.length) % avatars.length;
+    updateModalAvatar();
+  });
+  nextBtn.addEventListener('click', () => {
+    currentIndex = (currentIndex + 1) % avatars.length;
+    updateModalAvatar();
+  });
+
+  // Close modal on overlay click
+  accountModalOverlay.addEventListener('click', () => {
+    accountModal.classList.remove('show');
+  });
+
+  // === Apply Changes (Save to DB) ===
+  applyBtn.addEventListener('click', async () => {
+    const avatar = avatars[currentIndex];
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+
+    const payload = {};
+    if (firstName) payload.first_name = firstName;
+    if (lastName) payload.last_name = lastName;
+    payload.avatar_id = avatar.id; // <-- Send integer ID, not path
+
+    try {
+      await axios.post('http://127.0.0.1:5000/update-user', payload, { withCredentials: true });
+
+      console.log('✅ User updated successfully');
+
+      // Reflect in UI immediately — keep old name if no new one provided
+      const currentName = navbarUserName.textContent;
+      const newName = `${firstName || ''} ${lastName || ''}`.trim();
+      navbarUserAvatar.src = avatar.src;
+      if (loggedInUserName) loggedInUserName = user.name || 'User';
+
+      // Save locally for instant reload
+      localStorage.setItem('userAvatar', avatar.src);
+      localStorage.setItem('userAvatarID', avatar.id);
+      if (firstName) localStorage.setItem('userFirstName', firstName);
+      if (lastName) localStorage.setItem('userLastName', lastName);
+
+      accountModal.classList.remove('show');
+    } catch (err) {
+      console.error('❌ Failed to update user in DB:', err);
+      alert('Failed to save changes. Please try again.');
     }
+  });
 
-    // Clear selection when clicking empty space
-    function clearSelectionOnEmpty(e) {
-        if (!e.target.closest('.image-item')) {
-            clearSelection();
-        }
+  // === Load on Page Start ===
+  window.addEventListener('DOMContentLoaded', async () => {
+    try {
+      // 1️⃣ Get user info from backend
+      const res = await axios.get('http://127.0.0.1:5000/status', { withCredentials: true });
+      const user = res.data;
+
+      if (user.logged_in) {
+        const savedAvatarID = user.avatar_id ?? 0;
+        currentIndex = savedAvatarID < avatars.length ? savedAvatarID : 0;
+
+        // Update navbar and modal
+        const avatar = avatars[currentIndex];
+        navbarUserAvatar.src = avatar.src;
+        if (loggedInUserName) loggedInUserName = user.name || 'User';
+      }
+
+      updateModalAvatar();
+    } catch (err) {
+      console.error('⚠️ Could not fetch user status:', err);
+      updateModalAvatar(); // fallback
     }
+  });
+
+  // Check if session is initiated and connect automatically to gallery server
+  initUserSession();
+
+  // Start with home page
+  showPage(homePage);
+
+  //CHECK IF UI HAS FULLY LOADED
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("%c📄 DOM fully loaded.", "color: green;");    
+
+    
 
     // Initialize analysis page when it's shown
     function initializeAnalysisPage() {
@@ -960,7 +469,7 @@ if (!window._functionReloadProtected) {
             console.error('Invalid file type');
             return;
         }
-        
+      
         const uploadArea = document.getElementById('imageUploadArea');
         const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
         const imagePreview = document.getElementById('imagePreview');
@@ -1668,68 +1177,6 @@ if (!window._functionReloadProtected) {
         popup.querySelector('.popup-overlay').addEventListener('click', closePopup);
     }
 
-    // ================================
-    // PAGE SWITCHING WITH FADE
-    // ================================
-    const homeBtn = document.getElementById("homeBtn");
-    const galleryPage = document.getElementById("galleryPage");
-    const analysisPage = document.getElementById("analysisPage");
-    const homePage = document.getElementById("homePage");
-
-    const navButtons = [homeBtn, galleryBtn, analysisBtn];
-
-    function openAnalysisPage(afterOpen) {
-      showPage(analysisPage);
-      initializeAnalysisPage();
-      if (typeof afterOpen === 'function') {
-        setTimeout(() => {
-          afterOpen();
-        }, 150);
-      }
-    }
-
-    function showPage(pageToShow) {
-      // Prevent re-showing the page if it’s already visible
-      if (pageToShow.style.display !== "none") return;
-
-      if (!serverConnected && (pageToShow === galleryPage || pageToShow === analysisPage)) {
-        alert("⚠️ You must connect to the server first!");
-        return;
-      }
-
-      const pages = [homePage, galleryPage, analysisPage];
-
-      const fadeOutPromises = pages.map(page => {
-        if (!page || page === pageToShow) return Promise.resolve();
-        return new Promise(resolve => fadeOut(page, 100, resolve));
-      });
-
-      Promise.all(fadeOutPromises).then(() => {
-        fadeIn(pageToShow, 100);
-
-        if (pageToShow !== galleryPage && analyzeModeActive) {
-          exitAnalyzeMode();
-        }
-
-        navButtons.forEach(btn => {
-          if (!btn) return;
-          btn.classList.toggle("active", (
-            (btn === homeBtn && pageToShow === homePage) ||
-            (btn === galleryBtn && pageToShow === galleryPage) ||
-            (btn === analysisBtn && pageToShow === analysisPage)
-          ));
-        });
-      });
-    }
-
-    if (homeBtn) homeBtn.addEventListener("click", () => showPage(homePage));
-    if (analysisBtn) analysisBtn.addEventListener("click", () => {
-      openAnalysisPage(() => {
-        console.log('%c🔬 Analysis page ready', 'color: cyan;');
-      });
-    });
-
-    showPage(homePage);
 
   }); // end DOMContentLoaded
 
@@ -1780,6 +1227,4 @@ if (!window._functionReloadProtected) {
         dropdownMenu.classList.remove('show');
       }
     });
-    
-    console.log('%c✅ Simple dropdown initialized', 'color: limegreen;');
   }

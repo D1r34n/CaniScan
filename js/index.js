@@ -117,6 +117,7 @@ function createMainWindow() {
         resizable: false,
         maximizable: true,
         fullscreenable: true,
+        // session: loginWindow.webContents.session,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
@@ -231,28 +232,16 @@ app.whenReady().then(async () => {
 // ------------------- IPC Event Handlers -------------------
 
 // Handle login success
-ipcMain.on('login-success', (event, userData) => {
-  global.userName = userData.name;
-  global.userEmail = userData.email;
+ipcMain.on('login-success', () => {
+    if (loginWindow) loginWindow.hide();
 
-  if (loginWindow) loginWindow.hide();
-
-  // Create or show main window
-  if (!mainWindow) {
-    createMainWindow();
-
-    // Once it's ready, send user data
-    mainWindow.webContents.once('did-finish-load', () => {
-      mainWindow.webContents.send('user-data', userData);
-    });
-  } else {
-    // If already exists (e.g. after logout), just reload and send data again
-    mainWindow.webContents.reload();
-    mainWindow.webContents.once('did-finish-load', () => {
-    mainWindow.show();
-    mainWindow.webContents.send('user-data', userData);
-    });
-  }
+    if (!mainWindow) {
+        createMainWindow();
+        mainWindow.once('ready-to-show', () => mainWindow.show());
+    } else {
+        mainWindow.show();
+        mainWindow.focus();
+    }
 });
 
 // Minimize / Close window requests
@@ -291,30 +280,52 @@ ipcMain.on('get-maximize-state', (event) => {
 });
 
 // Logout user
+// ------------------- Logout Handler -------------------
 ipcMain.on('logout', async (event) => {
     try {
+        // 1️⃣ Logout from Flask
         await axios.post('http://127.0.0.1:5000/logout', {}, { withCredentials: true });
         global.userName = null;
         global.userEmail = null;
-        console.log("Trying to logout");
+        console.log("User logged out from backend");
 
-       if (mainWindow) {
-        mainWindow.hide();
-        mainWindow.webContents.reload();
+        // 2️⃣ Disconnect desktop server
+        if (desktopServerProcess && !desktopServerProcess.killed) {
+            desktopServerProcess.kill('SIGINT');
+            console.log("Desktop server disconnected via process kill.");
+            desktopServerProcess = null;
+        } else {
+            try {
+                await axios.post(`${DESKTOP_SERVER_URL}/shutdown`);
+                console.log("Desktop server shutdown via HTTP fallback.");
+            } catch (err) {
+                console.warn("Failed to shutdown desktop server via HTTP:", err.message);
+            }
+            desktopServerProcess = null;
         }
 
+        // 3️⃣ Destroy main window
+        if (mainWindow) {
+            mainWindow.destroy();
+            mainWindow = null;
+        }
+
+        // 4️⃣ Show login window
         if (!loginWindow) createLoginWindow();
         loginWindow.webContents.send('reset-login-fields');
         loginWindow.show();
         loginWindow.focus();
 
+        // 5️⃣ Inform renderer
         event.sender.send('logout-success', { message: 'Logged out successfully' });
-        console.log("User logged out successfully.");
+        console.log("Logout flow complete");
+
     } catch (err) {
         console.error("Logout failed:", err.message);
         event.sender.send('logout-failed', { message: err.message });
     }
 });
+
 
 // ------------------- Desktop Server Handling -------------------
 
@@ -363,32 +374,6 @@ ipcMain.on('connect-desktop-server', async (event) => {
                 event.sender.send('desktop-server-status', { success: false, message: err.message });
             }
         }, 1500);
-    }
-});
-
-// Disconnect desktop server
-ipcMain.on('disconnect-desktop-server', async (event) => {
-    try {
-        if (desktopServerProcess && !desktopServerProcess.killed) {
-            desktopServerProcess.kill('SIGINT');
-            desktopServerProcess = null;
-            console.log("Desktop server disconnected via process kill.");
-            event.sender.send('desktop-server-disconnected');
-            return;
-        }
-
-        // Fallback: try HTTP shutdown
-        try {
-            await axios.post(`${DESKTOP_SERVER_URL}/shutdown`);
-            console.log("Desktop server shutdown via HTTP.");
-        } catch (err) {
-            console.warn("Failed to shutdown desktop server via HTTP:", err.message);
-        }
-    } catch (err) {
-        console.error("Error disconnecting desktop server:", err);
-    } finally {
-        desktopServerProcess = null;
-        event.sender.send('desktop-server-disconnected');
     }
 });
 
