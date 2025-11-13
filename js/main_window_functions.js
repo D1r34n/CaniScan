@@ -1035,8 +1035,13 @@ if (!window._functionReloadProtected) {
             uploadPlaceholder.style.display = 'flex';
             imagePreview.style.display = 'none';
             const analysisResults = document.getElementById('analysisResults');
+            const resultDiagnosis = document.getElementById('resultDiagnosis');
+            const resultConfidence = document.getElementById('resultConfidence');
+            
             if (analysisResults) {
-                analysisResults.style.display = 'none';
+                analysisResults.style.display = 'block'; 
+                resultDiagnosis.textContent = 'Pending...'; 
+                resultConfidence.textContent = '--'; 
             }
             previewImage.src = '';
             previewImage.dataset.sourceFilename = '';

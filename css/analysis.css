@@ -1,16 +1,13 @@
 /* Analysis Page - Floating Boxes Layout */
 .analysis-container {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 1fr 400px;
   gap: 1.5rem;
   padding: 2rem;
   height: calc(100vh - 120px);
-  max-width: 1400px;
-  margin: 0 auto;
+  min-width: 100%;
   box-sizing: border-box;
-  align-items: stretch;
 }
-
 .floating-box {
   background: white;
   border-radius: 20px;
@@ -77,8 +74,32 @@
 
 .box-content {
   flex: 1;
-  padding: 1.5rem;
+  padding: 2rem;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.box-content:has(.image-preview[style*="display: block"]) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  justify-content: initial;
+}
+
+
+.box-content:has(.image-preview[style*="display: block"]) .image-upload-area {
+  max-width: none;
+  grid-column: 1;
+  flex: initial;
+}
+
+.box-content:has(.analysis-results[style*="display: none"]) .image-upload-area,
+.box-content:has(.analysis-results[style*="display: none"]) {
+  grid-column: 1 / -1;
 }
 
 /* Analysis History Box */
@@ -174,30 +195,36 @@
 
 /* Analyze Image Box (Dominant) */
 .analyze-image-box {  
-  flex: 2;
-  min-width: 500px;
-  position: relative;
-  z-index: 1;
-}
-
-.box-header--analyze-image {
-height: 70px;
+  grid-column: 1;
+  min-width: 0; 
+  display: flex;
+  flex-direction: column;
 }
 
 .image-upload-area {
+  width: 100%;
+  max-width: none;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  flex: 1;
+}
+
+.box-header--analyze-image {
+  height: 70px;
+  display: flex;
   align-items: center;
-  text-align: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
 }
 
 .upload-placeholder {
+  height: 400px;
+  justify-content: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  padding: 2rem;
+  gap: 1.5rem;
+  padding: 3rem;
   border: 2px dashed #d9b99b;
   border-radius: 20px;
   background: rgba(217, 185, 155, 0.05);
@@ -223,17 +250,21 @@ height: 70px;
 .image-preview {
   position: relative;
   width: 100%;
-  max-width: 400px;
+  max-width: 500px;
   margin: 0 auto;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .image-preview img {
   width: 100%;
-  height: 300px;
+  height: 400px;
   object-fit: contain;
-  border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  display: block;
+  background: #f8f9fa;
 }
+
 
 .image-overlay {
   position: absolute;
@@ -258,11 +289,20 @@ height: 70px;
 }
 
 .analysis-results {
-  margin-top: 1.5rem;
-  padding: 1.5rem;
-  background: #f8f9fa;
+  grid-column: 2;
+  margin-top: 0;
+  padding: 2rem;
+  background: white;
   border-radius: 15px;
-  border-left: 4px solid #d9b99b;
+  border: 2px solid #e9ecef;
+  height: 100%;
+  position: sticky;
+  top: 0;
+  display: block !important; /* Always show, override inline styles */
+}
+
+.box-content:not(:has(.image-preview[style*="display: block"])) .analysis-results {
+  display: none !important;
 }
 
 .result-header h5 {
@@ -274,26 +314,33 @@ height: 70px;
 .result-content {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .diagnosis-result,
 .confidence-result {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 10px;
 }
 
 .result-label {
   color: #6c757d;
   font-weight: 500;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .result-value {
   color: #282624;
-  font-weight: 600;
-  font-size: 1.1rem;
+  font-weight: 700;
+  font-size: 1.5rem;
 }
+
 
 
 
