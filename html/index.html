@@ -295,10 +295,15 @@
                     </button>
                 </div>
 
-                <!-- Right Control: Analyze Button -->
-                <button id="analyzeModeButton" class="btn btn-light analyze-mode-button">
-                    <i class="bi bi-box-arrow-in-down"></i> Analyze Images
-                </button>
+                <!-- Right Controls: Analyze and Delete Buttons -->
+                <div class="right-controls" style="display: flex; gap: 0.5rem;">
+                    <button id="deleteSelectedButton" class="btn btn-light delete-selected-button">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                    <button id="analyzeModeButton" class="btn btn-light analyze-mode-button">
+                        <i class="bi bi-box-arrow-in-down"></i> Analyze Images
+                    </button>
+                </div>
 
             </div>
             <!-- End of Left Controls: Sort Dropdown + Show Details -->
@@ -307,6 +312,12 @@
             <div class="gallery-columns">
                 <!-- Left Column: Image Grid -->
                 <div class="gallery-left">
+                    <div class="gallery-upload-bar" style="display:flex; gap: 0.5rem; align-items:center; margin-bottom: 0.5rem;">
+                        <button id="galleryUploadBtn" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-upload"></i> Upload Image
+                        </button>
+                        <input id="galleryUploadInput" type="file" accept="image/*" style="display:none;" />
+                    </div>
                     <div id="imageGrid" class="image-grid">
                         <div class="image-item">Image 1</div>
                         <div class="image-item">Image 2</div>
@@ -377,6 +388,10 @@
                                 <div class="confidence-result">
                                     <span class="result-label">Confidence:</span>
                                     <span class="result-value" id="resultConfidence">-</span>
+                                </div>
+                                <div class="inference-time-result">
+                                    <span class="result-label">Inference Time:</span>
+                                    <span class="result-value" id="resultInferenceTime">-</span>
                                 </div>
                             </div>
                         </div>

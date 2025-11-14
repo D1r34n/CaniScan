@@ -702,11 +702,15 @@ if (!window._functionReloadProtected) {
             const analysisResults = document.getElementById('analysisResults');
             const resultDiagnosis = document.getElementById('resultDiagnosis');
             const resultConfidence = document.getElementById('resultConfidence');
+            const resultInferenceTime = document.getElementById('resultInferenceTime');
             
             if (analysisResults) {
                 analysisResults.style.display = 'block'; 
                 resultDiagnosis.textContent = 'Pending...'; 
                 resultConfidence.textContent = '--'; 
+                if (resultInferenceTime) {
+                    resultInferenceTime.textContent = '--';
+                }
             }
             previewImage.src = '';
             previewImage.dataset.sourceFilename = '';
@@ -795,11 +799,15 @@ if (!window._functionReloadProtected) {
         }
         const resultDiagnosis = document.getElementById('resultDiagnosis');
         const resultConfidence = document.getElementById('resultConfidence');
+        const resultInferenceTime = document.getElementById('resultInferenceTime');
         if (resultDiagnosis) {
             resultDiagnosis.textContent = '-';
         }
         if (resultConfidence) {
             resultConfidence.textContent = '-';
+        }
+        if (resultInferenceTime) {
+            resultInferenceTime.textContent = '-';
         }
 
         window.currentAnalysisSource = {
@@ -941,6 +949,10 @@ if (!window._functionReloadProtected) {
                 analysisResults.style.display = 'block';
                 resultDiagnosis.textContent = analysisResult.disease;
                 resultConfidence.textContent = `${analysisResult.confidence}%`;
+                const resultInferenceTime = document.getElementById('resultInferenceTime');
+                if (resultInferenceTime && analysisResult.inference_time !== undefined) {
+                    resultInferenceTime.textContent = `${analysisResult.inference_time}s`;
+                }
                 
                 // Save analyzed image to gallery
                 const savedFilename = await saveAnalyzedImageToGallery(

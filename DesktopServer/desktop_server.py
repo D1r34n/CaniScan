@@ -348,7 +348,7 @@ def create_folder():
 
 @app.route('/images/<path:filepath>', methods=['DELETE'])
 def delete_image(filepath):
-    """Delete uploaded images from any path"""
+    """Delete uploaded images from any path and associated JSON metadata file"""
     try:
         # Security check - prevent directory traversal
         if '..' in filepath or filepath.startswith('/'):
@@ -362,11 +362,19 @@ def delete_image(filepath):
         if os.path.exists(file_path) and os.path.isfile(file_path):
             filename = os.path.basename(file_path)
             if allowed_file(filename):
+                # Delete the image file
                 os.remove(file_path)
                 print(f"Image deleted: {filepath}")
+                
+                # Delete associated JSON metadata file if it exists
+                metadata_file = os.path.join(UPLOAD_FOLDER, f"{filename}.meta.json")
+                if os.path.exists(metadata_file):
+                    os.remove(metadata_file)
+                    print(f"Metadata file deleted: {filename}.meta.json")
+                
                 return jsonify({
                     'success': True,
-                    'message': 'Image deleted successfully'
+                    'message': 'Image and metadata deleted successfully'
                 })
             else:
                 return jsonify({

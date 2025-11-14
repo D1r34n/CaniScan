@@ -348,6 +348,7 @@ if (refreshButton) {
 
 const analyzeModeButton = document.getElementById('analyzeModeButton');
 const analyzeSelected = document.getElementById('analyzeFloatingButton');
+const deleteSelected = document.getElementById('deleteSelectedButton');
 const galleryColumn = document.querySelector('.gallery-columns');
 
 function enterAnalyzeMode() {
@@ -358,6 +359,9 @@ function enterAnalyzeMode() {
     }
     if (analyzeSelected) {
         analyzeSelected.style.display = "block";
+    }
+    if (deleteSelected) {
+        deleteSelected.innerHTML = '<i class="bi bi-trash"></i> Delete Selected';
     }
     applyAnalyzeModeStyles();
     if (galleryColumn) {
@@ -373,6 +377,9 @@ export function exitAnalyzeMode(options = { clearSelection: true }) {
     }
     if (analyzeSelected) {
         analyzeSelected.style.display = "none";
+    }
+    if (deleteSelected) {
+        deleteSelected.innerHTML = '<i class="bi bi-trash"></i> Delete';
     }
     applyAnalyzeModeStyles();
     if (galleryColumn) {
@@ -432,6 +439,110 @@ if (analyzeSelected) {
                 alert('Unable to load the selected image for analysis. Please try again.');
             }
         });
+    });
+}
+
+if (deleteSelected) {
+    deleteSelected.addEventListener('click', async (event) => {
+        event.stopPropagation();
+
+        let imagesToDelete = [];
+
+        if (analyzeModeActive) {
+            // In analyze mode: delete selected images
+            if (!selectedImageFilenames.size) {
+                alert('Please select at least one image to delete.');
+                return;
+            }
+
+            const filenames = Array.from(selectedImageFilenames);
+            imagesToDelete = filenames
+                .map(filename => filteredGalleryImages.find(img => img.filename === filename) || allGalleryImages.find(img => img.filename === filename))
+                .filter(Boolean);
+
+            if (!imagesToDelete.length) {
+                alert('Selected images are no longer available.');
+                return;
+            }
+        } else {
+            // In normal mode: delete the currently active image
+            if (!lastActiveFilename) {
+                alert('Please select an image to delete.');
+                return;
+            }
+
+            const activeImage = filteredGalleryImages.find(img => img.filename === lastActiveFilename) || 
+                               allGalleryImages.find(img => img.filename === lastActiveFilename);
+            
+            if (!activeImage) {
+                alert('Selected image is no longer available.');
+                return;
+            }
+
+            imagesToDelete = [activeImage];
+        }
+
+        const imageCount = imagesToDelete.length;
+        const confirmMessage = imageCount === 1 
+            ? `Are you sure you want to delete this image? This action cannot be undone.`
+            : `Are you sure you want to delete ${imageCount} images? This action cannot be undone.`;
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        // Disable button during deletion
+        deleteSelected.disabled = true;
+        const originalText = deleteSelected.innerHTML;
+        deleteSelected.innerHTML = '<i class="bi bi-hourglass-split"></i> Deleting...';
+
+        try {
+            // Delete all selected images
+            const deletePromises = imagesToDelete.map(async (image) => {
+                try {
+                    const response = await fetch(`http://localhost:5001/images/${image.filename}`, {
+                        method: 'DELETE'
+                    });
+                    const result = await response.json();
+                    if (!result.success) {
+                        console.error(`Failed to delete ${image.filename}:`, result.message);
+                        return { success: false, filename: image.filename, error: result.message };
+                    }
+                    return { success: true, filename: image.filename };
+                } catch (error) {
+                    console.error(`Error deleting ${image.filename}:`, error);
+                    return { success: false, filename: image.filename, error: error.message };
+                }
+            });
+
+            const results = await Promise.all(deletePromises);
+            const successful = results.filter(r => r.success);
+            const failed = results.filter(r => !r.success);
+
+            if (failed.length > 0) {
+                console.warn('Some images failed to delete:', failed);
+                if (successful.length === 0) {
+                    alert('Failed to delete images. Please try again.');
+                } else {
+                    alert(`Deleted ${successful.length} image(s). ${failed.length} image(s) could not be deleted.`);
+                }
+            } else {
+                console.log(`Successfully deleted ${successful.length} image(s)`);
+            }
+
+            // Refresh gallery
+            if (analyzeModeActive) {
+                exitAnalyzeMode();
+            }
+            await loadGalleryImages();
+        } catch (error) {
+            console.error('Error during deletion:', error);
+            alert('An error occurred while deleting images. Please try again.');
+        } finally {
+            // Re-enable button
+            deleteSelected.disabled = false;
+            deleteSelected.innerHTML = originalText;
+        }
     });
 }
 
@@ -498,4 +609,62 @@ function clearSelectionOnEmpty(e) {
     if (!e.target.closest('.image-item')) {
         clearSelection();
     }
+}
+
+// Gallery upload button functionality
+const galleryUploadBtn = document.getElementById('galleryUploadBtn');
+const galleryUploadInput = document.getElementById('galleryUploadInput');
+
+if (galleryUploadBtn && galleryUploadInput) {
+    galleryUploadBtn.addEventListener('click', () => {
+        // Trigger the hidden file input
+        galleryUploadInput.click();
+    });
+
+    galleryUploadInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select a valid image file.');
+            return;
+        }
+
+        // Show loading state
+        const originalText = galleryUploadBtn.innerHTML;
+        galleryUploadBtn.disabled = true;
+        galleryUploadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Uploading...';
+
+        try {
+            // Create FormData for file upload
+            const formData = new FormData();
+            formData.append('image', file);
+
+            // Upload to server
+            const response = await fetch('http://localhost:5001/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                console.log('Image uploaded successfully:', result.filename);
+                // Refresh gallery to show new image
+                await loadGalleryImages();
+            } else {
+                alert(`Upload failed: ${result.message || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            alert('Failed to upload image. Please try again.');
+        } finally {
+            // Reset button state
+            galleryUploadBtn.disabled = false;
+            galleryUploadBtn.innerHTML = originalText;
+            // Clear file input
+            galleryUploadInput.value = '';
+        }
+    });
 }
