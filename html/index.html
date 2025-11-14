@@ -288,10 +288,15 @@
                     </button>
                 </div>
 
-                <!-- Right Control: Analyze Button -->
-                <button id="analyzeModeButton" class="btn btn-light analyze-mode-button">
-                    <i class="bi bi-box-arrow-in-down"></i> Analyze Images
-                </button>
+                <!-- Right Controls: Analyze and Delete Buttons -->
+                <div class="right-controls" style="display: flex; gap: 0.5rem;">
+                    <button id="deleteSelectedButton" class="btn btn-light delete-selected-button">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                    <button id="analyzeModeButton" class="btn btn-light analyze-mode-button">
+                        <i class="bi bi-box-arrow-in-down"></i> Analyze Images
+                    </button>
+                </div>
 
             </div>
             <!-- End of Left Controls: Sort Dropdown + Show Details -->
@@ -324,11 +329,6 @@
                 <!-- Floating Analyze Button -->
                 <button id="analyzeFloatingButton" class="btn btn-primary analyze-floating-button">
                     <i class="bi bi-search"></i> Analyze Selected
-                </button>
-
-                <!-- Floating Delete Button -->
-                <button id="deleteFloatingButton" class="btn btn-danger analyze-floating-button" style="right: 12rem; display:none;">
-                    <i class="bi bi-trash"></i> Delete Selected
                 </button>
 
             </div>

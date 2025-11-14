@@ -348,7 +348,7 @@ if (refreshButton) {
 
 const analyzeModeButton = document.getElementById('analyzeModeButton');
 const analyzeSelected = document.getElementById('analyzeFloatingButton');
-const deleteSelected = document.getElementById('deleteFloatingButton');
+const deleteSelected = document.getElementById('deleteSelectedButton');
 const galleryColumn = document.querySelector('.gallery-columns');
 
 function enterAnalyzeMode() {
@@ -361,7 +361,7 @@ function enterAnalyzeMode() {
         analyzeSelected.style.display = "block";
     }
     if (deleteSelected) {
-        deleteSelected.style.display = "block";
+        deleteSelected.innerHTML = '<i class="bi bi-trash"></i> Delete Selected';
     }
     applyAnalyzeModeStyles();
     if (galleryColumn) {
@@ -379,7 +379,7 @@ export function exitAnalyzeMode(options = { clearSelection: true }) {
         analyzeSelected.style.display = "none";
     }
     if (deleteSelected) {
-        deleteSelected.style.display = "none";
+        deleteSelected.innerHTML = '<i class="bi bi-trash"></i> Delete';
     }
     applyAnalyzeModeStyles();
     if (galleryColumn) {
@@ -446,13 +446,43 @@ if (deleteSelected) {
     deleteSelected.addEventListener('click', async (event) => {
         event.stopPropagation();
 
-        if (!selectedImageFilenames.size) {
-            alert('Please select at least one image to delete.');
-            return;
+        let imagesToDelete = [];
+
+        if (analyzeModeActive) {
+            // In analyze mode: delete selected images
+            if (!selectedImageFilenames.size) {
+                alert('Please select at least one image to delete.');
+                return;
+            }
+
+            const filenames = Array.from(selectedImageFilenames);
+            imagesToDelete = filenames
+                .map(filename => filteredGalleryImages.find(img => img.filename === filename) || allGalleryImages.find(img => img.filename === filename))
+                .filter(Boolean);
+
+            if (!imagesToDelete.length) {
+                alert('Selected images are no longer available.');
+                return;
+            }
+        } else {
+            // In normal mode: delete the currently active image
+            if (!lastActiveFilename) {
+                alert('Please select an image to delete.');
+                return;
+            }
+
+            const activeImage = filteredGalleryImages.find(img => img.filename === lastActiveFilename) || 
+                               allGalleryImages.find(img => img.filename === lastActiveFilename);
+            
+            if (!activeImage) {
+                alert('Selected image is no longer available.');
+                return;
+            }
+
+            imagesToDelete = [activeImage];
         }
 
-        const filenames = Array.from(selectedImageFilenames);
-        const imageCount = filenames.length;
+        const imageCount = imagesToDelete.length;
         const confirmMessage = imageCount === 1 
             ? `Are you sure you want to delete this image? This action cannot be undone.`
             : `Are you sure you want to delete ${imageCount} images? This action cannot be undone.`;
@@ -461,18 +491,9 @@ if (deleteSelected) {
             return;
         }
 
-        const imagesToDelete = filenames
-            .map(filename => filteredGalleryImages.find(img => img.filename === filename) || allGalleryImages.find(img => img.filename === filename))
-            .filter(Boolean);
-
-        if (!imagesToDelete.length) {
-            alert('Selected images are no longer available.');
-            exitAnalyzeMode();
-            return;
-        }
-
         // Disable button during deletion
         deleteSelected.disabled = true;
+        const originalText = deleteSelected.innerHTML;
         deleteSelected.innerHTML = '<i class="bi bi-hourglass-split"></i> Deleting...';
 
         try {
@@ -509,8 +530,10 @@ if (deleteSelected) {
                 console.log(`Successfully deleted ${successful.length} image(s)`);
             }
 
-            // Refresh gallery and exit analyze mode
-            exitAnalyzeMode();
+            // Refresh gallery
+            if (analyzeModeActive) {
+                exitAnalyzeMode();
+            }
             await loadGalleryImages();
         } catch (error) {
             console.error('Error during deletion:', error);
@@ -518,7 +541,7 @@ if (deleteSelected) {
         } finally {
             // Re-enable button
             deleteSelected.disabled = false;
-            deleteSelected.innerHTML = '<i class="bi bi-trash"></i> Delete Selected';
+            deleteSelected.innerHTML = originalText;
         }
     });
 }

@@ -107,6 +107,24 @@
   transform: translateY(-4px) !important;
 }
 
+/* Delete Selected Button - Same rounded style as Analyze button */
+.delete-selected-button {
+  background-color: #f9f9f9 !important;
+  color: #282624 !important;
+  border: none;
+  border-radius: 30px !important;
+  font-weight: 500;
+  padding: 0.5rem 1rem !important;
+  transition: all 0.3s ease !important;
+  text-align: center;
+}
+
+.delete-selected-button:hover {
+  background-color: #f0e2d2 !important; /* light beige hover */
+  color: #282624 !important;
+  transform: translateY(-4px) !important;
+}
+
 /* Controls Container inside left-controls */
 .gallery-controls {
   display: flex;
