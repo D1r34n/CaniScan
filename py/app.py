@@ -8,6 +8,7 @@ import re
 import csv
 import base64
 import bcrypt
+import time
 import numpy as np
 import cv2
 from datetime import datetime
@@ -442,8 +443,10 @@ def analyze():
                 'message': 'Invalid image data'
             }), 400
         
-        # Run YOLO detection
+        # Run YOLO detection and measure inference time
+        start_time = time.time()
         results = model(img)
+        inference_time = time.time() - start_time
         detections = results[0].boxes
         
         # Get user email
@@ -461,6 +464,7 @@ def analyze():
                 'success': True,
                 'disease': diagnosis,
                 'confidence': confidence,
+                'inference_time': round(inference_time, 3),
                 'recommendation': llm_response
             }), 200
         
@@ -481,6 +485,7 @@ def analyze():
             'success': True,
             'disease': disease,
             'confidence': round(confidence, 2),
+            'inference_time': round(inference_time, 3),
             'recommendation': llm_response
         }), 200
         
