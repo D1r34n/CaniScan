@@ -4,6 +4,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const axios = require('axios');
 const os = require('os');
+const chokidar = require('chokidar');
 
 // ------------------- Global Variables -------------------
 let yoloProcess;          // YOLOv8 Python process
@@ -399,3 +400,32 @@ app.on('before-quit', () => {
     if (yoloProcess && !yoloProcess.killed) yoloProcess.kill('SIGINT');
     if (desktopServerProcess && !desktopServerProcess.killed) desktopServerProcess.kill('SIGINT');
 });
+
+// ------------------- Uploads Folder Watcher -------------------
+const UPLOAD_FOLDER = path.join(__dirname, '..', 'uploads');
+
+const watcher = chokidar.watch(UPLOAD_FOLDER, {
+    persistent: true,
+    ignoreInitial: true,
+    depth: 99
+});
+
+watcher
+  .on('add', filePath => {
+    console.log(`New file added: ${filePath}`);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('uploads-changed', { type: 'add', file: filePath });
+    }
+  })
+  .on('change', filePath => {
+    console.log(`File changed: ${filePath}`);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('uploads-changed', { type: 'change', file: filePath });
+    }
+  })
+  .on('unlink', filePath => {
+    console.log(`File removed: ${filePath}`);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('uploads-changed', { type: 'unlink', file: filePath });
+    }
+  });

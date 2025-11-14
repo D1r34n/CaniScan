@@ -120,7 +120,7 @@
                     <h3>Gallery Overview</h3>
 
                     <!-- ===== Top Stats Cards Row ===== -->
-                    <div class="stats-cards-row">
+                    <div class="stats-cards-row" id="statsCardsRow">
                         <div class="stat-card">
                             <div class="card-top">
                                 <span>Raw</span>
@@ -176,32 +176,32 @@
                             <div class="chart-header">
                                 <h4>Image Distribution</h4>
 
-                                <select id="chartTypeSelect">
-                                    <option value="pie">Pie Chart</option>
-                                    <option value="bar">Bar Graph</option>
-                                </select>
+                                <div class="chart-dropdown shadow-sm" id="chartTypeDropdown">
+                                    <button class="chart-dropdown-button" id="chartDropdownButton">
+                                        Pie Chart <span>▼</span>
+                                    </button>
+                                    <div class="chart-dropdown-content" id="chartdropdownMenu">
+                                        <div>Pie Chart</div>
+                                        <div>Bar Chart</div>
+                                    </div>
+                                </div>
+                                
                             </div>
 
                             <!-- Chart Canvas -->
                             <div class="chart-container">
                                 <canvas id="statsPieChart"></canvas>
+                                <div id="chartLegend" class="custom-legend"></div>
                             </div>
+
                         </div>
 
                         <!-- ===== Trend Insights (Right) ===== -->
                         <div class="trend-insights">
-                        <h4>Trend Insights</h4>
+                        <h4>Insights</h4>
 
                         <div class="insights-cards">
-                            
-                            <div class="insight-card shadow-sm">
-                                <i class="bi bi-graph-up"></i>
-                                <div class="insight-text">
-                                    <strong>Dermatitis remains the most frequently detected condition.</strong>
-                                </div>
-                            </div>
-
-                            <div class="insight-card shadow-sm">
+                            <div class="insight-card shadow-sm" id="healthyInsight">
                                 <i class="bi bi-arrow-up-circle"></i>
                                 <div class="insight-text">
                                     <strong>Healthy scans increased this week, showing overall improvement.</strong>
@@ -209,6 +209,13 @@
                             </div>
 
                             <div class="insight-card shadow-sm">
+                                <i class="bi bi-graph-up"></i>
+                                <div class="insight-text">
+                                    <strong><span id="topDisease">Dermatitis</span> remains the most frequently detected condition.</strong>
+                                </div>
+                            </div>
+
+                            <div class="insight-card shadow-sm" id="mangeInsight">
                                 <i class="bi bi-search"></i>
                                 <div class="insight-text">
                                     <strong>Mange accounts for only 4% of all analyzed images.</strong>
@@ -473,6 +480,6 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
-    <script src="../js/gallery_chart.js"></script>
+    <script src="../js/gallery_chart.js" defer></script>
 </body>
 </html>

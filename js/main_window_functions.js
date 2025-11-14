@@ -431,6 +431,153 @@ if (!window._functionReloadProtected) {
     }
   });
 
+
+    ipcRenderer.on('uploads-changed', async (event, data) => {
+        console.log('Uploads changed:', data);
+
+        // Wait for cards to update
+        await loadStatsCards();
+
+        // Update the chart after cards are updated
+        if (typeof updateStatsChart === 'function') {
+            updateStatsChart();
+        }
+    });
+
+    async function loadStatsCards() {
+        
+        try {
+            const res = await fetch('http://127.0.0.1:5001/images');
+            const data = await res.json();
+
+            if (!data.success) {
+                console.error("Failed to load images:", data.message);
+                return;
+            }
+
+            const images = data.images;
+
+            // Initialize counters
+            let rawCount = 0;
+            let analyzedCount = 0;
+            const diseaseCounts = {}; // dynamic, handles any disease
+
+            images.forEach(img => {
+                if (img.analyzed) {
+                    analyzedCount++;
+                    // Normalize disease name
+                    const disease = img.disease
+                        ? img.disease.charAt(0).toUpperCase() + img.disease.slice(1).toLowerCase()
+                        : 'Unknown';
+                    diseaseCounts[disease] = (diseaseCounts[disease] || 0) + 1;
+                } else {
+                    rawCount++;
+                }
+            });
+
+            // Build cards array
+            const cardsData = [
+                { label: 'Raw', count: rawCount },
+                { label: 'Analyzed', count: analyzedCount },
+                ...Object.entries(diseaseCounts).map(([disease, count]) => ({ label: disease, count }))
+            ];
+
+            // Render stats cards
+            const cardsContainer = document.getElementById('statsCardsRow');
+            cardsContainer.innerHTML = ''; // clear existing
+            cardsData.forEach(card => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'stat-card';
+                cardEl.innerHTML = `
+                    <div class="card-top">
+                        <span>${card.label}</span>
+                        <span class="number">${card.count}</span>
+                    </div>
+                    <button class="view-btn">View</button>
+                `;
+                cardsContainer.appendChild(cardEl);
+            });
+
+            // Update first insight card
+            const healthyInsightCard = document.getElementById("healthyInsight");
+            if (healthyInsightCard) {
+                const healthyCount = diseaseCounts['Healthy'] || 0;
+
+                // Sum of all other diseases
+                const otherDiseasesCount = Object.entries(diseaseCounts)
+                    .filter(([disease]) => disease !== 'Healthy')
+                    .reduce((sum, [, count]) => sum + count, 0);
+
+                const healthyIcon = healthyInsightCard.querySelector('i');
+                const healthyText = healthyInsightCard.querySelector('.insight-text strong');
+
+                if (healthyCount < otherDiseasesCount) {
+                    healthyIcon.classList.remove("bi-arrow-up-circle");
+                    healthyIcon.classList.add("bi-arrow-down-circle");
+                    healthyText.textContent = `Healthy scans decreased, showing overall decline.`;
+                    healthyInsightCard.classList.add("decline"); // optional: for styling
+                } else {
+                    healthyIcon.classList.remove("bi-arrow-down-circle");
+                    healthyIcon.classList.add("bi-arrow-up-circle");
+                    healthyText.textContent = `Healthy scans increased, showing overall improvement.`;
+                    healthyInsightCard.classList.remove("decline");
+                }
+            }
+
+            // Update second insight card
+            const topDiseaseEl = document.getElementById('topDisease');
+            if (topDiseaseEl) {
+                const sortedDiseases = Object.entries(diseaseCounts).sort((a, b) => b[1] - a[1]);
+                if (sortedDiseases.length > 0 && sortedDiseases[0][1] > 0) {
+                    topDiseaseEl.textContent = sortedDiseases[0][0];
+                } else {
+                    topDiseaseEl.parentElement.textContent = "No disease detected in the gallery.";
+                }
+            }
+
+            // Update third insight card
+            const mangeInsightCard = document.getElementById("mangeInsight"); // give your div an id
+            if (mangeInsightCard) {
+                const mangeCount = diseaseCounts['Mange'] || 0;
+                const totalAnalyzed = Object.values(diseaseCounts).reduce((sum, count) => sum + count, 0);
+
+                const mangeIcon = mangeInsightCard.querySelector('i');
+                const mangeText = mangeInsightCard.querySelector('.insight-text strong');
+
+                if (totalAnalyzed > 0) {
+                    const percentage = ((mangeCount / totalAnalyzed) * 100).toFixed(1);
+                    mangeText.textContent = `Mange accounts for only ${percentage}% of all analyzed images.`;
+
+                    // Optional: change icon or style if percentage is high
+                    if (percentage > 50) {
+                        mangeIcon.classList.remove("bi-search");
+                        mangeIcon.classList.add("bi-exclamation-circle"); // highlight
+                        mangeInsightCard.classList.add("alert"); // optional styling
+                    } else {
+                        mangeIcon.classList.add("bi-search");
+                        mangeIcon.classList.remove("bi-exclamation-circle");
+                        mangeInsightCard.classList.remove("alert");
+                    }
+                } else {
+                    mangeText.textContent = "No Mange cases detected yet.";
+                }
+            }
+            // Update the chart after cards are rendered
+            if (typeof updateStatsChart === 'function') {
+                updateStatsChart();
+            }
+
+        } catch (err) {
+            console.error("Error loading stats cards:", err);
+        }
+    }
+
+    // Load stats cards on page load
+    await loadStatsCards();
+    if (typeof updateStatsChart === 'function') {
+        updateStatsChart();
+    }
+
   // Check if session is initiated and connect automatically to gallery server
   initUserSession();
 
