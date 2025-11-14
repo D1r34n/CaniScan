@@ -128,6 +128,15 @@ if (!window._functionReloadProtected) {
     }
   }
 
+  
+  // Page switch variables
+  const homeBtn = document.getElementById("homeBtn");
+  const galleryPage = document.getElementById("galleryPage");
+  const analysisPage = document.getElementById("analysisPage");
+  const homePage = document.getElementById("homePage");
+
+  const navButtons = [homeBtn, galleryBtn, analysisBtn];
+
   // Fade in and out function
   function fadeIn(element, duration = 400) {
     element.style.display = "flex";
@@ -157,15 +166,51 @@ if (!window._functionReloadProtected) {
       }
     }, interval);
   }
+  // ================================
+  // PAGE SWITCHING WITH FADE
+  // ================================
+    function showPage(pageToShow) {
+        // Prevent re-showing the page if it’s already visible
+        if (pageToShow.style.display !== "none") return;
+
+        if (!serverConnected && (pageToShow === galleryPage || pageToShow === analysisPage)) {
+        alert("⚠️ You must connect to the server first!");
+        return;
+        }
+
+        const pages = [homePage, galleryPage, analysisPage];
+
+        const fadeOutPromises = pages.map(page => {
+        if (!page || page === pageToShow) return Promise.resolve();
+        return new Promise(resolve => fadeOut(page, 100, resolve));
+        });
+
+        Promise.all(fadeOutPromises).then(() => {
+        fadeIn(pageToShow, 100);
+
+        if (pageToShow !== galleryPage && analyzeModeActive) {
+            exitAnalyzeMode();
+        }
+
+        navButtons.forEach(btn => {
+            if (!btn) return;
+            btn.classList.toggle("active", (
+            (btn === homeBtn && pageToShow === homePage) ||
+            (btn === galleryBtn && pageToShow === galleryPage) ||
+            (btn === analysisBtn && pageToShow === analysisPage)
+            ));
+        });
+        });
+    }
+
+    if (homeBtn) homeBtn.addEventListener("click", () => showPage(homePage));
+    if (analysisBtn) analysisBtn.addEventListener("click", () => {
+        openAnalysisPage(() => {
+        console.log('%c🔬 Analysis page ready', 'color: cyan;');
+        });
+    });
 
   // Page Switching Using Fade
-  const homeBtn = document.getElementById("homeBtn");
-  const galleryPage = document.getElementById("galleryPage");
-  const analysisPage = document.getElementById("analysisPage");
-  const homePage = document.getElementById("homePage");
-
-  const navButtons = [homeBtn, galleryBtn, analysisBtn];
-
   function openAnalysisPage(afterOpen) {
     showPage(analysisPage);
     if (typeof afterOpen === 'function') {
@@ -1212,51 +1257,6 @@ function setupClearHistoryButton() {
 
     */
 
-    // ================================
-    // PAGE SWITCHING WITH FADE
-    // ================================
-    function showPage(pageToShow) {
-      // Prevent re-showing the page if it’s already visible
-      if (pageToShow.style.display !== "none") return;
-
-      if (!serverConnected && (pageToShow === galleryPage || pageToShow === analysisPage)) {
-        alert("⚠️ You must connect to the server first!");
-        return;
-      }
-
-      const pages = [homePage, galleryPage, analysisPage];
-
-      const fadeOutPromises = pages.map(page => {
-        if (!page || page === pageToShow) return Promise.resolve();
-        return new Promise(resolve => fadeOut(page, 100, resolve));
-      });
-
-      Promise.all(fadeOutPromises).then(() => {
-        fadeIn(pageToShow, 100);
-
-        if (pageToShow !== galleryPage && analyzeModeActive) {
-          exitAnalyzeMode();
-        }
-
-        navButtons.forEach(btn => {
-          if (!btn) return;
-          btn.classList.toggle("active", (
-            (btn === homeBtn && pageToShow === homePage) ||
-            (btn === galleryBtn && pageToShow === galleryPage) ||
-            (btn === analysisBtn && pageToShow === analysisPage)
-          ));
-        });
-      });
-    }
-
-    if (homeBtn) homeBtn.addEventListener("click", () => showPage(homePage));
-    if (analysisBtn) analysisBtn.addEventListener("click", () => {
-      openAnalysisPage(() => {
-        console.log('%c🔬 Analysis page ready', 'color: cyan;');
-      });
-    });
-
-    showPage(homePage);
 
   }; // end DOMContentLoaded
 

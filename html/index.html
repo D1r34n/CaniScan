@@ -96,7 +96,7 @@
         <div class="main-container">
 
             <!-- Home Page -->
-            <div id="homePage" class="home-page" style="display: flex;">
+            <div id="homePage" class="home-page">
 
             <!-- Server Loading Screen Container -->
             <div id="loadingScreenContainer" class="loading-screen-container">
@@ -107,57 +107,122 @@
                 <div class="description">
                     <h5 class="card-title">Connecting...</h5>
                     <p class="card-text text-muted">
-                    The application is unable to reach the server. Make sure your connection is active.
+                        The application is unable to reach the server. Make sure your connection is active.
                     </p>
                 </div>
             </div>
 
-            <!-- Gallery Overview (Hidden by default) -->
-            <div id="galleryOverview" class="gallery-overview" style="display:none;">
-                <div class="gallery-overview-container">
+            <!-- Gallery Overview -->
+            <div id="galleryOverview" class="gallery-overview">
 
-                    <!-- Left Column -->
-                    <div class="left-column">
-                        <h3>Gallery Overview</h3>
+                <!-- Main Column -->
+                <div class="main-column">
+                    <h3>Gallery Overview</h3>
 
-                        <div class="overview-flex">
+                    <!-- ===== Top Stats Cards Row ===== -->
+                    <div class="stats-cards-row">
+                        <div class="stat-card">
+                            <div class="card-top">
+                                <span>Raw</span>
+                                <span class="number">12</span>
+                            </div>
+                            <button class="view-btn">View</button>
+                        </div>
+                        <div class="stat-card">
+                            <div class="card-top">
+                                <span>Analyzed</span>
+                                <span class="number">48</span>
+                            </div>
+                            <button class="view-btn">View</button>
+                        </div>
+                        <div class="stat-card">
+                            <div class="card-top">
+                                <span>Dermatitis</span>
+                                <span class="number">300</span>
+                            </div>
+                            <button class="view-btn">View</button>
+                        </div>
+                        <div class="stat-card">
+                            <div class="card-top">
+                                <span>Mange</span>
+                                <span class="number">10</span>
+                            </div>
+                            <button class="view-btn">View</button>
+                        </div>
+                        <div class="stat-card">
+                            <div class="card-top">
+                                <span>Hotspot</span>
+                                <span class="number">8</span>
+                            </div>
+                            <button class="view-btn">View</button>
+                        </div>
+                        <div class="stat-card">
+                            <div class="card-top">
+                                <span>Healthy</span>
+                                <span class="number">15</span>
+                            </div>
+                            <button class="view-btn">View</button>
+                        </div>
+                    </div>
 
-                            <!-- Pie Chart Container with Outer Wrapper for Title -->
-                            <div class="pie-chart-wrapper">
-                                <h4 class="container-title">Image Distribution</h4>
-                                <div class="pie-chart-container">
-                                    <canvas id="statsPieChart"></canvas>
-                                </div>
+                    <!-- ===== Chart Section ===== -->
+                    <!-- ===== Bottom Section: Chart Left + Insights Right ===== -->
+                    <div class="bottom-section">
+
+                        <!-- ===== Chart Section (Left) ===== -->
+                        <div class="chart-section">
+
+                            <!-- Pie / Bar Chart Dropdown -->
+                            <div class="chart-header">
+                                <h4>Image Distribution</h4>
+
+                                <select id="chartTypeSelect">
+                                    <option value="pie">Pie Chart</option>
+                                    <option value="bar">Bar Graph</option>
+                                </select>
                             </div>
 
-
-                            <!-- Stats Cards with Container Title -->
-                            <div class="stats-cards-grid-container">
-                                <h4 class="container-title">Image Statistics</h4>
-                                <div class="stats-cards-grid">
-                                    <div class="stat-card"><span>Raw Images</span><span class="number">12</span></div>
-                                    <div class="stat-card"><span>Analyzed Images</span><span class="number">48</span></div>
-                                    <div class="stat-card"><span>Dermatitis</span><span class="number">15</span></div>
-                                    <div class="stat-card"><span>Mange</span><span class="number">10</span></div>
-                                    <div class="stat-card"><span>Hotspot</span><span class="number">8</span></div>
-                                    <div class="stat-card"><span>Healthy</span><span class="number">15</span></div>
-                                </div>
+                            <!-- Chart Canvas -->
+                            <div class="chart-container">
+                                <canvas id="statsPieChart"></canvas>
                             </div>
-
-                        </div> <!-- end of overview-flex -->
-                    </div> <!-- end of left-column -->
-
-                    <!-- Right Column -->
-                    <div class="right-column">
-
-                        <button id="disconnectServerButton" class="disconnect-btn">Disconnect</button>
                         </div>
 
-                    </div> <!-- end of right-column -->
-                </div> <!-- end of gallery-overview-container -->
-            </div> <!-- end of galleryOverview -->
+                        <!-- ===== Trend Insights (Right) ===== -->
+                        <div class="trend-insights">
+                        <h4>Trend Insights</h4>
 
-        </div> <!-- end of homePage -->
+                        <div class="insights-cards">
+                            
+                            <div class="insight-card shadow-sm">
+                                <i class="bi bi-graph-up"></i>
+                                <div class="insight-text">
+                                    <strong>Dermatitis remains the most frequently detected condition.</strong>
+                                </div>
+                            </div>
+
+                            <div class="insight-card shadow-sm">
+                                <i class="bi bi-arrow-up-circle"></i>
+                                <div class="insight-text">
+                                    <strong>Healthy scans increased this week, showing overall improvement.</strong>
+                                </div>
+                            </div>
+
+                            <div class="insight-card shadow-sm">
+                                <i class="bi bi-search"></i>
+                                <div class="insight-text">
+                                    <strong>Mange accounts for only 4% of all analyzed images.</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
 
 
         <!-- Gallery Page -->
@@ -405,7 +470,9 @@
     <script type="module" src="../js/main_window_functions.js" defer></script> 
     <script type="module" src="../js/gallery_page.js" defer></script> 
 
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <script src="../js/gallery_chart.js"></script>
 </body>
 </html>
