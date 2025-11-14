@@ -1,7 +1,7 @@
 let statsChart = null; // chart reference
 let currentChartType = 'pie'; // default chart type
 
-// Get chart data from stat cards
+// Get chart data from stat cards (now including Healthy)
 function getChartData() {
     const statCards = document.querySelectorAll('.stat-card');
     const labels = [];
@@ -16,7 +16,7 @@ function getChartData() {
         labels.push(labelEl.textContent.trim());
         data.push(parseInt(numberEl.textContent.trim()));
         const style = window.getComputedStyle(card);
-        backgroundColors.push(style.backgroundColor || '#000'); // fallback
+        backgroundColors.push(style.backgroundColor || '#000'); // fallback color
     });
 
     return { labels, data, backgroundColors };
@@ -26,7 +26,8 @@ function getChartData() {
 function initStatsChart(type = 'pie') {
     const { labels, data, backgroundColors } = getChartData();
     const canvas = document.getElementById('statsPieChart');
-    if (!canvas) return; 
+    if (!canvas) return;
+
     const ctx = canvas.getContext('2d');
 
     if (statsChart) statsChart.destroy();
@@ -46,10 +47,7 @@ function initStatsChart(type = 'pie') {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { 
-                    display: false, 
-                    labels: { color: '#fff' } // legend text white
-                },
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -58,19 +56,19 @@ function initStatsChart(type = 'pie') {
                             const percentage = ((value / total) * 100).toFixed(1);
                             return `${context.label}: ${value} (${percentage}%)`;
                         }
-                    },
-                    bodyColor: '#fff',  // tooltip text white
-                    titleColor: '#fff'
+                    }
                 },
                 datalabels: { display: false }
             },
             scales: type === 'bar' ? {
-                x: { 
-                    ticks: { display: false } // hide x-axis labels
+                x: {
+                    ticks: { display: false }, // hide x-axis labels
+                    grid: { display: false }   // optional: hide vertical grid lines
                 },
-                y: { 
+                y: {
                     beginAtZero: true,
-                    ticks: { color: '#fff' } // y-axis text white
+                    ticks: { color: '#fff' },
+                    grid: { color: 'rgba(255,255,255,0.2)' } // subtle horizontal grid
                 }
             } : {}
         },
@@ -80,7 +78,7 @@ function initStatsChart(type = 'pie') {
     updateCustomLegend(labels, data, backgroundColors);
 }
 
-// Update chart data dynamically
+// Update chart dynamically
 function updateStatsChart() {
     if (!statsChart) return;
     const { labels, data, backgroundColors } = getChartData();
@@ -93,12 +91,12 @@ function updateStatsChart() {
     updateCustomLegend(labels, data, backgroundColors);
 }
 
-// Create or update custom legend
+// Custom legend
 function updateCustomLegend(labels, data, backgroundColors) {
     const legendContainer = document.getElementById("chartLegend");
     if (!legendContainer) return;
 
-    legendContainer.innerHTML = ""; // clear old legend
+    legendContainer.innerHTML = "";
     labels.forEach((label, i) => {
         const legendItem = document.createElement("span");
         legendItem.innerHTML = `
@@ -109,36 +107,30 @@ function updateCustomLegend(labels, data, backgroundColors) {
     });
 }
 
-// Change chart type from dropdown
+// Change chart type
 function changeChartType(type) {
-    const chartTypeMap = {
-        'Pie Chart': 'pie',
-        'Bar Chart': 'bar'
-    };
+    const chartTypeMap = { 'Pie Chart': 'pie', 'Bar Chart': 'bar' };
     currentChartType = chartTypeMap[type] || 'pie';
     initStatsChart(currentChartType);
 }
 
-// Dropdown functionality
+// Dropdown logic
 const chartDropdown = document.getElementById("chartTypeDropdown");
 const chartDropdownButton = document.getElementById("chartDropdownButton");
 const chartDropdownMenu = document.getElementById("chartdropdownMenu");
 
 chartDropdownButton.addEventListener("click", () => chartDropdown.classList.toggle("show"));
-
 chartDropdownMenu.querySelectorAll("div").forEach(item => {
     item.addEventListener("click", () => {
-        chartDropdownButton.firstChild.textContent = item.textContent + " "; // label
-        chartDropdownButton.querySelector("span").textContent = "▼"; // arrow
+        chartDropdownButton.firstChild.textContent = item.textContent + " ";
+        chartDropdownButton.querySelector("span").textContent = "▼";
         chartDropdown.classList.remove("show");
         changeChartType(item.textContent);
     });
 });
-
-// Close dropdown if clicked outside
 window.addEventListener("click", e => {
     if (!chartDropdown.contains(e.target)) chartDropdown.classList.remove("show");
 });
 
-// Initialize chart after everything is loaded
+// Initialize chart on load
 window.addEventListener("load", () => initStatsChart(currentChartType));

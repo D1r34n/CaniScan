@@ -445,7 +445,6 @@ if (!window._functionReloadProtected) {
     });
 
     async function loadStatsCards() {
-        
         try {
             const res = await fetch('http://127.0.0.1:5001/images');
             const data = await res.json();
@@ -459,32 +458,59 @@ if (!window._functionReloadProtected) {
 
             // Initialize counters
             let rawCount = 0;
-            let analyzedCount = 0;
-            const diseaseCounts = {}; // dynamic, handles any disease
+            let healthyCount = 0;
+            const diseaseCounts = {
+                'Allergic Dermatitis': 0,
+                'Fungal Infection': 0,
+                'Hotspot': 0,
+                'Mange': 0,
+                'Healthy': 0
+            };
 
+            // Count images
             images.forEach(img => {
                 if (img.analyzed) {
-                    analyzedCount++;
-                    // Normalize disease name
-                    const disease = img.disease
-                        ? img.disease.charAt(0).toUpperCase() + img.disease.slice(1).toLowerCase()
-                        : 'Unknown';
-                    diseaseCounts[disease] = (diseaseCounts[disease] || 0) + 1;
+                    if (img.disease) {
+                        const diseaseName = img.disease.toLowerCase(); // normalize
+                        switch (diseaseName) {
+                            case 'allergic dermatitis':
+                                diseaseCounts['Allergic Dermatitis']++;
+                                break;
+                            case 'fungal infection':
+                                diseaseCounts['Fungal Infection']++;
+                                break;
+                            case 'hotspot':
+                                diseaseCounts['Hotspot']++;
+                                break;
+                            case 'mange':
+                                diseaseCounts['Mange']++;
+                                break;
+                            case 'healthy':
+                                diseaseCounts['Healthy']++;
+                                break;
+                            default:
+                                // unknown disease, ignore or log
+                                break;
+                        }
+                    }
                 } else {
                     rawCount++;
                 }
             });
 
-            // Build cards array
+            // Build cards array in fixed order
             const cardsData = [
                 { label: 'Raw', count: rawCount },
-                { label: 'Analyzed', count: analyzedCount },
-                ...Object.entries(diseaseCounts).map(([disease, count]) => ({ label: disease, count }))
+                { label: 'Healthy', count: diseaseCounts['Healthy'] },
+                { label: 'Allergic Dermatitis', count: diseaseCounts['Allergic Dermatitis'] },
+                { label: 'Fungal Infection', count: diseaseCounts['Fungal Infection'] },
+                { label: 'Hotspot', count: diseaseCounts['Hotspot'] },
+                { label: 'Mange', count: diseaseCounts['Mange'] }
             ];
 
             // Render stats cards
             const cardsContainer = document.getElementById('statsCardsRow');
-            cardsContainer.innerHTML = ''; // clear existing
+            cardsContainer.innerHTML = '';
             cardsData.forEach(card => {
                 const cardEl = document.createElement('div');
                 cardEl.className = 'stat-card';
@@ -498,24 +524,26 @@ if (!window._functionReloadProtected) {
                 cardsContainer.appendChild(cardEl);
             });
 
-            // Update first insight card
+            // Update Healthy insight
             const healthyInsightCard = document.getElementById("healthyInsight");
             if (healthyInsightCard) {
-                const healthyCount = diseaseCounts['Healthy'] || 0;
-
-                // Sum of all other diseases
-                const otherDiseasesCount = Object.entries(diseaseCounts)
+                const totalOther = Object.entries(diseaseCounts)
                     .filter(([disease]) => disease !== 'Healthy')
                     .reduce((sum, [, count]) => sum + count, 0);
 
                 const healthyIcon = healthyInsightCard.querySelector('i');
                 const healthyText = healthyInsightCard.querySelector('.insight-text strong');
 
-                if (healthyCount < otherDiseasesCount) {
+                if (diseaseCounts['Healthy'] === 0) {
+                    healthyIcon.classList.remove("bi-arrow-up-circle");
+                    healthyIcon.classList.add("bi-arrow-down-circle");
+                    healthyText.textContent = `No Healthy scans detected yet.`;
+                    healthyInsightCard.classList.add("decline");
+                } else if (diseaseCounts['Healthy'] < totalOther) {
                     healthyIcon.classList.remove("bi-arrow-up-circle");
                     healthyIcon.classList.add("bi-arrow-down-circle");
                     healthyText.textContent = `Healthy scans decreased, showing overall decline.`;
-                    healthyInsightCard.classList.add("decline"); // optional: for styling
+                    healthyInsightCard.classList.add("decline");
                 } else {
                     healthyIcon.classList.remove("bi-arrow-down-circle");
                     healthyIcon.classList.add("bi-arrow-up-circle");
@@ -524,45 +552,65 @@ if (!window._functionReloadProtected) {
                 }
             }
 
-            // Update second insight card
+            // Update top disease insight
             const topDiseaseEl = document.getElementById('topDisease');
             if (topDiseaseEl) {
-                const sortedDiseases = Object.entries(diseaseCounts).sort((a, b) => b[1] - a[1]);
-                if (sortedDiseases.length > 0 && sortedDiseases[0][1] > 0) {
-                    topDiseaseEl.textContent = sortedDiseases[0][0];
+                const sorted = Object.entries(diseaseCounts)
+                    .filter(([disease]) => disease !== 'Healthy')
+                    .sort((a, b) => b[1] - a[1]);
+                if (sorted.length > 0 && sorted[0][1] > 0) {
+                    topDiseaseEl.textContent = sorted[0][0];
                 } else {
                     topDiseaseEl.parentElement.textContent = "No disease detected in the gallery.";
                 }
             }
 
-            // Update third insight card
-            const mangeInsightCard = document.getElementById("mangeInsight"); // give your div an id
-            if (mangeInsightCard) {
-                const mangeCount = diseaseCounts['Mange'] || 0;
-                const totalAnalyzed = Object.values(diseaseCounts).reduce((sum, count) => sum + count, 0);
+            // Update third insight card (lowest disease excluding Healthy)
+            const lowestInsightCard = document.getElementById("lowestInsight");
+            if (lowestInsightCard) {
+                const mainDiseases = ['Allergic Dermatitis', 'Fungal Infection', 'Hotspot', 'Mange'];
 
-                const mangeIcon = mangeInsightCard.querySelector('i');
-                const mangeText = mangeInsightCard.querySelector('.insight-text strong');
+                // Ensure all main diseases exist in normalizedCounts with their counts
+                const normalizedCounts = {};
+                mainDiseases.forEach(disease => {
+                    const key = Object.keys(diseaseCounts).find(k => k.toLowerCase() === disease.toLowerCase());
+                    normalizedCounts[disease] = key ? diseaseCounts[key] : 0;
+                });
 
-                if (totalAnalyzed > 0) {
-                    const percentage = ((mangeCount / totalAnalyzed) * 100).toFixed(1);
-                    mangeText.textContent = `Mange accounts for only ${percentage}% of all analyzed images.`;
+                // Filter out diseases with 0 count
+                const filteredCounts = Object.entries(normalizedCounts).filter(([_, count]) => count > 0);
 
-                    // Optional: change icon or style if percentage is high
-                    if (percentage > 50) {
-                        mangeIcon.classList.remove("bi-search");
-                        mangeIcon.classList.add("bi-exclamation-circle"); // highlight
-                        mangeInsightCard.classList.add("alert"); // optional styling
+                if (filteredCounts.length > 0) {
+                    // Sort by count ascending and take the first one (lowest)
+                    filteredCounts.sort((a, b) => a[1] - b[1]);
+                    const [lowestDisease, lowestCount] = filteredCounts[0];
+
+                    const totalAnalyzed = Object.values(normalizedCounts).reduce((sum, count) => sum + count, 0);
+                    const percentage = totalAnalyzed > 0 ? ((lowestCount / totalAnalyzed) * 100).toFixed(1) : 0;
+
+                    const lowestIcon = lowestInsightCard.querySelector('i');
+                    const lowestText = lowestInsightCard.querySelector('.insight-text strong');
+
+                    lowestText.textContent = `${lowestDisease} accounts for only ${percentage}% of all analyzed images.`;
+                    console.log(`Lowest: ${lowestDisease} with ${lowestCount} images`);
+                    
+                    if (percentage < 10) {
+                        lowestIcon.classList.remove("bi-search");
+                        lowestIcon.classList.add("bi-exclamation-circle");
+                        lowestInsightCard.classList.add("alert");
                     } else {
-                        mangeIcon.classList.add("bi-search");
-                        mangeIcon.classList.remove("bi-exclamation-circle");
-                        mangeInsightCard.classList.remove("alert");
+                        lowestIcon.classList.add("bi-search");
+                        lowestIcon.classList.remove("bi-exclamation-circle");
+                        lowestInsightCard.classList.remove("alert");
                     }
                 } else {
-                    mangeText.textContent = "No Mange cases detected yet.";
+                    // No disease detected at all
+                    lowestInsightCard.querySelector('.insight-text strong').textContent = "No disease detected yet.";
                 }
             }
-            // Update the chart after cards are rendered
+
+
+            // Update chart
             if (typeof updateStatsChart === 'function') {
                 updateStatsChart();
             }
