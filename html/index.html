@@ -22,7 +22,7 @@
     </div>
 
     <!-- Navbar -->
-    <nav id="navigationBar" class="navbar navbar-expand-lg navbar-light shadow-sm">
+    <nav id="navigationBar" class="navbar navbar-expand-lg navbar-light">
         <div class="container-fluid navbar-container">
             <!-- Logo -->
             <div class="navbar-brand logo-wrapper">
@@ -31,7 +31,7 @@
             </div>
 
             <!-- Navigation Buttons -->
-            <div class="navbar-nav nav-buttons">
+            <div class="navbar-nav nav-buttons shadow-sm">
                 <button class="nav-btn active" id="homeBtn" data-page="home" >
                     <i class="bi bi-house-fill"></i> <span>Home</span>
                 </button>
@@ -44,7 +44,7 @@
             </div>
 
             <!-- User Greeting hover to settings -->
-            <div class="user-greeting" id="userGreeting">
+            <div class="user-greeting shadow-sm" id="userGreeting">
                 <div class="avatar-container">
                     <img id="navbarUserAvatar" src="../images/Earl.png" alt="Avatar" class="navbar-avatar">
                 </div>
@@ -92,100 +92,137 @@
         </div>
     </nav>
 
-    <!-- Main container -->
-    <div class="main-container">
+        <!-- Main container -->
+        <div class="main-container">
 
-        <!-- Home Page -->
-        <div id="homePage" class="home-page" style="display: flex;">
+            <!-- Home Page -->
+            <div id="homePage" class="home-page">
 
-            <!-- Server Card Container -->
-            <div id="serverCardContainer" class="server-card-container">
-                <div class="card server-card">
-                <div class="card-body">
-                    <i class="bi bi-wifi-off"></i>
-                    <h5 class="card-title">Please connect to server</h5>
+            <!-- Server Loading Screen Container -->
+            <div id="loadingScreenContainer" class="loading-screen-container">
+                <video autoplay loop muted playsinline class="loading-video">
+                    <source src="../images/doggy_loading.mp4" type="video/mp4">
+                </video>
+
+                <div class="description">
+                    <h5 class="card-title">Connecting...</h5>
                     <p class="card-text text-muted">
-                    The application is unable to reach the server. Make sure your connection is active.
+                        The application is unable to reach the server. Make sure your connection is active.
                     </p>
-                </div>
-                <div id="connectServerButton" class="button">Connect to server</div>
                 </div>
             </div>
 
-            <!-- Gallery Overview (Hidden by default) -->
-            <div id="galleryOverview" class="gallery-overview" style="display:none;">
-                <div class="gallery-overview-container">
+            <!-- Gallery Overview -->
+            <div id="galleryOverview" class="gallery-overview">
 
-                    <!-- Left Column -->
-                    <div class="left-column">
-                        <h3>Gallery Overview</h3>
+                <!-- Main Column -->
+                <div class="main-column">
+                    <h3>Gallery Overview</h3>
 
-                        <div class="overview-flex">
+                    <!-- ===== Top Stats Cards Row ===== -->
+                    <div class="stats-cards-row">
+                        <div class="stat-card">
+                            <div class="card-top">
+                                <span>Raw</span>
+                                <span class="number">12</span>
+                            </div>
+                            <button class="view-btn">View</button>
+                        </div>
+                        <div class="stat-card">
+                            <div class="card-top">
+                                <span>Analyzed</span>
+                                <span class="number">48</span>
+                            </div>
+                            <button class="view-btn">View</button>
+                        </div>
+                        <div class="stat-card">
+                            <div class="card-top">
+                                <span>Dermatitis</span>
+                                <span class="number">300</span>
+                            </div>
+                            <button class="view-btn">View</button>
+                        </div>
+                        <div class="stat-card">
+                            <div class="card-top">
+                                <span>Mange</span>
+                                <span class="number">10</span>
+                            </div>
+                            <button class="view-btn">View</button>
+                        </div>
+                        <div class="stat-card">
+                            <div class="card-top">
+                                <span>Hotspot</span>
+                                <span class="number">8</span>
+                            </div>
+                            <button class="view-btn">View</button>
+                        </div>
+                        <div class="stat-card">
+                            <div class="card-top">
+                                <span>Healthy</span>
+                                <span class="number">15</span>
+                            </div>
+                            <button class="view-btn">View</button>
+                        </div>
+                    </div>
 
-                            <!-- Pie Chart Container with Outer Wrapper for Title -->
-                            <div class="pie-chart-wrapper">
-                                <h4 class="container-title">Gallery Image Distribution</h4>
-                                <div class="pie-chart-container">
-                                    <canvas id="statsPieChart"></canvas>
+                    <!-- ===== Chart Section ===== -->
+                    <!-- ===== Bottom Section: Chart Left + Insights Right ===== -->
+                    <div class="bottom-section">
+
+                        <!-- ===== Chart Section (Left) ===== -->
+                        <div class="chart-section">
+
+                            <!-- Pie / Bar Chart Dropdown -->
+                            <div class="chart-header">
+                                <h4>Image Distribution</h4>
+
+                                <select id="chartTypeSelect">
+                                    <option value="pie">Pie Chart</option>
+                                    <option value="bar">Bar Graph</option>
+                                </select>
+                            </div>
+
+                            <!-- Chart Canvas -->
+                            <div class="chart-container">
+                                <canvas id="statsPieChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- ===== Trend Insights (Right) ===== -->
+                        <div class="trend-insights">
+                        <h4>Trend Insights</h4>
+
+                        <div class="insights-cards">
+                            
+                            <div class="insight-card shadow-sm">
+                                <i class="bi bi-graph-up"></i>
+                                <div class="insight-text">
+                                    <strong>Dermatitis remains the most frequently detected condition.</strong>
                                 </div>
                             </div>
 
-
-                            <!-- Stats Cards with Container Title -->
-                            <div class="stats-cards-grid-container">
-                                <h4 class="container-title">Image Statistics</h4>
-                                <div class="stats-cards-grid">
-                                    <div class="stat-card"><span>Raw Images</span><span class="number">12</span></div>
-                                    <div class="stat-card"><span>Analyzed Images</span><span class="number">48</span></div>
-                                    <div class="stat-card"><span>Dermatitis</span><span class="number">15</span></div>
-                                    <div class="stat-card"><span>Mange</span><span class="number">10</span></div>
-                                    <div class="stat-card"><span>Hotspot</span><span class="number">8</span></div>
-                                    <div class="stat-card"><span>Healthy</span><span class="number">15</span></div>
+                            <div class="insight-card shadow-sm">
+                                <i class="bi bi-arrow-up-circle"></i>
+                                <div class="insight-text">
+                                    <strong>Healthy scans increased this week, showing overall improvement.</strong>
                                 </div>
                             </div>
 
-                        </div> <!-- end of overview-flex -->
-                    </div> <!-- end of left-column -->
-
-                    <!-- Right Column -->
-                    <div class="right-column">
-
-                       <!-- Top Row: Server Status -->
-                        <div class="top-row server-status">
-                        <img class="connected_icon" src="../images/connected_dog.jpg" alt="Server Icon">
-                        <p id="serverStatusText">
-                        <i class="bi bi-wifi"></i> Server is <span id="serverStatus">inactive</span> at
-                        </p>
-                        <div id="serverIPWrapper">
-                        <span id="serverIP">Loading...</span>
-                        <button id="copyIPBtn" title="Copy IP"><i class="bi bi-clipboard"></i></button>
+                            <div class="insight-card shadow-sm">
+                                <i class="bi bi-search"></i>
+                                <div class="insight-text">
+                                    <strong>Mange accounts for only 4% of all analyzed images.</strong>
+                                </div>
+                            </div>
                         </div>
+                    </div>
 
 
+                    </div>
 
-                        <button id="disconnectServerButton" class="disconnect-btn">Disconnect</button>
-                        </div>
-
-
-
-                        <!-- Bottom Row: Activity Log -->
-                        <div class="bottom-row activity-log">
-                            <h4>Activity Log</h4>
-                            <ul class="activity-list">
-                                <li>Device connected at 10:32 AM</li>
-                                <li>Data synced successfully</li>
-                                <li>Device disconnected at 11:00 AM</li>
-                                <li>Device connected at 10:32 AM</li>
-                                <li>Data synced successfully</li>
-                                <li>Device disconnected at 11:30 AM</li>
-                            </ul>
-                        </div>
-
-                    </div> <!-- end of right-column -->
-                </div> <!-- end of gallery-overview-container -->
-            </div> <!-- end of galleryOverview -->
-
-        </div> <!-- end of homePage -->
+                </div>
+            </div>
+        </div>
 
 
         <!-- Gallery Page -->
@@ -247,7 +284,7 @@
                     </button>
 
                     <button id="refreshButton" class="btn btn-light refresh-button">
-                        <i class="bi bi-arrow-clockwise"></i> Refresh (5s)
+                        <i class="bi bi-arrow-clockwise"></i>
                     </button>
                 </div>
 
@@ -303,34 +340,9 @@
                 <!-- Analysis Page -->
         <div id="analysisPage" class="page-content" style="display:none;">
             <div class="analysis-container">
-                <!-- Analysis History Floating Box -->
-                <div class="floating-box analysis-history-box">
-                    <div class="box-header">
-                        <h4><i class="bi bi-clock-history"></i> Analysis History</h4>
-                        <button class="btn-clear-history" id="clearHistoryBtn" title="Clear History">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                    <div class="box-content">
-                        <div class="history-list" id="analysisHistoryList">
-                            <!-- Analysis history items will be dynamically added here -->
-                            <div class="history-item">
-                                <div class="history-image">
-                                    <img src="../images/connected_dog.jpg" alt="Analysis Image" class="history-img">
-                                </div>
-                                <div class="history-details">
-                                    <div class="history-name">sample_image.jpg</div>
-                                    <div class="history-diagnosis">Fungal Infection</div>
-                                    <div class="history-confidence">87%</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Analyze Image Floating Box (Dominant) -->
                 <div class="floating-box analyze-image-box dominant">
-                    <div class="box-header">
+                    <div class="box-header box-header--analyze-image">
                         <h4><i class="bi bi-search"></i> Analyze Image</h4>
                         <div class="dropdown">
                             <button class="dropdown-button" id="dropdownButton">
@@ -375,73 +387,103 @@
                     </div>
                 </div>
 
-                <!-- Recommendations Floating Box -->
-                <div class="floating-box recommendations-box">
-                    <div class="box-header">
-                        <h4><i class="bi bi-chat-dots"></i> Recommendations</h4>
+    <div class="floating-box recommendations-box">
+
+    <!-- History and Analysis Combined-->
+    <!-- Tab Header -->
+        <div class="box-header box-header--recommendations">
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="recommendations">
+                    <i class="bi bi-chat-dots"></i> Recommendations
+                </button>
+                <button class="tab-btn" data-tab="history">
+                    <i class="bi bi-clock-history"></i> Analysis History
+                </button>
+            </div>
+        </div>
+    
+        <div class="box-content">
+            <!-- Recommendations Tab Content -->
+            <div class="tab-content active" id="recommendationsTab">
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-message bot-message">
+                            <div class="message-content">
+                                Hello! I'm here to help with recommendations for your dog's skin condition. How can I assist you today?
+                            </div>
+                        </div>
                     </div>
-                    <div class="box-content">
-                        <div class="chat-container">
-                            <div class="chat-messages" id="chatMessages">
-                                <div class="chat-message bot-message">
-                                    <div class="message-content">
-                                        Hello! I'm here to help with recommendations for your dog's skin condition. How can I assist you today?
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="chat-input-area">
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="chatInput" placeholder="Ask about treatments, symptoms, or care...">
-                                    <button class="btn btn-primary" id="sendMessageBtn">
-                                        <i class="bi bi-send"></i>
-                                    </button>
-                                </div>
-                            </div>
+                    <div class="chat-input-area">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="chatInput" placeholder="Ask about treatments, symptoms, or care...">
+                            <button class="btn btn-primary" id="sendMessageBtn">
+                                <i class="bi bi-send"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    </div>
-
-    <!-- Account Selection Modal -->
-    <div id="accountSelectionModal" class="account-modal">
-        <div class="account-modal-overlay"></div>
-        <div class="account-modal-content">
-            <h2>Choose Your Avatar</h2>
-            <div class="accounts-grid">
-                <div class="account-item" data-account="Earl">
-                    <img src="../images/Earl.png" alt="Earl">
-                    <span>LABRADOR</span>
+            
+            <!-- Analysis History Tab Content -->
+            <div class="tab-content" id="historyTab">
+                <div class="history-header">
+                    <button class="btn-clear-history" id="clearHistoryBtn">
+                        <i class="bi bi-trash"></i> Clear History
+                    </button>
                 </div>
-                <div class="account-item" data-account="Edrian">
-                    <img src="../images/Edrian.png" alt="Edrian">
-                    <span>POMERANIAN</span>
-                </div>
-                <div class="account-item" data-account="Ken">
-                    <img src="../images/Ken2.png" alt="Ken">
-                    <span>KEN</span>
-                </div>
-                <div class="account-item" data-account="Joaquin">
-                    <img src="../images/Joaquin.png" alt="Joaquin">
-                    <span>SHIH TZU</span>
-                </div>
-                <div class="account-item" data-account="Jignesh">
-                    <img src="../images/Jigs.png" alt="Jignesh">
-                    <span>CORGI</span>
+                <div class="history-list" id="historyList">
+                    <!-- History items will be dynamically added here -->
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <p>No analysis history yet</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+<!-- Account Selection Modal -->
+<div id="accountSelectionModal" class="account-modal">
+  <div class="account-modal-overlay"></div>
+  <div class="account-modal-content">
+    <h2>Choose Your Avatar</h2>
+
+    <!-- Avatar Carousel -->
+    <div class="avatar-carousel">
+      <button id="prevAvatar" class="arrow-btn">&#10094;</button>
+      
+      <div class="avatar-display">
+        <img id="currentAvatar" src="../images/Earl.png" alt="Avatar">
+        <span id="avatarLabel">LABRADOR</span>
+      </div>
+
+      <button id="nextAvatar" class="arrow-btn">&#10095;</button>
+    </div>
+
+    <!-- Name Inputs -->
+    <div class="name-inputs">
+      <label for="firstName">First Name</label>
+      <input type="text" id="firstName" placeholder="First Name">
+
+      <label for="lastName">Last Name</label>
+      <input type="text" id="lastName" placeholder="Last Name">
+    </div>
+
+    <!-- Apply Button -->
+    <button id="applyAvatarChanges" class="apply-btn">Apply</button>
+  </div>
+</div>
+
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
-    <!-- <script src="../js/main_window_functions.js"></script> -->
 
-    <script type="module" src="../js/main_window_functions.js"></script>
+    <!-- Defer added so function only loads once DOM Content loaded -->
+    <script type="module" src="../js/main_window_functions.js" defer></script> 
+    <script type="module" src="../js/gallery_page.js" defer></script> 
 
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <script src="../js/gallery_chart.js"></script>
 </body>
 </html>

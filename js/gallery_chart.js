@@ -1,22 +1,17 @@
 document.addEventListener("DOMContentLoaded", function () {
-    // Grab all the stat cards
-    const statCards = document.querySelectorAll('.stats-cards-grid .stat-card');
+    const statCards = document.querySelectorAll('.stat-card');
 
     const labels = [];
     const data = [];
     const backgroundColors = [];
 
     statCards.forEach(card => {
-        // Label
         labels.push(card.querySelector('span').textContent.trim());
-        // Number
         data.push(parseInt(card.querySelector('.number').textContent.trim()));
-        // Background color (computed from CSS)
         const style = window.getComputedStyle(card);
         backgroundColors.push(style.backgroundColor);
     });
 
-    // Initialize Chart.js
     const ctx = document.getElementById('statsPieChart').getContext('2d');
     const statsPieChart = new Chart(ctx, {
         type: 'pie',
@@ -32,22 +27,29 @@ document.addEventListener("DOMContentLoaded", function () {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'right', 
+                    labels: {
+                        boxWidth: 20,
+                        padding: 15 // increase padding to push legend further right
+                    }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(217, 185, 155, 0.8)', // semi-transparent #d9b99b
-                    titleColor: '#000',    // optional: title text color
-                    bodyColor: '#000',     // optional: body text color
+                    enabled: true, // enable hover tooltip
                     callbacks: {
                         label: function(context) {
                             const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
                             const value = context.raw;
                             const percentage = ((value / total) * 100).toFixed(1);
-                            return `${percentage}%`;
+                            return `${context.label}: ${value} (${percentage}%)`;
                         }
                     }
+                },
+                datalabels: {
+                    display: false // hide permanent inside-chart labels
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 });

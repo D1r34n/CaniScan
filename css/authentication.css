@@ -264,7 +264,7 @@ input::-webkit-credentials-auto-fill-button {
 }
 
 .btn-login:hover {
-  background-color: #282624 !important;
+  background-color: #2f3035 !important;
   transform: scale(1.05);
 }
 
@@ -283,13 +283,13 @@ input::-webkit-credentials-auto-fill-button {
 
 
 .form-links:hover {
-    color: #282624;
+    color: #2f3035;
     transform: scale(1.03);
 }
 
 
 .subtext {
-    color: #282624;
+    color: #2f3035;
     text-decoration: none;
     font-weight: 100 !important;
     text-align: center;       /* centers text */
