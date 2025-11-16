@@ -107,6 +107,24 @@
   transform: translateY(-4px) !important;
 }
 
+/* Delete Selected Button - Same rounded style as Analyze button */
+.delete-selected-button {
+  background-color: #f9f9f9 !important;
+  color: #282624 !important;
+  border: none;
+  border-radius: 30px !important;
+  font-weight: 500;
+  padding: 0.5rem 1rem !important;
+  transition: all 0.3s ease !important;
+  text-align: center;
+}
+
+.delete-selected-button:hover {
+  background-color: #f0e2d2 !important; /* light beige hover */
+  color: #282624 !important;
+  transform: translateY(-4px) !important;
+}
+
 /* Controls Container inside left-controls */
 .gallery-controls {
   display: flex;
@@ -302,8 +320,22 @@
 /* Change to filled square when selected */
 .image-item.selected::after {
   content: "\F26C"; /* Unicode for bi-check-square */
+  font-family: "bootstrap-icons";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 1.4rem;
   color: #d9b99b;
-  z-index: 3;
+  border: none;
+  border-radius: 4px;
+  width: 1.4rem;
+  height: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  pointer-events: none;
+  z-index: 20; /* above overlays/badges */
 }
 
 /* Optional: make hover effect stronger in Analyze mode */
@@ -326,8 +358,8 @@
 /* Analyzed badge on image items */
 .analyzed-badge {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  bottom: 8px;
+  left: 8px;
   background: rgba(40, 167, 69, 0.9);
   color: white;
   border-radius: 50%;

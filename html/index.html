@@ -120,7 +120,7 @@
                     <h3>Gallery Overview</h3>
 
                     <!-- ===== Top Stats Cards Row ===== -->
-                    <div class="stats-cards-row">
+                    <div class="stats-cards-row" id="statsCardsRow">
                         <div class="stat-card">
                             <div class="card-top">
                                 <span>Raw</span>
@@ -176,32 +176,32 @@
                             <div class="chart-header">
                                 <h4>Image Distribution</h4>
 
-                                <select id="chartTypeSelect">
-                                    <option value="pie">Pie Chart</option>
-                                    <option value="bar">Bar Graph</option>
-                                </select>
+                                <div class="chart-dropdown shadow-sm" id="chartTypeDropdown">
+                                    <button class="chart-dropdown-button" id="chartDropdownButton">
+                                        Pie Chart <span>▼</span>
+                                    </button>
+                                    <div class="chart-dropdown-content" id="chartdropdownMenu">
+                                        <div>Pie Chart</div>
+                                        <div>Bar Chart</div>
+                                    </div>
+                                </div>
+                                
                             </div>
 
                             <!-- Chart Canvas -->
                             <div class="chart-container">
                                 <canvas id="statsPieChart"></canvas>
+                                <div id="chartLegend" class="custom-legend"></div>
                             </div>
+
                         </div>
 
                         <!-- ===== Trend Insights (Right) ===== -->
                         <div class="trend-insights">
-                        <h4>Trend Insights</h4>
+                        <h4>Insights</h4>
 
                         <div class="insights-cards">
-                            
-                            <div class="insight-card shadow-sm">
-                                <i class="bi bi-graph-up"></i>
-                                <div class="insight-text">
-                                    <strong>Dermatitis remains the most frequently detected condition.</strong>
-                                </div>
-                            </div>
-
-                            <div class="insight-card shadow-sm">
+                            <div class="insight-card shadow-sm" id="healthyInsight">
                                 <i class="bi bi-arrow-up-circle"></i>
                                 <div class="insight-text">
                                     <strong>Healthy scans increased this week, showing overall improvement.</strong>
@@ -209,6 +209,13 @@
                             </div>
 
                             <div class="insight-card shadow-sm">
+                                <i class="bi bi-graph-up"></i>
+                                <div class="insight-text">
+                                    <strong><span id="topDisease">Dermatitis</span> remains the most frequently detected condition.</strong>
+                                </div>
+                            </div>
+
+                            <div class="insight-card shadow-sm" id="lowestInsight">
                                 <i class="bi bi-search"></i>
                                 <div class="insight-text">
                                     <strong>Mange accounts for only 4% of all analyzed images.</strong>
@@ -288,10 +295,15 @@
                     </button>
                 </div>
 
-                <!-- Right Control: Analyze Button -->
-                <button id="analyzeModeButton" class="btn btn-light analyze-mode-button">
-                    <i class="bi bi-box-arrow-in-down"></i> Analyze Images
-                </button>
+                <!-- Right Controls: Analyze and Delete Buttons -->
+                <div class="right-controls" style="display: flex; gap: 0.5rem;">
+                    <button id="deleteSelectedButton" class="btn btn-light delete-selected-button">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                    <button id="analyzeModeButton" class="btn btn-light analyze-mode-button">
+                        <i class="bi bi-box-arrow-in-down"></i> Analyze Images
+                    </button>
+                </div>
 
             </div>
             <!-- End of Left Controls: Sort Dropdown + Show Details -->
@@ -300,6 +312,12 @@
             <div class="gallery-columns">
                 <!-- Left Column: Image Grid -->
                 <div class="gallery-left">
+                    <div class="gallery-upload-bar" style="display:flex; gap: 0.5rem; align-items:center; margin-bottom: 0.5rem;">
+                        <button id="galleryUploadBtn" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-upload"></i> Upload Image
+                        </button>
+                        <input id="galleryUploadInput" type="file" accept="image/*" style="display:none;" />
+                    </div>
                     <div id="imageGrid" class="image-grid">
                         <div class="image-item">Image 1</div>
                         <div class="image-item">Image 2</div>
@@ -370,6 +388,10 @@
                                 <div class="confidence-result">
                                     <span class="result-label">Confidence:</span>
                                     <span class="result-value" id="resultConfidence">-</span>
+                                </div>
+                                <div class="inference-time-result">
+                                    <span class="result-label">Inference Time:</span>
+                                    <span class="result-value" id="resultInferenceTime">-</span>
                                 </div>
                             </div>
                         </div>
@@ -473,6 +495,6 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
-    <script src="../js/gallery_chart.js"></script>
+    <script src="../js/gallery_chart.js" defer></script>
 </body>
 </html>
