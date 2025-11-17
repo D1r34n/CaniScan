@@ -476,15 +476,6 @@ const dropdownAnalyzeBtn = document.getElementById('dropdownAnalyzeBtn');
 const dropdownDeleteBtn = document.getElementById('dropdownDeleteBtn');
 
 const galleryUploadInput = document.getElementById('galleryUploadInput');
-// Permanent listener for empty-space clicks
-if (galleryColumn) {
-    galleryColumn.addEventListener('click', (e) => {
-        // Only clear if we didn't click on an image item
-        if (!e.target.closest('.image-item')) {
-            clearSelection(); // removes 'active' and selection
-        }
-    });
-}
 
 // Action Dropdown BUtton
 actionsButton.addEventListener('click', (e) => {
@@ -784,9 +775,20 @@ function selectImage(e, imageDataOverride = null) {
     }
 }
 
-// Clear selection when clicking empty space
-function clearSelectionOnEmpty(e) {
-    if (!e.target.closest('.image-item')) {
-        clearSelection();
-    }
+// Permanent listener for empty-space clicks
+if (galleryColumn) {
+    galleryColumn.addEventListener('click', (e) => {
+        // Only clear if we didn't click on an image item
+        if (!e.target.closest('.image-item')) {
+            clearSelection(); // removes 'active' and selection
+            const isMinimized = detailPane.classList.contains("minimized");
+            if (!isMinimized) {
+            // Minimize pane
+            detailPane.classList.add("minimized");
+            // leftColumn.style.flex = "3.5";
+            galleryUploadBtn.style.right = "1rem";
+             
+        }
+        }
+    });
 }

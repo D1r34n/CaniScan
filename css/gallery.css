@@ -199,7 +199,7 @@
 
 .sort-dropdown-container {
   position: relative;
-  width: 200px;
+  width: 8rem;
 }
 
 .sort-dropdown {
@@ -235,7 +235,7 @@
   position: absolute;
   top: 110%;
   left: 0;
-  width: 100%;
+  width: 150%;
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);

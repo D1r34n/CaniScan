@@ -26,7 +26,7 @@ if (!window._functionReloadProtected) {
 
     const userNameElement = document.getElementById("userName");
     const dropdownUserName = document.getElementById("dropdownUserName");
-    const dropdownUserEmail = document.getElementById("dropdownUserEmail");
+    const slideContainer = dropdownUserName.querySelector(".user-slide span");
 
     const userGreeting = document.getElementById('userGreeting');
     const userDropdown = document.getElementById('userDropdown');
@@ -136,12 +136,11 @@ if (!window._functionReloadProtected) {
                 fadeOut(loadingScreenContainer, 400, () => fadeIn(galleryOverview, 400));
                 if (galleryBtn) galleryBtn.disabled = false;
                 if (analysisBtn) analysisBtn.disabled = false;
+
                 // optionally show server IP
-                const statusSpan = document.getElementById("serverStatus");
-                const ipSpan = document.getElementById("serverIP");
+                const ipSpan = document.getElementById("ipAddress");
                 const copyIPBtn = document.getElementById("copyIPBtn");
-                if (statusSpan && ipSpan && status.ip) {
-                    statusSpan.textContent = "active";
+                if (ipSpan && status.ip) {
                     const originalIP = `${status.ip}:5001`;
                     ipSpan.textContent = originalIP;
                     if (copyIPBtn) {
@@ -149,8 +148,9 @@ if (!window._functionReloadProtected) {
                             navigator.clipboard.writeText(originalIP)
                                 .then(() => {
                                     ipSpan.textContent = "IP copied!";
-                                    ipSpan.style.color = "limegreen";
-                                    setTimeout(() => { ipSpan.textContent = originalIP; ipSpan.style.color = "#333"; }, 1500);
+                                    ipSpan.style.color = "#4caf50";
+                                    copyIPBtn.style.visibility = "hidden";
+                                    setTimeout(() => { ipSpan.textContent = originalIP; ipSpan.style.color = "#2f3035"; copyIPBtn.style.visibility = "visible"; }, 1500);
                                 }).catch(err => console.error("Failed to copy IP:", err));
                         });
                     }
@@ -184,9 +184,44 @@ if (!window._functionReloadProtected) {
             }
 
             loggedInUserName = data.name || "User";
+            const fullName = (data.name || "") + " " + (data.lastname || "");
             userNameElement.textContent = `Hello, ${loggedInUserName}!`;
-            if (dropdownUserName) dropdownUserName.textContent = loggedInUserName;
-            if (dropdownUserEmail && data.email) dropdownUserEmail.textContent = data.email;
+            slideContainer.textContent = fullName || 'User';
+
+            dropdownUserName.addEventListener('mouseenter', () => {
+                if(!slideContainer) return;
+                slideContainer.textContent = data.email || 'user@gmail.com';
+                dropdownUserName.querySelector(".user-slide").classList.add('slide');
+            });
+
+            dropdownUserName.addEventListener('mouseleave', () => {
+                if(!slideContainer) return;
+                slideContainer.textContent = fullName || 'User';
+                dropdownUserName.querySelector(".user-slide").classList.remove('slide');
+            });
+
+
+            // Click copies email
+            dropdownUserName.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(data.email);
+                    const originalText = dropdownUserName.textContent;
+                    slideContainer.textContent = 'Copied!';
+                    slideContainer.style.color = "#4caf50";
+                    dropdownUserName.style.userSelect = 'none';
+                    dropdownUserName.querySelector(".user-slide").classList.remove('slide');
+
+                    // Revert back after 1.5 seconds
+                    setTimeout(() => {
+                        slideContainer.textContent = data.email || 'user@gmail.com';
+                        slideContainer.style.color = "white";
+                        dropdownUserName.querySelector(".user-slide").classList.add('slide');
+                        
+                    }, 1500);
+                } catch (err) {
+                    console.error('Failed to copy email:', err);
+                }
+            });
 
             console.log("%c👤 Logged-in user:", "color: cyan;", loggedInUserName);
 
