@@ -97,11 +97,6 @@
   flex: initial;
 }
 
-.box-content:has(.analysis-results[style*="display: none"]) .image-upload-area,
-.box-content:has(.analysis-results[style*="display: none"]) {
-  grid-column: 1 / -1;
-}
-
 /* Analysis History Box */
 .analysis-history-box {
   flex: 1;
@@ -249,16 +244,16 @@
 
 .image-preview {
   position: relative;
-  width: 100%;
+  width: fit-content;
+  height: fit-content;
   max-width: 500px;
-  margin: 0 auto;
   border-radius: 15px;
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .image-preview img {
-  width: 100%;
+  width: 348px;
   height: 400px;
   object-fit: contain;
   display: block;

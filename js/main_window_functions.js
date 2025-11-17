@@ -632,14 +632,6 @@ if (!window._functionReloadProtected) {
   // Start with home page
   showPage(homePage);
 
-    //CHECK IF UI HAS FULLY LOADED
-    document.addEventListener("DOMContentLoaded", () => {
-        console.log("%c📄 DOM fully loaded.", "color: green;");  
-        setupTabs();
-        setupClearHistoryButton();
-        loadAnalysisHistory();  
-    });
-
     // Shared image handling function
     function handleImageFile(file) {
         if (!file || !file.type.startsWith('image/')) {
@@ -963,8 +955,6 @@ if (!window._functionReloadProtected) {
         dropdownMenu.classList.remove('show');
       }
     });
-    
-    console.log('%c✅ Simple dropdown initialized', 'color: limegreen;');
   }
 
     // Analysis button functionality
@@ -1329,79 +1319,6 @@ if (!window._functionReloadProtected) {
     historyList.insertBefore(historyItem, historyList.firstChild);
 }
 
-// Load all history items from localStorage
-function loadAnalysisHistory() {
-    const historyList = document.getElementById('historyList');
-    const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
-    
-    // Clear current display
-    historyList.innerHTML = '';
-    
-    if (history.length === 0) {
-        // Show empty state
-        historyList.innerHTML = `
-            <div class="empty-state">
-                <i class="bi bi-inbox"></i>
-                <p>No analysis history yet</p>
-            </div>
-        `;
-    } else {
-        // Display all history items
-        history.forEach(item => {
-            addHistoryItem(item.imageSrc, item.diagnosis, item.confidence, item.timestamp);
-        });
-    }
-    
-    console.log(`Loaded ${history.length} history items`);
-}
-
-// Clear History Functionality (integrated with your backend)
-function setupClearHistoryButton() {
-    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-    if (!clearHistoryBtn) return;
-    
-    clearHistoryBtn.addEventListener('click', async () => {
-        // Confirm before clearing
-        const confirmed = confirm(
-            'Are you sure you want to clear all analysis history? This will delete:\n\n' +
-            '- All analysis history in the app\n' +
-            '- All diagnosis records in the CSV file\n\n' +
-            'This action cannot be undone.'
-        );
-        
-        if (confirmed) {
-            try {
-                // Clear localStorage
-                localStorage.removeItem('analysisHistory');
-                
-                // Clear from CSV via API
-                const response = await fetch('http://localhost:5000/clear-analysis-history', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include'
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('History cleared:', result);
-                    
-                    // Reload history display (will show empty state)
-                    loadAnalysisHistory();
-                    
-                    // Show success message
-                    alert('Analysis history has been cleared successfully.');
-                } else {
-                    throw new Error('Failed to clear history from server');
-                }
-            } catch (error) {
-                console.error('Error clearing history:', error);
-                alert('Error clearing history. Please try again.');
-            }
-        }
-    });
-}
     
     /*function showAnalysisDetailsPopup(imageSrc, diagnosis, confidence, timestamp) {
         const displayDate = timestamp ? new Date(timestamp).toLocaleString() : new Date().toLocaleString();
@@ -1466,74 +1383,3 @@ function setupClearHistoryButton() {
 
 
   }; // end DOMContentLoaded
-
-// Tab Switching Functionality
-function setupTabs() {
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const recommendationsTab = document.getElementById('recommendationsTab');
-    const historyTab = document.getElementById('historyTab');
-    
-    tabButtons.forEach((button, index) => {
-        button.addEventListener('click', () => {
-            const tabName = button.getAttribute('data-tab');
-            
-            // Remove active class from all buttons and tabs
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            
-            // Add active class to clicked button
-            button.classList.add('active');
-            
-            // Show/hide appropriate tab content
-            if (tabName === 'recommendations') {
-                recommendationsTab.classList.add('active');
-                historyTab.classList.remove('active');
-            } else if (tabName === 'history') {
-                historyTab.classList.add('active');
-                recommendationsTab.classList.remove('active');
-            }
-        });
-    });
-}
-
-// Clear history functionality
-    function setupClearHistoryButton() {
-        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-        if (!clearHistoryBtn) return;
-        
-        clearHistoryBtn.addEventListener('click', async () => {
-            // Confirm before clearing
-            const confirmed = confirm('Are you sure you want to clear all analysis history? This will delete:\n\n- All analysis history in the app\n- All diagnosis records in the CSV file\n\nThis action cannot be undone.');
-            
-            if (confirmed) {
-                try {
-                    // Clear localStorage
-                    localStorage.removeItem('analysisHistory');
-                    
-                    // Clear from CSV via API
-                    const response = await fetch('http://localhost:5000/clear-analysis-history', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        credentials: 'include'
-                    });
-                    
-                    if (response.ok) {
-                        const result = await response.json();
-                        console.log('History cleared:', result);
-                        
-                        // Reload history display (will be empty)
-                        loadAnalysisHistory();
-                        
-                        // Show success message
-                        alert('Analysis history has been cleared successfully.');
-                    } else {
-                        throw new Error('Failed to clear history from server');
-                    }
-                } catch (error) {
-                    console.error('Error clearing history:', error);
-                    alert('Error clearing history. Please try again.');
-                }
-            }
-        });
-    }
