@@ -93,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
+                credentials: 'include'   // ← THIS IS THE KEY
             });
 
             const data = await res.json();
@@ -177,6 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     email: email, 
                     password: password 
                 }),
+                credentials: 'include'
             });
 
             const data = await res.json();

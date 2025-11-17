@@ -4,6 +4,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const axios = require('axios');
 const os = require('os');
+const chokidar = require('chokidar');
 
 // ------------------- Global Variables -------------------
 let yoloProcess;          // YOLOv8 Python process
@@ -14,6 +15,45 @@ let splashWindow;          // Splash/loading window reference
 let tray;                  // System tray reference
 let isQuiting = false;     // Flag to track app quitting
 const DESKTOP_SERVER_URL = 'http://127.0.0.1:5001';
+
+// ------------------- Helper Functions -------------------
+async function handleExitRequest(win) {
+    if (!win || win.isDestroyed()) return;
+
+    if (isQuiting) {
+        win.destroy();
+        return;
+    }
+
+    if (win.__exitDialogOpen) {
+        return;
+    }
+
+    win.__exitDialogOpen = true;
+
+    try {
+        const choice = await dialog.showMessageBox(win, {
+            type: 'question',
+            buttons: ['Minimize to Tray', 'Exit Application', 'Cancel'],
+            defaultId: 0,
+            cancelId: 2,
+            title: 'Exit CaniScan',
+            message: 'What would you like to do?',
+            detail: 'Choose to minimize the app to the system tray or fully exit the application.',
+            icon: path.join(__dirname, '..', 'images', 'system_tray_icon.png')
+        });
+
+        if (choice.response === 0) {
+            win.hide();
+        } else if (choice.response === 1) {
+            isQuiting = true;
+            app.quit();
+        }
+        // Cancel does nothing
+    } finally {
+        win.__exitDialogOpen = false;
+    }
+}
 
 // ------------------- Window Creation Functions -------------------
 function createSplashWindow() {
@@ -72,8 +112,13 @@ function createMainWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 720,
-        resizable: false,
+        minWidth: 1024,
+        minHeight: 640,
         frame: false,
+        resizable: false,
+        maximizable: true,
+        fullscreenable: true,
+        // session: loginWindow.webContents.session,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
@@ -88,32 +133,18 @@ function createMainWindow() {
     mainWindow.webContents.openDevTools();
 
     mainWindow.on('close', async (event) => {
-        // Prevent closing, show dialog unless quitting
         if (!isQuiting) {
             event.preventDefault();
-            
-            // Show exit confirmation dialog
-            const choice = await dialog.showMessageBox(mainWindow, {
-                type: 'question',
-                buttons: ['Minimize to Tray', 'Exit Application', 'Cancel'],
-                defaultId: 0,
-                cancelId: 2,
-                title: 'Exit CaniScan',
-                message: 'What would you like to do?',
-                detail: 'Choose to minimize the app to the system tray or fully exit the application.',
-                icon: path.join(__dirname, '..', 'images', 'system_tray_icon.png')
-            });
-            
-            if (choice.response === 0) {
-                // Minimize to tray
-                mainWindow.hide();
-            } else if (choice.response === 1) {
-                // Exit application
-                isQuiting = true;
-                app.quit();
-            }
-            // If response === 2 (Cancel), do nothing - window stays open
+            await handleExitRequest(mainWindow);
         }
+    });
+
+    mainWindow.on('maximize', () => {
+        mainWindow.webContents.send('window-maximize-changed', true);
+    });
+
+    mainWindow.on('unmaximize', () => {
+        mainWindow.webContents.send('window-maximize-changed', false);
     });
 
     mainWindow.webContents.on('did-finish-load', () => {
@@ -124,6 +155,7 @@ function createMainWindow() {
                 email: global.userEmail
             });
         }
+        mainWindow.webContents.send('window-maximize-changed', mainWindow.isMaximized());
     });
 }
 
@@ -201,12 +233,16 @@ app.whenReady().then(async () => {
 // ------------------- IPC Event Handlers -------------------
 
 // Handle login success
-ipcMain.on('login-success', (event, userData) => {
-    global.userName = userData.name;
-    global.userEmail = userData.email; // Must store email globally
+ipcMain.on('login-success', () => {
     if (loginWindow) loginWindow.hide();
-    if (!mainWindow) createMainWindow();
-    else mainWindow.show();
+
+    if (!mainWindow) {
+        createMainWindow();
+        mainWindow.once('ready-to-show', () => mainWindow.show());
+    } else {
+        mainWindow.show();
+        mainWindow.focus();
+    }
 });
 
 // Minimize / Close window requests
@@ -216,31 +252,81 @@ ipcMain.on('minimize-window', (event) => {
 });
 ipcMain.on('close-window', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (win && !win.isDestroyed()) win.hide();
+    if (win && !win.isDestroyed()) {
+        handleExitRequest(win);
+    }
+});
+ipcMain.on('request-app-exit', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isDestroyed()) {
+        handleExitRequest(win);
+    }
+});
+ipcMain.on('toggle-maximize', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed()) return;
+
+    if (win.isMaximized()) {
+        win.unmaximize();
+        event.sender.send('window-maximize-changed', false);
+    } else {
+        win.maximize();
+        event.sender.send('window-maximize-changed', true);
+    }
+});
+ipcMain.on('get-maximize-state', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed()) return;
+    event.sender.send('window-maximize-changed', win.isMaximized());
 });
 
 // Logout user
+// ------------------- Logout Handler -------------------
 ipcMain.on('logout', async (event) => {
     try {
+        // 1️⃣ Logout from Flask
         await axios.post('http://127.0.0.1:5000/logout', {}, { withCredentials: true });
         global.userName = null;
         global.userEmail = null;
-        console.log("Trying to logout");
+        console.log("User logged out from backend");
 
-        if (mainWindow) mainWindow.hide();
+        // 2️⃣ Disconnect desktop server
+        if (desktopServerProcess && !desktopServerProcess.killed) {
+            desktopServerProcess.kill('SIGINT');
+            console.log("Desktop server disconnected via process kill.");
+            desktopServerProcess = null;
+        } else {
+            try {
+                await axios.post(`${DESKTOP_SERVER_URL}/shutdown`);
+                console.log("Desktop server shutdown via HTTP fallback.");
+            } catch (err) {
+                console.warn("Failed to shutdown desktop server via HTTP:", err.message);
+            }
+            desktopServerProcess = null;
+        }
 
+        // 3️⃣ Destroy main window
+        if (mainWindow) {
+            mainWindow.destroy();
+            mainWindow = null;
+        }
+
+        // 4️⃣ Show login window
         if (!loginWindow) createLoginWindow();
         loginWindow.webContents.send('reset-login-fields');
         loginWindow.show();
         loginWindow.focus();
 
+        // 5️⃣ Inform renderer
         event.sender.send('logout-success', { message: 'Logged out successfully' });
-        console.log("User logged out successfully.");
+        console.log("Logout flow complete");
+
     } catch (err) {
         console.error("Logout failed:", err.message);
         event.sender.send('logout-failed', { message: err.message });
     }
 });
+
 
 // ------------------- Desktop Server Handling -------------------
 
@@ -292,32 +378,6 @@ ipcMain.on('connect-desktop-server', async (event) => {
     }
 });
 
-// Disconnect desktop server
-ipcMain.on('disconnect-desktop-server', async (event) => {
-    try {
-        if (desktopServerProcess && !desktopServerProcess.killed) {
-            desktopServerProcess.kill('SIGINT');
-            desktopServerProcess = null;
-            console.log("Desktop server disconnected via process kill.");
-            event.sender.send('desktop-server-disconnected');
-            return;
-        }
-
-        // Fallback: try HTTP shutdown
-        try {
-            await axios.post(`${DESKTOP_SERVER_URL}/shutdown`);
-            console.log("Desktop server shutdown via HTTP.");
-        } catch (err) {
-            console.warn("Failed to shutdown desktop server via HTTP:", err.message);
-        }
-    } catch (err) {
-        console.error("Error disconnecting desktop server:", err);
-    } finally {
-        desktopServerProcess = null;
-        event.sender.send('desktop-server-disconnected');
-    }
-});
-
 // ------------------- App Quit Handling -------------------
 app.on('window-all-closed', (event) => {
     if (!isQuiting) {
@@ -340,3 +400,32 @@ app.on('before-quit', () => {
     if (yoloProcess && !yoloProcess.killed) yoloProcess.kill('SIGINT');
     if (desktopServerProcess && !desktopServerProcess.killed) desktopServerProcess.kill('SIGINT');
 });
+
+// ------------------- Uploads Folder Watcher -------------------
+const UPLOAD_FOLDER = path.join(__dirname, '..', 'uploads');
+
+const watcher = chokidar.watch(UPLOAD_FOLDER, {
+    persistent: true,
+    ignoreInitial: true,
+    depth: 99
+});
+
+watcher
+  .on('add', filePath => {
+    console.log(`New file added: ${filePath}`);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('uploads-changed', { type: 'add', file: filePath });
+    }
+  })
+  .on('change', filePath => {
+    console.log(`File changed: ${filePath}`);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('uploads-changed', { type: 'change', file: filePath });
+    }
+  })
+  .on('unlink', filePath => {
+    console.log(`File removed: ${filePath}`);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('uploads-changed', { type: 'unlink', file: filePath });
+    }
+  });
