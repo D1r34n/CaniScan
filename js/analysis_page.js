@@ -2,18 +2,6 @@
 // analysis_page.js - Analysis Page Functionality
 // ========================================
 
-// Wait for DOM to be ready
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize all analysis page features
-    initializeAnalysisPage();
-});
-
-function initializeAnalysisPage() {
-    setupTabs();
-    setupClearHistoryButton();
-    loadAnalysisHistory();
-}
-
 // ================================
 // TAB SWITCHING FUNCTIONALITY
 // ================================
@@ -22,15 +10,11 @@ function setupTabs() {
     const recommendationsTab = document.getElementById('recommendationsTab');
     const historyTab = document.getElementById('historyTab');
     
-    if (!tabButtons.length || !recommendationsTab || !historyTab) {
-        console.warn('Tab elements not found');
-        return;
-    }
     
     tabButtons.forEach((button) => {
         button.addEventListener('click', () => {
             const tabName = button.getAttribute('data-tab');
-            
+                        
             // Remove active class from all buttons
             tabButtons.forEach(btn => btn.classList.remove('active'));
             
@@ -49,6 +33,7 @@ function setupTabs() {
             }
         });
     });
+    
 }
 
 // ================================
@@ -56,7 +41,7 @@ function setupTabs() {
 // ================================
 function loadAnalysisHistory() {
     const historyList = document.getElementById('historyList');
-
+    
     // Get history from localStorage
     const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
         
@@ -77,6 +62,7 @@ function loadAnalysisHistory() {
             addHistoryItem(item.imageSrc, item.diagnosis, item.confidence, item.timestamp);
         });
     }
+    
 }
 
 function addHistoryItem(imageSrc, diagnosis, confidence, timestamp = null) {
@@ -203,6 +189,7 @@ function addToAnalysisHistory(imageSrc, diagnosis, confidence, filename) {
     
     // Update the display
     addHistoryItem(imageSrc, diagnosis, confidence, newItem.timestamp);
+    
 }
 
 // ================================
@@ -210,7 +197,7 @@ function addToAnalysisHistory(imageSrc, diagnosis, confidence, filename) {
 // ================================
 function setupClearHistoryButton() {
     const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-    
+
     clearHistoryBtn.addEventListener('click', async () => {
         // Confirm before clearing
         const confirmed = confirm(
@@ -236,7 +223,7 @@ function setupClearHistoryButton() {
                 
                 if (response.ok) {
                     const result = await response.json();
-
+                    
                     // Reload history display (will show empty state)
                     loadAnalysisHistory();
                     
@@ -246,12 +233,18 @@ function setupClearHistoryButton() {
                     throw new Error('Failed to clear history from server');
                 }
             } catch (error) {
+                console.error('Error clearing history:', error);
                 alert('Error clearing history. Please try again.');
             }
         }
     });
     
 }
+
+//setup analysis page functions
+setupTabs();
+setupClearHistoryButton();
+loadAnalysisHistory();
 
 // ================================
 // UTILITY FUNCTIONS
@@ -288,7 +281,425 @@ function restoreChatInputClickability() {
             }
         }
     });
+    
 }
+
+// ============================================
+// CUSTOM DROPDOWN MENU FOR ANALYSIS PAGE LOGIC
+// ============================================
+const dropdownButton = document.getElementById('dropdownButton');
+const dropdownMenu = document.getElementById('dropdownMenu');
+
+if (dropdownButton && dropdownMenu) {
+// Toggle dropdown on button click
+dropdownButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdownMenu.classList.toggle('show');
+    console.log('Dropdown toggled');
+});
+
+// Handle dropdown item selection
+const dropdownItems = dropdownMenu.querySelectorAll('div');
+dropdownItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+    const selectedValue = e.target.textContent.trim();
+    
+    // Update button text (keep the arrow)
+    dropdownButton.innerHTML = `${selectedValue} <span>▼</span>`;
+    
+    // Close dropdown
+    dropdownMenu.classList.remove('show');
+    
+    // Store selected model
+    window.selectedModel = selectedValue;
+    
+    console.log('Selected model:', selectedValue);
+    });
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    if (!dropdownButton.contains(e.target) && !dropdownMenu.contains(e.target)) {
+    dropdownMenu.classList.remove('show');
+    }
+});
+}
+
+// Shared image handling function
+function handleImageFile(file) {
+    if (!file || !file.type.startsWith('image/')) {
+        console.error('Invalid file type');
+        return;
+    }
+    
+    const uploadArea = document.getElementById('imageUploadArea');
+    const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImage = document.getElementById('previewImage');
+    
+    if (!uploadArea || !uploadPlaceholder || !imagePreview || !previewImage) {
+        console.error('Required elements not found');
+        return;
+    }
+    
+    console.log('Processing image file:', file.name);
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        previewImage.src = e.target.result;
+        uploadPlaceholder.style.display = 'none';
+        imagePreview.style.display = 'block';
+        previewImage.dataset.sourceFilename = '';
+        window.currentAnalysisSource = {
+            type: 'upload',
+            filename: file.name || 'uploaded-image'
+        };
+        console.log('Image loaded successfully');
+    };
+    reader.onerror = (e) => {
+        console.error('Error reading file:', e);
+        alert('Error loading image. Please try again.');
+    };
+    reader.readAsDataURL(file);
+}
+
+// Image upload and preview functionality
+function setupImageUpload() {
+const uploadArea = document.getElementById('imageUploadArea');
+const uploadPlaceholder = uploadArea.querySelector('.upload-placeholder');
+const imagePreview = document.getElementById('imagePreview');
+const previewImage = document.getElementById('previewImage');
+const changeImageBtn = document.getElementById('changeImageBtn');
+
+// Drag and drop functionality
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadPlaceholder.style.borderColor = '#c4a484';
+    uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.1)';
+});
+
+uploadArea.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    uploadPlaceholder.style.borderColor = '#d9b99b';
+    uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadPlaceholder.style.borderColor = '#d9b99b';
+    uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleImageFile(files[0]);
+    }
+});
+
+// File input functionality
+uploadPlaceholder.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Create a new file input each time
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none';
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            handleImageFile(e.target.files[0]);
+        }
+        // Clean up immediately after use
+        if (fileInput.parentNode) {
+            fileInput.parentNode.removeChild(fileInput);
+        }
+    });
+    
+    // Add to DOM, trigger click, then remove
+    document.body.appendChild(fileInput);
+    fileInput.click();
+    
+    // Clean up after a short delay to ensure the file dialog has opened
+    setTimeout(() => {
+        if (fileInput.parentNode) {
+            fileInput.parentNode.removeChild(fileInput);
+        }
+    }, 100);
+});
+
+// Change image button
+changeImageBtn.addEventListener('click', () => {
+    uploadPlaceholder.style.display = 'flex';
+    imagePreview.style.display = 'none';
+    const analysisResults = document.getElementById('analysisResults');
+    const resultDiagnosis = document.getElementById('resultDiagnosis');
+    const resultConfidence = document.getElementById('resultConfidence');
+    const resultInferenceTime = document.getElementById('resultInferenceTime');
+    
+    if (analysisResults) {
+        analysisResults.style.display = 'block'; 
+        resultDiagnosis.textContent = 'Pending...'; 
+        resultConfidence.textContent = '--'; 
+        if (resultInferenceTime) {
+            resultInferenceTime.textContent = '--';
+        }
+    }
+    previewImage.src = '';
+    previewImage.dataset.sourceFilename = '';
+    window.currentAnalysisSource = null;
+});
+}
+
+// Analysis button functionality
+function setupAnalysisButton() {
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const analysisResults = document.getElementById('analysisResults');
+    const resultDiagnosis = document.getElementById('resultDiagnosis');
+    const resultConfidence = document.getElementById('resultConfidence');
+    
+    analyzeBtn.addEventListener('click', async () => {
+
+    if (!window.selectedModel) {
+        alert('Please select a model first (YoloV8n or YoloV11n)');
+        return;
+        }
+
+        const previewImage = document.getElementById('previewImage');
+        if (!previewImage.src) return;
+        
+        // Show loading state
+        analyzeBtn.disabled = true;
+        analyzeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
+        
+        try {
+
+            // Call real YOLO analysis API
+            const analysisResult = await performRealAnalysis(previewImage.src, window.selectedModel);
+            
+            // Show results
+            analysisResults.style.display = 'block';
+            resultDiagnosis.textContent = analysisResult.disease;
+            resultConfidence.textContent = `${analysisResult.confidence}%`;
+            const resultInferenceTime = document.getElementById('resultInferenceTime');
+            if (resultInferenceTime && analysisResult.inference_time !== undefined) {
+                resultInferenceTime.textContent = `${analysisResult.inference_time}s`;
+            }
+            
+            // Save analyzed image to gallery
+            const savedFilename = await saveAnalyzedImageToGallery(
+            previewImage.src, 
+            analysisResult.disease, 
+            analysisResult.confidence
+            ); 
+            
+            // Add to history with filename
+            await addToAnalysisHistory(
+            previewImage.src, 
+            analysisResult.disease, 
+            `${analysisResult.confidence}%`, 
+            savedFilename
+            );
+            
+            // Show initial LLM recommendation in chat
+            showInitialRecommendation(analysisResult.recommendation);
+            
+            // Store current analysis data for chat context
+            window.currentAnalysis = {
+                diagnosis: analysisResult.disease,
+                confidence: analysisResult.confidence,
+                model: window.selectedModel
+            };
+            
+            // Debug: Log the stored analysis data
+            console.log('DEBUG: Stored analysis data:', window.currentAnalysis);
+            
+            // Ensure chat input is clickable and focused after analysis
+            setTimeout(() => {
+                restoreChatInputClickability();
+            }, 100);
+            
+        } catch (error) {
+            console.error('Analysis failed:', error);
+            alert('Analysis failed. Please try again.');
+        } finally {
+            // Reset button
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = 'Analyze';
+        }
+    });
+    
+    async function performRealAnalysis(imageSrc, modelName) {
+        try {
+            const response = await fetch('http://localhost:5000/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    frame: imageSrc,
+                    model: modelName
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Error calling analysis API:', error);
+            throw error;
+        }
+    }
+}
+
+// Chat interface functionality
+function setupChatInterface() {
+    const chatInput = document.getElementById('chatInput');
+    const sendMessageBtn = document.getElementById('sendMessageBtn');
+    const chatMessages = document.getElementById('chatMessages');
+    
+    function sendMessage() {
+        const message = chatInput.value.trim();
+        if (!message) return;
+        
+        // Add user message
+        addChatMessage(message, 'user');
+        chatInput.value = '';
+        
+        // Show typing indicator
+        const typingIndicator = addTypingIndicator();
+        
+        // Call LLM API for response
+        callLLMAPI(message)
+            .then(response => {
+                // Remove typing indicator
+                removeTypingIndicator(typingIndicator);
+                
+                // Add bot response
+                addChatMessage(response.response, 'bot');
+            })
+            .catch(error => {
+                console.error('Error getting LLM response:', error);
+                // Remove typing indicator
+                removeTypingIndicator(typingIndicator);
+                
+                // Add error message
+                addChatMessage("I apologize, but I'm having trouble processing your request right now. Please try again or consult a veterinarian for immediate assistance.", 'bot');
+            });
+    }
+    
+    async function callLLMAPI(message) {
+        // LLM works with or without analysis - if analysis exists, it enhances the response
+        const currentAnalysis = window.currentAnalysis || { diagnosis: '', confidence: 0 };
+        
+        // Debug: Log the data being sent to the API
+        console.log('DEBUG: Sending to chat API:', {
+            message: message,
+            diagnosis: currentAnalysis.diagnosis || 'None',
+            confidence: currentAnalysis.confidence || 0
+        });
+        
+        const response = await fetch('http://localhost:5000/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',  // Include session cookie
+            body: JSON.stringify({
+                message: message,
+                diagnosis: currentAnalysis.diagnosis || '',
+                confidence: currentAnalysis.confidence || 0
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return await response.json();
+    }
+    
+    function addTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'chat-message bot-message typing-indicator';
+        typingDiv.innerHTML = `
+            <div class="message-content">
+                <span class="typing-dots">
+                    <span>.</span><span>.</span><span>.</span>
+                </span>
+            </div>
+        `;
+        chatMessages.appendChild(typingDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return typingDiv;
+    }
+    
+    function removeTypingIndicator(typingDiv) {
+        if (typingDiv && typingDiv.parentNode) {
+            typingDiv.parentNode.removeChild(typingDiv);
+        }
+    }
+    
+    function showInitialRecommendation(recommendation) {
+        // Clear existing messages except the welcome message
+        const welcomeMessage = chatMessages.querySelector('.bot-message');
+        chatMessages.innerHTML = '';
+        if (welcomeMessage) {
+            chatMessages.appendChild(welcomeMessage);
+        }
+        
+        // Add the initial recommendation
+        addChatMessage(recommendation, 'bot');
+    }
+    
+    sendMessageBtn.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+    
+    // Ensure chat input is always focusable
+    chatInput.addEventListener('click', () => {
+        chatInput.focus();
+        if (window.require && window.require('electron')) {
+            const { ipcRenderer } = window.require('electron');
+            if (ipcRenderer) {
+                ipcRenderer.send('focus-window');
+            }
+        }
+    });
+    
+    // Auto-focus chat input when analysis page is shown
+    const analysisPage = document.getElementById('analysisPage');
+    if (analysisPage) {
+        const observer = new MutationObserver(() => {
+            if (analysisPage.style.display !== 'none') {
+                // Small delay to ensure page is fully rendered
+                setTimeout(() => {
+                    chatInput.focus();
+                }, 100);
+            }
+        });
+        observer.observe(analysisPage, { attributes: true, attributeFilter: ['style'] });
+    }
+    
+    function addChatMessage(message, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${sender}-message`;
+        messageDiv.innerHTML = `
+            <div class="message-content">${message}</div>
+        `;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+}
+
+//setup image upload functionality
+setupImageUpload();
 
 // ================================
 // EXPORT FUNCTIONS FOR USE IN OTHER FILES
@@ -299,5 +710,9 @@ window.analysisPageFunctions = {
     addToAnalysisHistory,
     setupTabs,
     setupClearHistoryButton,
-    restoreChatInputClickability
+    restoreChatInputClickability,
+    handleImageFile,
+    setupImageUpload,
+    setupAnalysisButton,
+    setupChatInterface
 };
