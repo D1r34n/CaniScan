@@ -1,5 +1,6 @@
 // Home Page Functions
 import { loadGalleryImages, analyzeModeActive, exitAnalyzeMode } from './gallery_page.js';
+import { restoreChatInputClickability } from './analysis_page.js';
 
 if (!window._functionReloadProtected) {
     window._functionReloadProtected = true;
@@ -104,7 +105,6 @@ if (!window._functionReloadProtected) {
     }
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
-    updateOnlineStatus();
 
     // ================================
     // SERVER CONNECTION
@@ -168,10 +168,20 @@ if (!window._functionReloadProtected) {
     // ================================
     async function initUserSession() {
         if (!userNameElement) return;
+
         try {
-            const res = await fetch("http://127.0.0.1:5000/status", { method: "GET", credentials: "include" });
+            const res = await fetch("http://127.0.0.1:5000/status", {
+                method: "GET",
+                credentials: "include"
+            });
             const data = await res.json();
-            if (!data.logged_in) { console.log("%c❌ No user logged in.", "color: red;"); return; }
+
+            if (!data.logged_in) {
+                console.log("%c❌ No user logged in.", "color: red;");
+                serverConnected = false; // ensure serverConnected is false
+                updateOnlineStatus();    // immediately update UI
+                return;
+            }
 
             loggedInUserName = data.name || "User";
             userNameElement.textContent = `Hello, ${loggedInUserName}!`;
@@ -179,12 +189,66 @@ if (!window._functionReloadProtected) {
             if (dropdownUserEmail && data.email) dropdownUserEmail.textContent = data.email;
 
             console.log("%c👤 Logged-in user:", "color: cyan;", loggedInUserName);
-            tryConnectDesktopServer();
+
+            serverConnected = true;     // mark server as connected
+            updateOnlineStatus();       // update UI after session check
+
+            tryConnectDesktopServer();  // existing logic for desktop server
+
         } catch (err) {
             console.error("Failed to check Flask session:", err);
+            serverConnected = false;    // mark server as offline
+            updateOnlineStatus();       // update UI accordingly
         }
     }
     initUserSession();
+
+    // ================================
+    // USER DROPDOWN TOGGLE
+    // ================================
+    if (userGreeting && userDropdown) {
+        userGreeting.addEventListener("click", () => {
+            userDropdown.classList.toggle("show");
+        });
+
+        // Close dropdown if clicking outside
+        document.addEventListener("click", (event) => {
+            if (!userGreeting.contains(event.target) &&
+                !userDropdown.contains(event.target)) {
+                userDropdown.classList.remove("show");
+            }
+        });
+    }
+
+    //Log out Button
+    logoutBtn.addEventListener('click', () => {
+        console.log('Logout clicked');
+
+        if (!confirm('Are you sure you want to log out?')) return;
+
+        if (!ipcRenderer) {
+            console.warn('ipcRenderer not available — cannot log out!');
+            return;
+        }
+
+        // Send single logout request; this now handles server disconnect & window destroy
+        ipcRenderer.send('logout');
+
+        // Optionally, listen for logout success/failure
+        ipcRenderer.once('logout-success', (event, data) => {
+            console.log(data.message);
+            // No need to fadeOut/fadeIn anything; main window destroyed and login window shown
+        });
+
+        ipcRenderer.once('logout-failed', (event, data) => {
+            console.error('Logout failed:', data.message);
+            alert('Logout failed. Please try again.');
+        });
+
+        // Close the dropdown immediately
+        userDropdown.classList.remove('show');
+        userGreeting.classList.remove('active');
+    });
 
     // ================================
     // PAGE SWITCHING
@@ -223,7 +287,7 @@ if (!window._functionReloadProtected) {
     showPage(homePage);
 
     // ================================
-    // AVATAR MODAL
+    // Account Modal
     // ================================
     const axios = require('axios');
     const accountModal = document.getElementById('accountSelectionModal');
@@ -293,6 +357,13 @@ if (!window._functionReloadProtected) {
         }
     })();
 
+    // Open Account Modal
+    const openAccountModal = document.getElementById("changeProfileBtn");
+
+    openAccountModal?.addEventListener("click", () => {
+        accountModal.classList.add("show");
+    });
+
     // ================================
     // STATS CARDS WITH RETRY
     // ================================
@@ -302,9 +373,17 @@ if (!window._functionReloadProtected) {
         try {
             const res = await fetch('http://127.0.0.1:5001/images');
             const data = await res.json();
-            if (!data.success) throw new Error(data.message || "Unknown error");
+
+            if (!data.success) {
+                console.error("Failed to load images:", data.message);
+                return;
+            }
 
             const images = data.images;
+
+            // ===========================
+            // Initialize counters
+            // ===========================
             let rawCount = 0;
             const diseaseCounts = {
                 'Allergic Dermatitis': 0,
@@ -315,16 +394,24 @@ if (!window._functionReloadProtected) {
             };
 
             images.forEach(img => {
-                if (!img.analyzed) { rawCount++; return; }
-                switch ((img.disease || '').toLowerCase()) {
-                    case 'allergic dermatitis': diseaseCounts['Allergic Dermatitis']++; break;
-                    case 'fungal infection': diseaseCounts['Fungal Infection']++; break;
-                    case 'hotspot': diseaseCounts['Hotspot']++; break;
-                    case 'mange': diseaseCounts['Mange']++; break;
-                    case 'healthy': diseaseCounts['Healthy']++; break;
+                if (!img.analyzed) {
+                    rawCount++;
+                } else if (img.disease) {
+                    const diseaseName = img.disease.toLowerCase();
+                    switch(diseaseName) {
+                        case 'allergic dermatitis': diseaseCounts['Allergic Dermatitis']++; break;
+                        case 'fungal infection': diseaseCounts['Fungal Infection']++; break;
+                        case 'hotspot': diseaseCounts['Hotspot']++; break;
+                        case 'mange': diseaseCounts['Mange']++; break;
+                        case 'healthy': diseaseCounts['Healthy']++; break;
+                        default: break; // ignore unknown diseases
+                    }
                 }
             });
 
+            // ===========================
+            // Build & render stats cards
+            // ===========================
             const cardsData = [
                 { label: 'Raw', count: rawCount },
                 { label: 'Healthy', count: diseaseCounts['Healthy'] },
@@ -351,23 +438,103 @@ if (!window._functionReloadProtected) {
                 });
             }
 
-            // (Optional) update healthy/top disease insights here
+            // ===========================
+            // Insight 1: Healthy scans
+            // ===========================
+            const healthyInsightCard = document.getElementById("healthyInsight");
+            if (healthyInsightCard) {
+                const totalOther = Object.entries(diseaseCounts)
+                    .filter(([disease]) => disease !== 'Healthy')
+                    .reduce((sum, [, count]) => sum + count, 0);
+
+                const healthyIcon = healthyInsightCard.querySelector('i');
+                const healthyText = healthyInsightCard.querySelector('.insight-text strong');
+
+                if (diseaseCounts['Healthy'] === 0) {
+                    healthyIcon.classList.remove("bi-arrow-up-circle");
+                    healthyIcon.classList.add("bi-arrow-down-circle");
+                    healthyText.textContent = 'No Healthy scans detected yet.';
+                    healthyInsightCard.classList.add("decline");
+                } else if (diseaseCounts['Healthy'] < totalOther) {
+                    healthyIcon.classList.remove("bi-arrow-up-circle");
+                    healthyIcon.classList.add("bi-arrow-down-circle");
+                    healthyText.textContent = 'Healthy scans decreased, showing overall decline.';
+                    healthyInsightCard.classList.add("decline");
+                } else {
+                    healthyIcon.classList.remove("bi-arrow-down-circle");
+                    healthyIcon.classList.add("bi-arrow-up-circle");
+                    healthyText.textContent = 'Healthy scans increased, showing overall improvement.';
+                    healthyInsightCard.classList.remove("decline");
+                }
+            }
+
+            // ===========================
+            // Insight 2: Top Disease
+            // ===========================
+            const topDiseaseEl = document.getElementById('topDisease');
+            if (topDiseaseEl) {
+                const sorted = Object.entries(diseaseCounts)
+                    .filter(([disease]) => disease !== 'Healthy')
+                    .sort((a, b) => b[1] - a[1]);
+
+                if (sorted.length > 0 && sorted[0][1] > 0) {
+                    topDiseaseEl.textContent = sorted[0][0];
+                } else {
+                    topDiseaseEl.parentElement.textContent = "No disease detected in the gallery.";
+                }
+            }
+
+            // ===========================
+            // Insight 3: Lowest Disease
+            // ===========================
+            const lowestInsightCard = document.getElementById("lowestInsight");
+            if (lowestInsightCard) {
+                const mainDiseases = ['Allergic Dermatitis', 'Fungal Infection', 'Hotspot', 'Mange'];
+                const normalizedCounts = {};
+                mainDiseases.forEach(disease => normalizedCounts[disease] = diseaseCounts[disease] ?? 0);
+
+                const filteredCounts = Object.entries(normalizedCounts).filter(([_, count]) => count > 0);
+
+                if (filteredCounts.length > 0) {
+                    filteredCounts.sort((a, b) => a[1] - b[1]);
+                    const [lowestDisease, lowestCount] = filteredCounts[0];
+                    const totalAnalyzed = Object.values(normalizedCounts).reduce((sum, c) => sum + c, 0);
+                    const percentage = totalAnalyzed > 0 ? ((lowestCount / totalAnalyzed) * 100).toFixed(1) : 0;
+
+                    const lowestIcon = lowestInsightCard.querySelector('i');
+                    const lowestText = lowestInsightCard.querySelector('.insight-text strong');
+
+                    lowestText.textContent = `${lowestDisease} accounts for only ${percentage}% of all analyzed images.`;
+
+                    if (percentage < 10) {
+                        lowestIcon.classList.remove("bi-search");
+                        lowestIcon.classList.add("bi-exclamation-circle");
+                        lowestInsightCard.classList.add("alert");
+                    } else {
+                        lowestIcon.classList.add("bi-search");
+                        lowestIcon.classList.remove("bi-exclamation-circle");
+                        lowestInsightCard.classList.remove("alert");
+                    }
+                } else {
+                    lowestInsightCard.querySelector('.insight-text strong').textContent = "No disease detected yet.";
+                }
+            }
+
+            // ===========================
+            // Optional: chart update
+            // ===========================
             if (typeof updateStatsChart === 'function') updateStatsChart();
 
             console.log("%c✅ Synced gallery overview with gallery server.", "color: limegreen;");
+
         } catch (err) {
             console.error("Error loading stats cards:", err);
-            console.log(`Retrying in ${statsRetryDelay / 1000}s...`);
-            setTimeout(loadStatsCards, statsRetryDelay); // retry automatically
+            setTimeout(loadStatsCards, statsRetryDelay);
         }
     }
 
     // initial load
     loadStatsCards();
-
-}
-
-// End of Home Page Functions
 
     // Shared image handling function
     function handleImageFile(file) {
@@ -406,253 +573,6 @@ if (!window._functionReloadProtected) {
         };
         reader.readAsDataURL(file);
     }
-    
-    // Image upload and preview functionality
-    function setupImageUpload() {
-        const uploadArea = document.getElementById('imageUploadArea');
-        const uploadPlaceholder = uploadArea.querySelector('.upload-placeholder');
-        const imagePreview = document.getElementById('imagePreview');
-        const previewImage = document.getElementById('previewImage');
-        const changeImageBtn = document.getElementById('changeImageBtn');
-        
-        // Drag and drop functionality
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadPlaceholder.style.borderColor = '#c4a484';
-            uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.1)';
-        });
-        
-        uploadArea.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            uploadPlaceholder.style.borderColor = '#d9b99b';
-            uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
-        });
-        
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadPlaceholder.style.borderColor = '#d9b99b';
-            uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleImageFile(files[0]);
-            }
-        });
-        
-        // File input functionality
-        uploadPlaceholder.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Create a new file input each time
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'image/*';
-            fileInput.style.display = 'none';
-            
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                    handleImageFile(e.target.files[0]);
-                }
-                // Clean up immediately after use
-                if (fileInput.parentNode) {
-                    fileInput.parentNode.removeChild(fileInput);
-                }
-            });
-            
-            // Add to DOM, trigger click, then remove
-            document.body.appendChild(fileInput);
-            fileInput.click();
-            
-            // Clean up after a short delay to ensure the file dialog has opened
-            setTimeout(() => {
-                if (fileInput.parentNode) {
-                    fileInput.parentNode.removeChild(fileInput);
-                }
-            }, 100);
-        });
-        
-        // Change image button
-        changeImageBtn.addEventListener('click', () => {
-            uploadPlaceholder.style.display = 'flex';
-            imagePreview.style.display = 'none';
-            const analysisResults = document.getElementById('analysisResults');
-            const resultDiagnosis = document.getElementById('resultDiagnosis');
-            const resultConfidence = document.getElementById('resultConfidence');
-            const resultInferenceTime = document.getElementById('resultInferenceTime');
-            
-            if (analysisResults) {
-                analysisResults.style.display = 'block'; 
-                resultDiagnosis.textContent = 'Pending...'; 
-                resultConfidence.textContent = '--'; 
-                if (resultInferenceTime) {
-                    resultInferenceTime.textContent = '--';
-                }
-            }
-            previewImage.src = '';
-            previewImage.dataset.sourceFilename = '';
-            window.currentAnalysisSource = null;
-        });
-    }
-    
-    // Gallery selection functionality
-    function setupGallerySelection() {
-        const selectFromGalleryBtn = document.getElementById('selectFromGalleryBtn');
-        
-        selectFromGalleryBtn.addEventListener('click', (e) => {
-            console.log('Select from gallery button clicked');
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Create a new file input each time
-            const galleryFileInput = document.createElement('input');
-            galleryFileInput.type = 'file';
-            galleryFileInput.accept = 'image/*';
-            galleryFileInput.style.display = 'none';
-            
-            galleryFileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                    handleImageFile(e.target.files[0]);
-                }
-                // Clean up immediately after use
-                if (galleryFileInput.parentNode) {
-                    galleryFileInput.parentNode.removeChild(galleryFileInput);
-                }
-            });
-            
-            // Add to DOM, trigger click, then remove
-            document.body.appendChild(galleryFileInput);
-            galleryFileInput.click();
-            
-            // Clean up after a short delay to ensure the file dialog has opened
-            setTimeout(() => {
-                if (galleryFileInput.parentNode) {
-                    galleryFileInput.parentNode.removeChild(galleryFileInput);
-                }
-            }, 100);
-        });
-    }
-
-    async function fetchImageAsDataURL(url) {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch image (${response.status})`);
-        }
-
-        const blob = await response.blob();
-        return await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    }
-
-    async function displayImageFromGallery(image) {
-        if (!image || !image.filename) {
-            throw new Error('Invalid image data provided.');
-        }
-
-        const uploadArea = document.getElementById('imageUploadArea');
-        const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
-        const imagePreview = document.getElementById('imagePreview');
-        const previewImage = document.getElementById('previewImage');
-        const analysisResults = document.getElementById('analysisResults');
-
-        if (!uploadArea || !uploadPlaceholder || !imagePreview || !previewImage) {
-            throw new Error('Analysis components are not available.');
-        }
-
-        const imageUrl = `http://localhost:5001/images/${image.filename}`;
-        const dataUrl = await fetchImageAsDataURL(imageUrl);
-
-        previewImage.src = dataUrl;
-        previewImage.alt = image.filename;
-        previewImage.dataset.sourceFilename = image.filename;
-        uploadPlaceholder.style.display = 'none';
-        imagePreview.style.display = 'block';
-        if (analysisResults) {
-            analysisResults.style.display = 'none';
-        }
-        const resultDiagnosis = document.getElementById('resultDiagnosis');
-        const resultConfidence = document.getElementById('resultConfidence');
-        const resultInferenceTime = document.getElementById('resultInferenceTime');
-        if (resultDiagnosis) {
-            resultDiagnosis.textContent = '-';
-        }
-        if (resultConfidence) {
-            resultConfidence.textContent = '-';
-        }
-        if (resultInferenceTime) {
-            resultInferenceTime.textContent = '-';
-        }
-
-        window.currentAnalysisSource = {
-            type: 'gallery',
-            filename: image.filename,
-            disease: image.disease || '',
-            confidence: image.confidence || '',
-            analyzed: Boolean(image.analyzed)
-        };
-    }
-
-    function autoAnalyzeSelectedImage() {
-        if (window.currentAnalysisSource?.type !== 'gallery') return;
-
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const previewImage = document.getElementById('previewImage');
-        if (!analyzeBtn || !previewImage || !previewImage.src) return;
-
-        if (!analyzeBtn.disabled) {
-            analyzeBtn.click();
-        }
-    }
-    
-    // Save analyzed image to gallery with metadata
-    async function saveAnalyzedImageToGallery(imageSrc, disease, confidence) {
-        try {
-            // Convert data URL to blob
-            const response = await fetch(imageSrc);
-            const blob = await response.blob();
-            
-            // Create FormData
-            const formData = new FormData();
-            formData.append('image', blob, 'analyzed_image.jpg');
-            formData.append('analyzed', 'true');
-            formData.append('disease', disease);
-            formData.append('confidence', confidence.toString());
-            if (window.currentAnalysisSource?.type === 'gallery' && window.currentAnalysisSource.filename) {
-                formData.append('source_filename', window.currentAnalysisSource.filename);
-            }
-            
-            // Upload to desktop server
-            const uploadResponse = await fetch('http://localhost:5001/upload', {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (!uploadResponse.ok) {
-                throw new Error('Failed to upload image');
-            }
-            
-            const result = await uploadResponse.json();
-            console.log('Image saved to gallery:', result);
-            
-            // Refresh gallery if on gallery page
-            const galleryPage = document.getElementById('galleryPage');
-            if (galleryPage && galleryPage.style.display !== 'none') {
-                setTimeout(() => {
-                    loadGalleryImages();
-                }, 500);
-            }
-            
-            return result.filename;
-        } catch (error) {
-            console.error('Error saving image to gallery:', error);
-            throw error;
-        }
-    }
-    
     
     // Global handler to restore clickability after alerts
     const originalAlert = window.alert;
@@ -724,4 +644,4 @@ if (!window._functionReloadProtected) {
     }
 
     */
-
+}

@@ -249,7 +249,7 @@ loadAnalysisHistory();
 // ================================
 // UTILITY FUNCTIONS
 // ================================
-function restoreChatInputClickability() {
+export function restoreChatInputClickability() {
     const chatInput = document.getElementById('chatInput');
     const chatInputArea = document.querySelector('.chat-input-area');
     const recommendationsBox = document.querySelector('.recommendations-box');
@@ -449,6 +449,104 @@ changeImageBtn.addEventListener('click', () => {
     previewImage.dataset.sourceFilename = '';
     window.currentAnalysisSource = null;
 });
+}
+
+// Gallery selection functionality
+function setupGallerySelection() {
+    const selectFromGalleryBtn = document.getElementById('selectFromGalleryBtn');
+    
+    selectFromGalleryBtn.addEventListener('click', (e) => {
+        console.log('Select from gallery button clicked');
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Create a new file input each time
+        const galleryFileInput = document.createElement('input');
+        galleryFileInput.type = 'file';
+        galleryFileInput.accept = 'image/*';
+        galleryFileInput.style.display = 'none';
+        
+        galleryFileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleImageFile(e.target.files[0]);
+            }
+            // Clean up immediately after use
+            if (galleryFileInput.parentNode) {
+                galleryFileInput.parentNode.removeChild(galleryFileInput);
+            }
+        });
+        
+        // Add to DOM, trigger click, then remove
+        document.body.appendChild(galleryFileInput);
+        galleryFileInput.click();
+        
+        // Clean up after a short delay to ensure the file dialog has opened
+        setTimeout(() => {
+            if (galleryFileInput.parentNode) {
+                galleryFileInput.parentNode.removeChild(galleryFileInput);
+            }
+        }, 100);
+    });
+}
+
+async function fetchImageAsDataURL(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch image (${response.status})`);
+    }
+
+    const blob = await response.blob();
+    return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+// Save analyzed image to gallery with metadata
+async function saveAnalyzedImageToGallery(imageSrc, disease, confidence) {
+    try {
+        // Convert data URL to blob
+        const response = await fetch(imageSrc);
+        const blob = await response.blob();
+        
+        // Create FormData
+        const formData = new FormData();
+        formData.append('image', blob, 'analyzed_image.jpg');
+        formData.append('analyzed', 'true');
+        formData.append('disease', disease);
+        formData.append('confidence', confidence.toString());
+        if (window.currentAnalysisSource?.type === 'gallery' && window.currentAnalysisSource.filename) {
+            formData.append('source_filename', window.currentAnalysisSource.filename);
+        }
+        
+        // Upload to desktop server
+        const uploadResponse = await fetch('http://localhost:5001/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!uploadResponse.ok) {
+            throw new Error('Failed to upload image');
+        }
+        
+        const result = await uploadResponse.json();
+        console.log('Image saved to gallery:', result);
+        
+        // Refresh gallery if on gallery page
+        const galleryPage = document.getElementById('galleryPage');
+        if (galleryPage && galleryPage.style.display !== 'none') {
+            setTimeout(() => {
+                loadGalleryImages();
+            }, 500);
+        }
+        
+        return result.filename;
+    } catch (error) {
+        console.error('Error saving image to gallery:', error);
+        throw error;
+    }
 }
 
 // Analysis button functionality
