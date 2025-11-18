@@ -553,6 +553,9 @@ async function fetchImageAsDataURL(url) {
     });
 }
 
+// Make fetchImageAsDataURL available globally
+window.fetchImageAsDataURL = fetchImageAsDataURL;
+
 // Save analyzed image to gallery with metadata
 async function saveAnalyzedImageToGallery(imageSrc, disease, confidence) {
     try {

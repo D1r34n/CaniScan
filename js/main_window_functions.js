@@ -335,15 +335,24 @@ if (!window._functionReloadProtected) {
                 }
             }
             
-            // If there's a pending callback from gallery page, execute it
+            // If there's a pending callback from gallery page, execute it after a longer delay
+            // to ensure page is fully rendered and all functions are available
             if (window._analysisPageCallback) {
                 const cb = window._analysisPageCallback;
                 window._analysisPageCallback = null;
+                // Wait longer to ensure fetchImageAsDataURL is available
                 setTimeout(() => {
-                    if (cb) cb();
-                }, 100);
+                    if (cb) {
+                        try {
+                            cb();
+                        } catch (error) {
+                            console.error('Error executing analysis page callback:', error);
+                            alert(`Error loading image: ${error.message || 'Unknown error'}`);
+                        }
+                    }
+                }, 300);
             }
-        }, 100);
+        }, 150);
     });
 
     showPage(homePage);

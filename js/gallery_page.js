@@ -136,7 +136,27 @@ async function displayImageFromGallery(image) {
 
     // Fetch image as data URL
     const imageUrl = `http://localhost:5001/images/${image.filename}`;
-    const dataUrl = await fetchImageAsDataURL(imageUrl);
+    
+    // Use global function if available, otherwise define it locally
+    let fetchImageFn = window.fetchImageAsDataURL;
+    if (!fetchImageFn) {
+        // Fallback: define it locally if not available globally
+        fetchImageFn = async function(url) {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch image (${response.status})`);
+            }
+            const blob = await response.blob();
+            return await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        };
+    }
+    
+    const dataUrl = await fetchImageFn(imageUrl);
 
     // Update preview
     previewImage.src = dataUrl;
@@ -638,6 +658,17 @@ if (dropdownAnalyzeBtn) {
         
         openAnalysisPage(async () => {
             try {
+                // Wait a bit longer to ensure analysis page is fully rendered
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
+                // Verify analysis page elements exist before proceeding
+                const uploadArea = document.getElementById('imageUploadArea');
+                const previewImage = document.getElementById('previewImage');
+                
+                if (!uploadArea || !previewImage) {
+                    throw new Error('Analysis page elements not ready. Please try again.');
+                }
+                
                 await displayImageFromGallery(targetImage);
                 
                 // Ensure a model is selected before auto-analyzing
@@ -651,13 +682,29 @@ if (dropdownAnalyzeBtn) {
                     console.log('No model selected, defaulting to YoloV8n');
                 }
                 
-                // Small delay to ensure image is loaded and model is set
+                // Wait for image to load before auto-analyzing
+                await new Promise((resolve) => {
+                    const img = document.getElementById('previewImage');
+                    if (img.complete) {
+                        resolve();
+                    } else {
+                        img.onload = resolve;
+                        img.onerror = () => {
+                            console.error('Image failed to load');
+                            resolve(); // Continue anyway
+                        };
+                        // Timeout after 5 seconds
+                        setTimeout(resolve, 5000);
+                    }
+                });
+                
+                // Small delay to ensure everything is ready
                 setTimeout(() => {
                     autoAnalyzeSelectedImage();
                 }, 300);
             } catch (error) {
                 console.error('Failed to prepare selected image for analysis:', error);
-                alert('Unable to load the selected image for analysis. Please try again.');
+                alert(`Unable to load the selected image for analysis: ${error.message || 'Unknown error'}. Please try again.`);
             }
         });
     });
