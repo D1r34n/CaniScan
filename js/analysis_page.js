@@ -172,31 +172,33 @@ function showAnalysisDetailsPopup(imageSrc, diagnosis, confidence, timestamp) {
 function addToAnalysisHistory(imageSrc, diagnosis, confidence, filename) {
     // Get existing history from localStorage
     const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
-    
-    // Create new history item
+
+    // Use values from window.currentAnalysis instead of DOM elements
     const newItem = {
         imageSrc,
         diagnosis,
         confidence,
+        dogName: window.currentAnalysis?.dogName || '',
+        dogBreed: window.currentAnalysis?.dogBreed || '', // human-readable breed
         filename: filename || 'Analysis Result',
         timestamp: new Date().toISOString()
     };
-    
+
     // Add to beginning of array
     history.unshift(newItem);
-    
+
     // Keep only last 10 items
     if (history.length > 10) {
         history.pop();
     }
-    
+
     // Save back to localStorage
     localStorage.setItem('analysisHistory', JSON.stringify(history));
-    
+
     // Update the display
     addHistoryItem(imageSrc, diagnosis, confidence, newItem.timestamp);
-    
 }
+
 
 // ================================
 // CLEAR HISTORY FUNCTIONALITY
@@ -627,7 +629,7 @@ async function fetchImageAsDataURL(url) {
 window.fetchImageAsDataURL = fetchImageAsDataURL;
 
 // Save analyzed image to gallery with metadata
-async function saveAnalyzedImageToGallery(imageSrc, disease, confidence) {
+async function saveAnalyzedImageToGallery(imageSrc, dogBreed, disease, confidence) {
     try {
         // Convert data URL to blob
         const response = await fetch(imageSrc);
@@ -637,12 +639,13 @@ async function saveAnalyzedImageToGallery(imageSrc, disease, confidence) {
         const formData = new FormData();
         formData.append('image', blob, 'analyzed_image.jpg');
         formData.append('analyzed', 'true');
+        formData.append('breed', dogBreed);
         formData.append('disease', disease);
         formData.append('confidence', confidence.toString());
         if (window.currentAnalysisSource?.type === 'gallery' && window.currentAnalysisSource.filename) {
             formData.append('source_filename', window.currentAnalysisSource.filename);
         }
-        
+
         // Upload to desktop server
         const uploadResponse = await fetch('http://localhost:5001/upload', {
             method: 'POST',
@@ -714,104 +717,85 @@ async function loadBreeds() {
 // Analysis button functionality
 function setupAnalysisButton() {
     const analyzeBtn = document.getElementById('analyzeBtn');
-    const analysisResults = document.getElementById('analysisResults');
-    const resultDiagnosis = document.getElementById('resultDiagnosis');
-    const resultConfidence = document.getElementById('resultConfidence');
-    const resultInferenceTime = document.getElementById('resultInferenceTime');
-    
+
     analyzeBtn.addEventListener('click', async () => {
         const previewImage = document.getElementById('previewImage');
         if (!previewImage.src) return;
-        
-        // Get form values
-        const dogName = document.getElementById('dogName');
-        const dogBreed = document.getElementById('dogBreed');
+
+        const dogNameInput = document.getElementById('dogName');
+        const dogBreedSelect = document.getElementById('dogBreed-box');
+        const selectedBreed = dogBreedSelect.options[dogBreedSelect.selectedIndex].text;
         const modelSelect = document.getElementById('modelSelect');
-        
-        // Validate model selection
+
         if (!modelSelect || !modelSelect.value) {
             alert('Please select a model first');
             return;
         }
-        
+
         const selectedModel = modelSelect.value;
-        
+
         // Show loading state
         analyzeBtn.disabled = true;
         analyzeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
-        
+
         try {
-            // Call real YOLO analysis API
+            // Call the real YOLO analysis API
             const analysisResult = await performRealAnalysis(previewImage.src, selectedModel);
-            
-            // Hide form, show results
+
+            // Store current analysis BEFORE saving to gallery
+            window.currentAnalysis = {
+                diagnosis: analysisResult.diagnosis,
+                confidence: analysisResult.confidence,
+                model: selectedModel,
+                dogName: dogNameInput?.value || '',
+                dogBreed: selectedBreed
+            };
+
+            // Save analyzed image to gallery (will now include dog_name and dog_breed)
+            const savedFilename = await saveAnalyzedImageToGallery(
+                previewImage.src,
+                selectedBreed,  // Pass human-readable name
+                analysisResult.disease,
+                analysisResult.confidence
+            );
+
+            // Hide form and show results
             const analysisForm = document.getElementById('analysisForm');
             const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
             const resultsTitle = document.getElementById('resultsTitle');
-            
+
             if (analysisForm) analysisForm.style.display = 'none';
             if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'flex';
-            if (resultsTitle) resultsTitle.textContent = dogName?.value || 'Analysis Results';
-            if (resultInferenceTime && analysisResult.inference_time !== undefined) {
-                    resultInferenceTime.textContent = `${analysisResult.inference_time}s`;
-                }
+            if (resultsTitle) resultsTitle.textContent = dogNameInput?.value || 'Analysis Results';
 
-            // Update results
+            // Update result elements
             const resultDiagnosis = document.getElementById('resultDiagnosis');
             const resultConfidence = document.getElementById('resultConfidence');
-            
+            const resultInferenceTime = document.getElementById('resultInferenceTime');
+
             if (resultDiagnosis) resultDiagnosis.textContent = analysisResult.disease;
             if (resultConfidence) resultConfidence.textContent = `${analysisResult.confidence}%`;
-            
-            // Save to gallery
-            const savedFilename = await saveAnalyzedImageToGallery(
-                previewImage.src, 
-                analysisResult.disease, 
-                analysisResult.confidence
-            );
-            
-            // Add to history
-            await window.analysisPageFunctions.addToAnalysisHistory(
-                previewImage.src, 
-                analysisResult.disease, 
-                `${analysisResult.confidence}%`, 
+            if (resultInferenceTime && analysisResult.inference_time !== undefined) {
+                resultInferenceTime.textContent = `${analysisResult.inference_time}s`;
+            }
+
+            // Add to localStorage history
+            window.analysisPageFunctions.addToAnalysisHistory(
+                previewImage.src,
+                analysisResult.disease,
+                `${analysisResult.confidence}%`,
                 savedFilename
             );
-            
-            // Show initial LLM recommendation in chat
+
+            // Show initial LLM recommendation
             if (window.showInitialRecommendation) {
                 window.showInitialRecommendation(analysisResult.recommendation);
-            } else {
-                // Fallback: setupChatInterface might not be called yet
-                setTimeout(() => {
-                    if (window.showInitialRecommendation) {
-                        window.showInitialRecommendation(analysisResult.recommendation);
-                    }
-                }, 100);
             }
-            
-            // Store current analysis data for chat context
-            window.currentAnalysis = {
-                diagnosis: analysisResult.disease,
-                confidence: analysisResult.confidence,
-                model: selectedModel,
-                dogName: dogName?.value || '',
-                dogBreed: dogBreed?.value || ''
-            };
-            
-            // Show initial recommendation
-            showInitialRecommendation(analysisResult.recommendation);
-            
+
             setTimeout(() => {
                 restoreChatInputClickability();
-                // Also ensure send button is properly initialized
-                const sendMessageBtn = document.getElementById('sendMessageBtn');
-                if (sendMessageBtn && !sendMessageBtn.hasAttribute('data-listener-attached')) {
-                    // Re-attach listener if needed (shouldn't be necessary but just in case)
-                    sendMessageBtn.setAttribute('data-listener-attached', 'true');
-                }
             }, 200);
-            
+
         } catch (error) {
             console.error('Analysis failed:', error);
             alert('Analysis failed. Please try again.');
@@ -821,32 +805,25 @@ function setupAnalysisButton() {
             analyzeBtn.innerHTML = 'Analyze';
         }
     });
-    
+
     async function performRealAnalysis(imageSrc, modelName) {
         try {
             const response = await fetch('http://localhost:5000/analyze', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    frame: imageSrc,
-                    model: modelName
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ frame: imageSrc, model: modelName })
             });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const result = await response.json();
-            return result;
+
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+            return await response.json();
         } catch (error) {
             console.error('Error calling analysis API:', error);
             throw error;
         }
     }
 }
+
 
 // Chat interface functionality
 function setupChatInterface() {
