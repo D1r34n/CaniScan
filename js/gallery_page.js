@@ -503,7 +503,7 @@ if (galleryUploadBtn && galleryUploadInput) {
         }
 
         // Show loading state
-        const originalText = dropdownUploadBtn.innerHTML;
+        const originalText = galleryUploadBtn.innerHTML;
         galleryUploadBtn.disabled = true;
         galleryUploadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Uploading...';
 
@@ -595,12 +595,66 @@ if (dropdownAnalyzeBtn) {
 
         exitAnalyzeMode();
 
+        // Function to open analysis page and run callback
+        function openAnalysisPage(callback) {
+            const analysisPage = document.getElementById('analysisPage');
+            const analysisBtn = document.getElementById('analysisBtn');
+            
+            if (!analysisPage) {
+                console.error('Analysis page not found');
+                if (callback) callback();
+                return;
+            }
+            
+            // Use the analysis button click to trigger proper page switching with animations
+            if (analysisBtn) {
+                // Store callback to be executed after page is shown
+                window._analysisPageCallback = callback;
+                
+                // Trigger the button click which will show the page
+                // The callback will be handled in the analysisBtn click handler
+                analysisBtn.click();
+            } else {
+                // Fallback: manually show the page
+                const homePage = document.getElementById('homePage');
+                const galleryPage = document.getElementById('galleryPage');
+                const pages = [homePage, galleryPage, analysisPage];
+                pages.forEach(page => {
+                    if (page && page !== analysisPage) {
+                        page.style.display = 'none';
+                    }
+                });
+                analysisPage.style.display = 'flex';
+                analysisPage.style.opacity = '1';
+                
+                // Run callback after a short delay
+                setTimeout(() => {
+                    if (callback) {
+                        callback();
+                    }
+                }, 300);
+            }
+        }
+        
         openAnalysisPage(async () => {
             try {
                 await displayImageFromGallery(targetImage);
+                
+                // Ensure a model is selected before auto-analyzing
+                if (!window.selectedModel) {
+                    // Set default model to YoloV8n if none selected
+                    window.selectedModel = 'YoloV8n';
+                    const dropdownButton = document.getElementById('dropdownButton');
+                    if (dropdownButton) {
+                        dropdownButton.innerHTML = `YoloV8n <span>▼</span>`;
+                    }
+                    console.log('No model selected, defaulting to YoloV8n');
+                }
+                
+                // Small delay to ensure image is loaded and model is set
                 setTimeout(() => {
                     autoAnalyzeSelectedImage();
-                }, 200);
+                }, 300);
             } catch (error) {
                 console.error('Failed to prepare selected image for analysis:', error);
                 alert('Unable to load the selected image for analysis. Please try again.');

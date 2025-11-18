@@ -334,6 +334,15 @@ if (!window._functionReloadProtected) {
                     window.analysisPageFunctions.restoreChatInputClickability();
                 }
             }
+            
+            // If there's a pending callback from gallery page, execute it
+            if (window._analysisPageCallback) {
+                const cb = window._analysisPageCallback;
+                window._analysisPageCallback = null;
+                setTimeout(() => {
+                    if (cb) cb();
+                }, 100);
+            }
         }, 100);
     });
 
