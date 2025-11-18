@@ -2,6 +2,12 @@
 // analysis_page.js - Analysis Page Functionality
 // ========================================
 
+import { 
+    loadGalleryImages, 
+    analyzeModeActive, 
+    enterAnalyzeMode
+} from './gallery_page.js';
+
 // ================================
 // TAB SWITCHING FUNCTIONALITY
 // ================================
@@ -495,47 +501,7 @@ function setupImageUpload() {
 
     // File input functionality (click on placeholder)
     uploadPlaceholder.addEventListener('click', (e) => {
-        // Don't open file picker if clicking on the gallery button or change image button
-        const selectFromGalleryBtn = document.getElementById('selectFromGalleryBtn');
-        const changeImageBtn = document.getElementById('changeImageBtn');
-        
-        if (selectFromGalleryBtn && (e.target === selectFromGalleryBtn || selectFromGalleryBtn.contains(e.target))) {
-            return; // Let the gallery button handle its own click
-        }
-        
-        if (changeImageBtn && (e.target === changeImageBtn || changeImageBtn.contains(e.target))) {
-            return; // Let the change image button handle its own click
-        }
-        
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Create a new file input each time
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = 'image/*';
-        fileInput.style.display = 'none';
-        
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files.length > 0) {
-                handleImageFile(e.target.files[0]);
-            }
-            // Clean up immediately after use
-            if (fileInput.parentNode) {
-                fileInput.parentNode.removeChild(fileInput);
-            }
-        });
-        
-        // Add to DOM, trigger click, then remove
-        document.body.appendChild(fileInput);
-        fileInput.click();
-        
-        // Clean up after a short delay to ensure the file dialog has opened
-        setTimeout(() => {
-            if (fileInput.parentNode) {
-                fileInput.parentNode.removeChild(fileInput);
-            }
-        }, 100);
+        selectFromGallery();
     });
 
     if (changeImageBtn) {
@@ -594,41 +560,39 @@ function setupImageUpload() {
     }
 }
 
+function selectFromGallery({ event = null, autoLoad = true } = {}) {
+    const galleryPage = document.getElementById("galleryPage");
+    console.log('Selecting from gallery...');
+
+    // Handle event ONLY if provided
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    // Switch pages
+    window.showPage(galleryPage);
+
+    // Load images automatically unless disabled
+    if (autoLoad) {
+        loadGalleryImages();
+    }
+
+    // Enable analyze mode if not already active
+    if (!analyzeModeActive) {
+        enterAnalyzeMode();
+    }
+
+    // Show the dropdown
+    actionsDropdown.classList.add('show');
+}
+
 // Gallery selection functionality
 function setupGallerySelection() {
     const selectFromGalleryBtn = document.getElementById('selectFromGalleryBtn');
-    
+
     selectFromGalleryBtn.addEventListener('click', (e) => {
-        console.log('Select from gallery button clicked');
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Create a new file input each time
-        const galleryFileInput = document.createElement('input');
-        galleryFileInput.type = 'file';
-        galleryFileInput.accept = 'image/*';
-        galleryFileInput.style.display = 'none';
-        
-        galleryFileInput.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files.length > 0) {
-                handleImageFile(e.target.files[0]);
-            }
-            // Clean up immediately after use
-            if (galleryFileInput.parentNode) {
-                galleryFileInput.parentNode.removeChild(galleryFileInput);
-            }
-        });
-        
-        // Add to DOM, trigger click, then remove
-        document.body.appendChild(galleryFileInput);
-        galleryFileInput.click();
-        
-        // Clean up after a short delay to ensure the file dialog has opened
-        setTimeout(() => {
-            if (galleryFileInput.parentNode) {
-                galleryFileInput.parentNode.removeChild(galleryFileInput);
-            }
-        }, 100);
+        selectFromGallery();
     });
 }
 

@@ -268,8 +268,18 @@ function renderGalleryImages() {
         lastSelectedFilename = null;
         lastSelectedIndex = null;
         lastActiveFilename = null;
-        imageGrid.innerHTML = '<div class="no-images">No images match the current filters.</div>';
+
+        // Show the empty-state div
+        if (emptyState) emptyState.style.display = 'block';
+
+        showSelectImagePlaceholder("No images available");
+        
+        // Clear image grid
+        imageGrid.innerHTML = '';
         return;
+    } else {
+        // Hide empty-state if images exist
+        if (emptyState) emptyState.style.display = 'none';
     }
 
     filtered.forEach((image, index) => {
@@ -388,8 +398,6 @@ function syncSelectedState() {
 function showSelectImagePlaceholder(message = "Select an image") {
     const detailPane = document.getElementById("detailPane");
     if (!detailPane) return;
-
-    detailPane.classList.remove('minimized');
 
     let detailContent = detailPane.querySelector('.detail-content');
     if (!detailContent) {
@@ -593,7 +601,7 @@ if (galleryUploadBtn && galleryUploadInput) {
 }
 
 // Enter Analyze Mode: show selection and floating buttons
-function enterAnalyzeMode() {
+export function enterAnalyzeMode() {
     // Clear any previously active image
     document.querySelectorAll('.image-item.active').forEach(el => el.classList.remove('active'));
     lastActiveFilename = null;
@@ -925,14 +933,18 @@ function selectImage(e, imageDataOverride = null) {
     }
 }
 
-// Permanent listener for empty-space clicks
+// Clicking on empty space will clear the details pane
 if (galleryColumn) {
     galleryColumn.addEventListener('click', (e) => {
         // Only clear if we didn't click on an image item
         if (!e.target.closest('.image-item')) {
             clearSelection(); // removes 'active' and selection
-            // Minimize the details pane using unified function
-            showDetailsPane({ minimized: true, rightOffset: '1rem' });
+
+            if (filteredGalleryImages.length === 0) {
+                showSelectImagePlaceholder("No images available");
+            } else {
+                showSelectImagePlaceholder("Select an image");
+            }
         }
     });
 }

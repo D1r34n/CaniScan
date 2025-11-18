@@ -459,7 +459,6 @@ if (!window._functionReloadProtected) {
         // Optionally, listen for logout success/failure
         ipcRenderer.once('logout-success', (event, data) => {
             console.log(data.message);
-            // No need to fadeOut/fadeIn anything; main window destroyed and login window shown
         });
 
         ipcRenderer.once('logout-failed', (event, data) => {
@@ -541,6 +540,8 @@ if (!window._functionReloadProtected) {
             navButtons.forEach(btn=>btn?.classList.toggle("active",(btn===homeBtn&&page===homePage)||(btn===galleryBtn&&page===galleryPage)||(btn===analysisBtn&&page===analysisPage)));
         });
     }
+
+    window.showPage = showPage;
 
     homeBtn?.addEventListener("click",()=>showPage(homePage));
     galleryBtn?.addEventListener("click",()=>{ showPage(galleryPage); loadGalleryImages(); });

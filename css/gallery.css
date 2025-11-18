@@ -336,6 +336,25 @@
   will-change: flex;
 }
 
+/* ==============================
+   Empty State Styles
+   ============================== */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #5f606a !important;
+}
+
+.empty-state img {
+    width: 250px;
+    margin: 1rem 0rem;
+}
+
+.empty-state div {
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
 .upload-btn {
     position: absolute;
     bottom: 1rem; /* distance from bottom of left column */
