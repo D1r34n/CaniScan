@@ -8,22 +8,26 @@ const minimizeDetail = document.getElementById("minimizeDetail");
 const leftColumn = document.querySelector(".gallery-left");
 const galleryUploadBtn = document.getElementById('galleryUploadBtn');
 
+function showDetailsPane({ minimized = false, rightOffset = '26rem' } = {}) {
+    if (!detailPane || !galleryUploadBtn) return;
+
+    if (minimized) {
+        detailPane.classList.add('minimized');
+    } else {
+        detailPane.classList.remove('minimized');
+    }
+
+    galleryUploadBtn.style.right = rightOffset;
+}
+
 // Toggle detail pane visibility
 if (detailPane && minimizeDetail && leftColumn) {
     minimizeDetail.addEventListener("click", () => {
         const isMinimized = detailPane.classList.contains("minimized");
-        if (isMinimized) {
-            // Restore pane
-            detailPane.classList.remove("minimized");
-            // leftColumn.style.flex = "3.5";
-            galleryUploadBtn.style.right = "26rem";
-        } else {
-            // Minimize pane
-            detailPane.classList.add("minimized");
-            // leftColumn.style.flex = "3.5";
-            galleryUploadBtn.style.right = "1rem";
-             
-        }
+        showDetailsPane({
+            minimized: !isMinimized,
+            rightOffset: isMinimized ? '26rem' : '1rem'
+        });
     });
 }
 
@@ -411,12 +415,14 @@ function showSelectImagePlaceholder(message = "Select an image") {
 }
 
 
+// Refactored showImageDetails using showDetailsPane
 function showImageDetails(image) {
-    const detailPane = document.getElementById("detailPane");
-    if (!detailPane || !image) return;
+    if (!image) return;
 
     lastActiveFilename = image.filename || null;
-    detailPane.classList.remove('minimized');
+
+    // Show the pane using unified function
+    showDetailsPane({ minimized: false, rightOffset: '26rem' });
 
     const uploadedDate = image.uploaded_at ? new Date(image.uploaded_at) : null;
     const dateStr = uploadedDate ? uploadedDate.toLocaleDateString() : 'N/A';
@@ -430,7 +436,9 @@ function showImageDetails(image) {
         ? `<span class="status-badge analyzed-status"><i class="bi bi-check-circle-fill"></i> Analyzed</span>`
         : `<span class="status-badge raw-status"><i class="bi bi-circle"></i> Raw (Not Analyzed)</span>`;
 
+    const detailPane = document.getElementById("detailPane");
     const detailContent = detailPane.querySelector('.detail-content');
+
     if (detailContent) {
         const displayName = isAnalyzed ? diagnosis : 'Not Analyzed';
         const displayNameClass = isAnalyzed ? 'diagnosis-value' : '';
@@ -565,6 +573,7 @@ if (galleryUploadBtn && galleryUploadInput) {
 
             if (result.success) {
                 console.log('Image uploaded successfully:', result.filename);
+                
                 // Refresh gallery to show new image
                 await loadGalleryImages();
             } else {
@@ -922,14 +931,8 @@ if (galleryColumn) {
         // Only clear if we didn't click on an image item
         if (!e.target.closest('.image-item')) {
             clearSelection(); // removes 'active' and selection
-            const isMinimized = detailPane.classList.contains("minimized");
-            if (!isMinimized) {
-            // Minimize pane
-            detailPane.classList.add("minimized");
-            // leftColumn.style.flex = "3.5";
-            galleryUploadBtn.style.right = "1rem";
-             
-        }
+            // Minimize the details pane using unified function
+            showDetailsPane({ minimized: true, rightOffset: '1rem' });
         }
     });
 }
