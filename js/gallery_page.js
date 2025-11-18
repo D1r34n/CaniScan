@@ -497,12 +497,35 @@ const dropdownDeleteBtn = document.getElementById('dropdownDeleteBtn');
 
 const galleryUploadInput = document.getElementById('galleryUploadInput');
 
-// Action Dropdown BUtton
+// Action Dropdown Button
 actionsButton.addEventListener('click', (e) => {
     e.stopPropagation();
-    actionsDropdown.classList.toggle('show');
-    if (analyzeModeActive) exitAnalyzeMode();
-        else enterAnalyzeMode();
+    
+    if (analyzeModeActive) {
+        // If in analyze mode, exit it and close dropdown
+        exitAnalyzeMode();
+        actionsDropdown.classList.remove('show');
+    } else {
+        // If not in analyze mode, enter it and show dropdown
+        enterAnalyzeMode();
+        actionsDropdown.classList.add('show');
+    }
+});
+
+// Close dropdown when clicking outside (but keep it open during analyze mode for better UX)
+document.addEventListener('click', (e) => {
+    // Don't close if clicking on image items during analyze mode
+    if (analyzeModeActive && e.target.closest('.image-item')) {
+        return; // Keep dropdown open when selecting images
+    }
+    
+    // Close dropdown if clicking outside of it and the button
+    if (actionsDropdown && !actionsDropdown.contains(e.target) && !actionsButton.contains(e.target)) {
+        // Only close if not in analyze mode, or if clicking on non-interactive areas
+        if (!analyzeModeActive) {
+            actionsDropdown.classList.remove('show');
+        }
+    }
 });
 
 // Gallery upload button functionality
@@ -571,6 +594,10 @@ function enterAnalyzeMode() {
         actionsButton.innerHTML = `<i class="bi bi-x-lg"></i> Cancel`;
         actionsButton.classList.add('active');
     }
+    // Ensure dropdown is shown when entering analyze mode
+    if (actionsDropdown) {
+        actionsDropdown.classList.add('show');
+    }
     applyAnalyzeModeStyles();
 }
 
@@ -582,6 +609,9 @@ export function exitAnalyzeMode(options = { clearSelection: true }) {
         actionsButton.innerHTML = '<i class="bi bi-check2-square"></i> Select Images';
         actionsButton.classList.remove('active');
     }
+    if (actionsDropdown) {
+        actionsDropdown.classList.remove('show');
+    }
     if (dropdownDeleteBtn) dropdownDeleteBtn.innerHTML = '<i class="bi bi-trash"></i> Delete';
     applyAnalyzeModeStyles();
     if (options.clearSelection) clearSelection();
@@ -590,6 +620,11 @@ export function exitAnalyzeMode(options = { clearSelection: true }) {
 if (dropdownAnalyzeBtn) {
     dropdownAnalyzeBtn.addEventListener('click', async (event) => {
         event.stopPropagation();
+        
+        // Close dropdown when action is clicked
+        if (actionsDropdown) {
+            actionsDropdown.classList.remove('show');
+        }
 
         if (!selectedImageFilenames.size) {
             alert('Please select at least one image to analyze.');
@@ -713,6 +748,11 @@ if (dropdownAnalyzeBtn) {
 if (dropdownDeleteBtn) {
     dropdownDeleteBtn.addEventListener('click', async (event) => {
         event.stopPropagation();
+        
+        // Close dropdown when action is clicked
+        if (actionsDropdown) {
+            actionsDropdown.classList.remove('show');
+        }
 
         let imagesToDelete = [];
 
