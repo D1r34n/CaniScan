@@ -933,15 +933,12 @@ async function loadBreeds() {
         const response = await fetch('../csv/fci-breeds.csv');
         const csvText = await response.text();
         
-        // Parse CSV
         const lines = csvText.split('\n');
         const breeds = [];
         
-        // Skip header row, start from index 1
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (line) {
-                // Split by comma and get the name column (index 1)
                 const columns = line.split(',');
                 const breedName = columns[1];
                 if (breedName) {
@@ -955,7 +952,6 @@ async function loadBreeds() {
         
         breeds.forEach(breed => {
             const option = document.createElement('option');
-            // Format: lowercase with first letter capital
             const formattedBreed = breed.toLowerCase()
                 .split(' ')
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1))
