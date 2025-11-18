@@ -385,7 +385,14 @@ function handleImageFile(file) {
     const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
     const imagePreview = document.getElementById('imagePreview');
     const previewImage = document.getElementById('previewImage');
-        
+    
+    if (!uploadArea || !uploadPlaceholder || !imagePreview || !previewImage) {
+        console.error('Required elements not found');
+        return;
+    }
+    
+    console.log('Processing image file:', file.name);
+    
     // Check if this is a different image
     const isDifferentImage = !window.currentAnalysisSource || 
                             window.currentAnalysisSource.filename !== file.name;
@@ -400,6 +407,7 @@ function handleImageFile(file) {
             type: 'upload',
             filename: file.name || 'uploaded-image'
         };
+        console.log('Image loaded successfully');
         
         // If it's a different image, hide results and show form
         if (isDifferentImage) {
@@ -417,6 +425,23 @@ function handleImageFile(file) {
             
             if (analysisForm) {
                 analysisForm.style.display = 'block';
+            }
+            
+            // Reset form fields to default when image changes
+            const dogName = document.getElementById('dogName');
+            const dogBreed = document.getElementById('dogBreed-box');
+            const modelSelect = document.getElementById('modelSelect');
+            
+            if (dogName) {
+                dogName.value = '';
+            }
+            
+            if (dogBreed) {
+                dogBreed.selectedIndex = 0; // Reset to "Select breed"
+            }
+            
+            if (modelSelect) {
+                modelSelect.selectedIndex = 0; // Reset to "Select model"
             }
             
             // Scroll to form after a short delay
@@ -513,27 +538,60 @@ function setupImageUpload() {
         }, 100);
     });
 
-// Change image button
-changeImageBtn.addEventListener('click', () => {
-    uploadPlaceholder.style.display = 'flex';
-    imagePreview.style.display = 'none';
-    const analysisResults = document.getElementById('analysisResults');
-    const resultDiagnosis = document.getElementById('resultDiagnosis');
-    const resultConfidence = document.getElementById('resultConfidence');
-    const resultInferenceTime = document.getElementById('resultInferenceTime');
-    
-    if (analysisResults) {
-        analysisResults.style.display = 'block'; 
-        resultDiagnosis.textContent = 'Pending...'; 
-        resultConfidence.textContent = '--'; 
-        if (resultInferenceTime) {
-            resultInferenceTime.textContent = '--';
-        }
+    if (changeImageBtn) {
+        changeImageBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Reset analysis results when changing image
+            const analysisResults = document.getElementById('analysisResults');
+            if (analysisResults) {
+                analysisResults.style.display = 'none';
+            }
+            
+            // Clear previous analysis data
+            window.currentAnalysis = null;
+            window.currentAnalysisSource = null;
+            
+            // Create a new file input each time
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.style.display = 'none';
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    handleImageFile(e.target.files[0]);
+                    
+                    // Scroll back to the analysis form after successful image change
+                    const analysisForm = document.getElementById('analysisForm');
+                    if (analysisForm) {
+                        analysisForm.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'start' 
+                        });
+                    }
+                }
+                // If no files selected (user cancelled), don't scroll
+                
+                // Clean up immediately after use
+                    if (fileInput.parentNode) {
+                        fileInput.parentNode.removeChild(fileInput);
+                    }
+            });
+            
+            // Add to DOM, trigger click, then remove
+            document.body.appendChild(fileInput);
+            fileInput.click();
+            
+            // Clean up after a short delay to ensure the file dialog has opened
+            setTimeout(() => {
+                if (fileInput.parentNode) {
+                    fileInput.parentNode.removeChild(fileInput);
+                }
+            }, 100);
+        });
     }
-    previewImage.src = '';
-    previewImage.dataset.sourceFilename = '';
-    window.currentAnalysisSource = null;
-});
 }
 
 // Gallery selection functionality
@@ -1001,6 +1059,8 @@ function setupChatInterface() {
 //setup image upload functionality
 loadBreeds();
 setupImageUpload();
+setupGallerySelection();
+
 
 // Initialize chat interface and analysis button
 // Use DOMContentLoaded to ensure elements exist, or call immediately if already loaded
