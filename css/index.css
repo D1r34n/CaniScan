@@ -654,9 +654,14 @@ html, body {
     margin-bottom: 0.5rem;
 }
 
+.user-name {
+    display: flex;
+    align-items: center;
+}
+
 .user-slide {
     display: inline-block;
-    max-width: 200px; /* adjust based on dropdown width */
+    max-width: 180px; /* adjust width */
     overflow: hidden;
     white-space: nowrap;
     vertical-align: bottom;
@@ -665,17 +670,20 @@ html, body {
 
 .user-slide span {
     display: inline-block;
-    padding-left: 0;       /* no extra padding when not sliding */
     animation: none;
 }
 
 .user-slide.slide span {
-    padding-left: 100%;    /* only push text when sliding */
-    animation: slide-text 5s linear infinite;
+    animation: slide-text 8s linear infinite;
+}
+
+#copyIPBtn {
+    flex-shrink: 0; /* prevent shrinking */
+    margin-left: 5px;
 }
 
 @keyframes slide-text {
-    0% { transform: translateX(0); }
+    0%   { transform: translateX(0); }
     100% { transform: translateX(-100%); }
 }
 

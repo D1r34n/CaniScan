@@ -182,6 +182,53 @@ if (!window._functionReloadProtected) {
         });
     }
 
+    let serverIP = '127.0.0.1:5001'; // default/fallback
+
+    // Fetch current server IP dynamically from backend
+    async function fetchServerIP() {
+        try {
+            const res = await fetch(`http://${serverIP}/ip`);
+            const ipAddress = document.getElementById('ipAddress');
+            if (!res.ok) throw new Error('Failed to fetch IP');
+            const data = await res.json();
+            if (data.success && data.ip) {
+                serverIP = `${data.ip}:5001`; // update serverIP dynamically
+            } else {
+                console.warn('Could not retrieve IP from server, keeping default.');
+            }
+            ipAddress.textContent = serverIP;
+        } catch (err) {
+            console.error('Error fetching dynamic server IP:', err);
+        }
+    }
+
+    // Copy IP to clipboard using current serverIP
+    async function copyServerIP() {
+        try {
+            const res = await fetch(`http://${serverIP}/ip`);
+            if (!res.ok) throw new Error('Failed to fetch IP');
+
+            const data = await res.json();
+            if (data.success && data.ip) {
+                await navigator.clipboard.writeText(data.ip);
+
+                const slideContainer = document.getElementById('ipAddress');
+                slideContainer.textContent = 'Copied!';
+                slideContainer.style.color = "#4caf50";
+
+                setTimeout(() => {
+                    slideContainer.textContent = data.ip;
+                    slideContainer.style.color = "#2f3035";
+                }, 1500);
+            } else {
+                console.error('No IP returned', data);
+                alert('Failed to retrieve server IP.');
+            }
+        } catch (err) {
+            console.error('Error fetching/copying IP:', err);
+            alert('Error fetching server IP.');
+        }
+    }
     // ================================
     // USER SESSION
     // ================================
@@ -204,6 +251,8 @@ if (!window._functionReloadProtected) {
             userNameElement.textContent = `Hello, ${loggedInUserName}!`;
             slideContainer.textContent = fullName || 'User';
 
+            const emailClipBoard = document.getElementById('copyEmailBtn');
+
             if (!listenersAttached && dropdownUserName) {
                 listenersAttached = true;
                 dropdownUserName.addEventListener('mouseenter', () => {
@@ -214,7 +263,8 @@ if (!window._functionReloadProtected) {
                     slideContainer.textContent = fullName || 'User';
                     dropdownUserName.querySelector(".user-slide").classList.remove('slide');
                 });
-                dropdownUserName.addEventListener('click', async () => {
+
+                emailClipBoard.addEventListener('click', async () => {
                     try {
                         await navigator.clipboard.writeText(data.email);
                         slideContainer.textContent = 'Copied!';
@@ -229,6 +279,9 @@ if (!window._functionReloadProtected) {
                     } catch (err) { console.error('Failed to copy email:', err); }
                 });
             }
+
+            await fetchServerIP(); // update serverIP first
+            document.getElementById('copyIPBtn').addEventListener('click', copyServerIP);   
 
             console.log("%c👤 Logged-in user:", "color: cyan;", loggedInUserName);
             serverConnected = true;
