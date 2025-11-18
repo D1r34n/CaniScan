@@ -37,6 +37,11 @@ html, body {
   margin: 0;
   padding: 0;
   background: linear-gradient(to bottom right, #ffffff, #b8926d);
+
+  user-select: none; /* prevents text highlighting */
+  -webkit-user-select: none; /* Safari/Chrome */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* IE/Edge */
 }
 
 /* Navbar */
@@ -583,7 +588,6 @@ html, body {
     flex: 1;                       
 }
 
-
 /* User Dropdown Styles */
 .user-dropdown {
     position: absolute;
@@ -601,6 +605,20 @@ html, body {
     overflow: hidden;
 }
 
+
+.user-ip {
+  font-size: 1rem;
+  color: #2f3035;
+  user-select: none; /* prevents text highlighting */
+  -webkit-user-select: none; /* Safari/Chrome */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* IE/Edge */
+}
+
+#copyIPBtn {
+  font-size: 0.8rem;
+  color: #2f3035;
+}
 .user-dropdown.show {
     opacity: 1;
     visibility: visible;
@@ -612,12 +630,38 @@ html, body {
     border-bottom: 1px solid #e9ecef;
     background: linear-gradient(135deg, #d9b99b, #c4a484);
     color: white;
+    max-width: 250px;
 }
 
 .dropdown-header .user-name {
     font-weight: 600;
     font-size: 1rem;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.user-slide {
+    display: inline-block;
+    max-width: 200px; /* adjust based on dropdown width */
+    overflow: hidden;
+    white-space: nowrap;
+    vertical-align: bottom;
+    cursor: pointer;
+}
+
+.user-slide span {
+    display: inline-block;
+    padding-left: 0;       /* no extra padding when not sliding */
+    animation: none;
+}
+
+.user-slide.slide span {
+    padding-left: 100%;    /* only push text when sliding */
+    animation: slide-text 5s linear infinite;
+}
+
+@keyframes slide-text {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
 }
 
 .dropdown-header .user-email {

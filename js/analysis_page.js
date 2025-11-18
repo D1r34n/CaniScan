@@ -251,19 +251,43 @@ loadAnalysisHistory();
 // ================================
 export function restoreChatInputClickability() {
     const chatInput = document.getElementById('chatInput');
+    const sendMessageBtn = document.getElementById('sendMessageBtn');
     const chatInputArea = document.querySelector('.chat-input-area');
+    const inputGroup = document.querySelector('.input-group');
     const recommendationsBox = document.querySelector('.recommendations-box');
+    const chatContainer = document.querySelector('.chat-container');
     
     if (chatInput) {
         chatInput.disabled = false;
         chatInput.style.pointerEvents = 'auto';
         chatInput.style.zIndex = '20';
+        chatInput.style.opacity = '1';
+        chatInput.removeAttribute('readonly');
         chatInput.focus();
+    }
+    
+    if (sendMessageBtn) {
+        sendMessageBtn.disabled = false;
+        sendMessageBtn.style.pointerEvents = 'auto';
+        sendMessageBtn.style.zIndex = '30';
+        sendMessageBtn.style.opacity = '1';
+        sendMessageBtn.style.cursor = 'pointer';
     }
     
     if (chatInputArea) {
         chatInputArea.style.pointerEvents = 'auto';
         chatInputArea.style.zIndex = '20';
+        chatInputArea.style.opacity = '1';
+    }
+    
+    if (inputGroup) {
+        inputGroup.style.pointerEvents = 'auto';
+        inputGroup.style.zIndex = '20';
+    }
+    
+    if (chatContainer) {
+        chatContainer.style.pointerEvents = 'auto';
+        chatContainer.style.zIndex = '10';
     }
     
     if (recommendationsBox) {
@@ -271,10 +295,11 @@ export function restoreChatInputClickability() {
         recommendationsBox.style.pointerEvents = 'auto';
     }
     
-    // Remove any lingering popup overlays
-    const blockingOverlays = document.querySelectorAll('.popup-overlay:not(.analysis-details-popup .popup-overlay), .analysis-details-popup');
+    // Remove any lingering popup overlays that might be blocking
+    const blockingOverlays = document.querySelectorAll('.popup-overlay');
     blockingOverlays.forEach(overlay => {
         const popup = overlay.closest('.analysis-details-popup');
+        // Only remove if it's not part of an active popup
         if (!popup || !document.body.contains(popup)) {
             if (overlay.parentNode) {
                 overlay.parentNode.removeChild(overlay);
@@ -282,6 +307,30 @@ export function restoreChatInputClickability() {
         }
     });
     
+    // Remove any invisible blocking elements
+    const allElements = document.querySelectorAll('*');
+    allElements.forEach(el => {
+        const style = window.getComputedStyle(el);
+        // Check if element is positioned and might be blocking
+        if (style.position === 'fixed' || style.position === 'absolute') {
+            const zIndex = parseInt(style.zIndex) || 0;
+            // If it's a high z-index element that's not visible but might block
+            if (zIndex > 10 && zIndex < 9999 && (style.opacity === '0' || style.display === 'none')) {
+                // Don't remove it, but ensure it's not blocking
+                if (el.classList.contains('popup-overlay') || el.classList.contains('analysis-details-popup')) {
+                    // Already handled above
+                }
+            }
+        }
+    });
+    
+    // Force a reflow to ensure styles are applied
+    if (chatInput) {
+        void chatInput.offsetHeight;
+    }
+    if (sendMessageBtn) {
+        void sendMessageBtn.offsetHeight;
+    }
 }
 
 // ============================================
@@ -464,59 +513,179 @@ function setupImageUpload() {
         }, 100);
     });
 
-    if (changeImageBtn) {
-        changeImageBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Reset analysis results when changing image
-            const analysisResults = document.getElementById('analysisResults');
-            if (analysisResults) {
-                analysisResults.style.display = 'none';
+// Change image button
+changeImageBtn.addEventListener('click', () => {
+    uploadPlaceholder.style.display = 'flex';
+    imagePreview.style.display = 'none';
+    const analysisResults = document.getElementById('analysisResults');
+    const resultDiagnosis = document.getElementById('resultDiagnosis');
+    const resultConfidence = document.getElementById('resultConfidence');
+    const resultInferenceTime = document.getElementById('resultInferenceTime');
+    
+    if (analysisResults) {
+        analysisResults.style.display = 'block'; 
+        resultDiagnosis.textContent = 'Pending...'; 
+        resultConfidence.textContent = '--'; 
+        if (resultInferenceTime) {
+            resultInferenceTime.textContent = '--';
+        }
+    }
+    previewImage.src = '';
+    previewImage.dataset.sourceFilename = '';
+    window.currentAnalysisSource = null;
+});
+}
+
+// Gallery selection functionality
+function setupGallerySelection() {
+    const selectFromGalleryBtn = document.getElementById('selectFromGalleryBtn');
+    
+    selectFromGalleryBtn.addEventListener('click', (e) => {
+        console.log('Select from gallery button clicked');
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Create a new file input each time
+        const galleryFileInput = document.createElement('input');
+        galleryFileInput.type = 'file';
+        galleryFileInput.accept = 'image/*';
+        galleryFileInput.style.display = 'none';
+        
+        galleryFileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleImageFile(e.target.files[0]);
             }
-            
-            // Clear previous analysis data
-            window.currentAnalysis = null;
-            window.currentAnalysisSource = null;
-            
-            // Create a new file input each time
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'image/*';
-            fileInput.style.display = 'none';
-            
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                    handleImageFile(e.target.files[0]);
-                    
-                    // Scroll back to the analysis form after successful image change
-                    const analysisForm = document.getElementById('analysisForm');
-                    if (analysisForm) {
-                        analysisForm.scrollIntoView({ 
-                            behavior: 'smooth', 
-                            block: 'start' 
-                        });
-                    }
-                }
-                // If no files selected (user cancelled), don't scroll
-                
-                // Clean up immediately after use
-                    if (fileInput.parentNode) {
-                        fileInput.parentNode.removeChild(fileInput);
-                    }
-            });
-            
-            // Add to DOM, trigger click, then remove
-            document.body.appendChild(fileInput);
-            fileInput.click();
-            
-            // Clean up after a short delay to ensure the file dialog has opened
-            setTimeout(() => {
-                if (fileInput.parentNode) {
-                    fileInput.parentNode.removeChild(fileInput);
-                }
-            }, 100);
+            // Clean up immediately after use
+            if (galleryFileInput.parentNode) {
+                galleryFileInput.parentNode.removeChild(galleryFileInput);
+            }
         });
+        
+        // Add to DOM, trigger click, then remove
+        document.body.appendChild(galleryFileInput);
+        galleryFileInput.click();
+        
+        // Clean up after a short delay to ensure the file dialog has opened
+        setTimeout(() => {
+            if (galleryFileInput.parentNode) {
+                galleryFileInput.parentNode.removeChild(galleryFileInput);
+            }
+        }, 100);
+    });
+}
+
+function autoAnalyzeSelectedImage() {
+    if (window.currentAnalysisSource?.type !== 'gallery') return;
+
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const previewImage = document.getElementById('previewImage');
+    if (!analyzeBtn || !previewImage || !previewImage.src) return;
+
+    if (!analyzeBtn.disabled) {
+        analyzeBtn.click();
+    }
+}
+
+async function fetchImageAsDataURL(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch image (${response.status})`);
+    }
+
+    const blob = await response.blob();
+    return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+// Make fetchImageAsDataURL available globally
+window.fetchImageAsDataURL = fetchImageAsDataURL;
+
+// Save analyzed image to gallery with metadata
+async function saveAnalyzedImageToGallery(imageSrc, disease, confidence) {
+    try {
+        // Convert data URL to blob
+        const response = await fetch(imageSrc);
+        const blob = await response.blob();
+        
+        // Create FormData
+        const formData = new FormData();
+        formData.append('image', blob, 'analyzed_image.jpg');
+        formData.append('analyzed', 'true');
+        formData.append('disease', disease);
+        formData.append('confidence', confidence.toString());
+        if (window.currentAnalysisSource?.type === 'gallery' && window.currentAnalysisSource.filename) {
+            formData.append('source_filename', window.currentAnalysisSource.filename);
+        }
+        
+        // Upload to desktop server
+        const uploadResponse = await fetch('http://localhost:5001/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!uploadResponse.ok) {
+            throw new Error('Failed to upload image');
+        }
+        
+        const result = await uploadResponse.json();
+        console.log('Image saved to gallery:', result);
+        
+        // Refresh gallery if on gallery page
+        const galleryPage = document.getElementById('galleryPage');
+        if (galleryPage && galleryPage.style.display !== 'none') {
+            setTimeout(() => {
+                loadGalleryImages();
+            }, 500);
+        }
+        
+        return result.filename;
+    } catch (error) {
+        console.error('Error saving image to gallery:', error);
+        throw error;
+    }
+}
+
+// Load and populate breeds from CSV
+async function loadBreeds() {
+    try {
+        const response = await fetch('../csv/fci-breeds.csv');
+        const csvText = await response.text();
+        
+        const lines = csvText.split('\n');
+        const breeds = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line) {
+                const columns = line.split(',');
+                const breedName = columns[1];
+                if (breedName) {
+                    breeds.push(breedName);
+                }
+            }
+        }
+        
+        // Populate dropdown
+        const select = document.getElementById('dogBreed-box');
+        
+        breeds.forEach(breed => {
+            const option = document.createElement('option');
+            const formattedBreed = breed.toLowerCase()
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            
+            option.value = breed.toLowerCase().replace(/\s+/g, '-');
+            option.textContent = formattedBreed;
+            select.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('Error loading breeds:', error);
     }
 }
 
@@ -587,7 +756,19 @@ function setupAnalysisButton() {
                 savedFilename
             );
             
-            // Store analysis data with dog info
+            // Show initial LLM recommendation in chat
+            if (window.showInitialRecommendation) {
+                window.showInitialRecommendation(analysisResult.recommendation);
+            } else {
+                // Fallback: setupChatInterface might not be called yet
+                setTimeout(() => {
+                    if (window.showInitialRecommendation) {
+                        window.showInitialRecommendation(analysisResult.recommendation);
+                    }
+                }, 100);
+            }
+            
+            // Store current analysis data for chat context
             window.currentAnalysis = {
                 diagnosis: analysisResult.disease,
                 confidence: analysisResult.confidence,
@@ -601,7 +782,13 @@ function setupAnalysisButton() {
             
             setTimeout(() => {
                 restoreChatInputClickability();
-            }, 100);
+                // Also ensure send button is properly initialized
+                const sendMessageBtn = document.getElementById('sendMessageBtn');
+                if (sendMessageBtn && !sendMessageBtn.hasAttribute('data-listener-attached')) {
+                    // Re-attach listener if needed (shouldn't be necessary but just in case)
+                    sendMessageBtn.setAttribute('data-listener-attached', 'true');
+                }
+            }, 200);
             
         } catch (error) {
             console.error('Analysis failed:', error);
@@ -645,13 +832,29 @@ function setupChatInterface() {
     const sendMessageBtn = document.getElementById('sendMessageBtn');
     const chatMessages = document.getElementById('chatMessages');
     
+    if (!chatInput || !sendMessageBtn || !chatMessages) {
+        console.warn('Chat interface elements not found');
+        return;
+    }
+    
+    // Check if already initialized to prevent duplicate listeners
+    if (chatInput.hasAttribute('data-chat-initialized')) {
+        // Already initialized, just ensure it's clickable
+        restoreChatInputClickability();
+        return;
+    }
+    
     function sendMessage() {
-        const message = chatInput.value.trim();
+        // Get current chat input from DOM (in case it was replaced)
+        const currentChatInput = document.getElementById('chatInput');
+        if (!currentChatInput) return;
+        
+        const message = currentChatInput.value.trim();
         if (!message) return;
         
         // Add user message
         addChatMessage(message, 'user');
-        chatInput.value = '';
+        currentChatInput.value = '';
         
         // Show typing indicator
         const typingIndicator = addTypingIndicator();
@@ -739,7 +942,10 @@ function setupChatInterface() {
         addChatMessage(recommendation, 'bot');
     }
     
+    // Attach event listeners
     sendMessageBtn.addEventListener('click', sendMessage);
+    sendMessageBtn.setAttribute('data-listener-attached', 'true');
+    
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             sendMessage();
@@ -757,6 +963,9 @@ function setupChatInterface() {
         }
     });
     
+    // Mark as initialized
+    chatInput.setAttribute('data-chat-initialized', 'true');
+    
     // Auto-focus chat input when analysis page is shown
     const analysisPage = document.getElementById('analysisPage');
     if (analysisPage) {
@@ -764,7 +973,11 @@ function setupChatInterface() {
             if (analysisPage.style.display !== 'none') {
                 // Small delay to ensure page is fully rendered
                 setTimeout(() => {
-                    chatInput.focus();
+                    const currentChatInput = document.getElementById('chatInput');
+                    if (currentChatInput) {
+                        currentChatInput.focus();
+                        restoreChatInputClickability();
+                    }
                 }, 100);
             }
         });
@@ -973,11 +1186,19 @@ document.addEventListener('DOMContentLoaded', loadBreeds);
 //setup image upload functionality
 loadBreeds();
 setupImageUpload();
-setupAnalysisButton();
-setupChatInterface();
-autoAnalyzeSelectedImage();
-setupGallerySelection();
 
+// Initialize chat interface and analysis button
+// Use DOMContentLoaded to ensure elements exist, or call immediately if already loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setupChatInterface();
+        setupAnalysisButton();
+    });
+} else {
+    // DOM already loaded
+    setupChatInterface();
+    setupAnalysisButton();
+}
 
 // ================================
 // EXPORT FUNCTIONS FOR USE IN OTHER FILES

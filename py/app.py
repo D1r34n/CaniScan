@@ -288,6 +288,7 @@ def login():
         # Create session
         session['email'] = user["email"]
         session['name'] = user['first_name']
+        session['lastname'] = user['last_name']
         
         print(f"✅ User logged in: {email}")
         
@@ -325,11 +326,12 @@ def status():
 
         user = response.data[0]
         name = f"{user.get('first_name', '')}".strip()
-
+        lastname = f"{user.get('last_name', '')}".strip()
         return jsonify({
             "logged_in": True,
             "email": user.get('email'),
             "name": name or "User",
+            "lastname": lastname or "name",
             "avatar_id": user.get("avatar_id", 0)
         }), 200
 

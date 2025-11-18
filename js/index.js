@@ -96,10 +96,10 @@ function createLoginWindow() {
     loginWindow.setBackgroundColor('white');
 
     loginWindow.on('close', (event) => {
-        // Prevent closing, hide instead unless quitting
-        if (!isQuiting) {
+        // Only prevent closing if NOT quitting AND NOT after successful login
+        if (!isQuiting && loginWindow && !loginWindow.isDestroyed()) {
             event.preventDefault();
-            loginWindow.hide();
+            handleExitRequest(loginWindow);
         }
     });
 
@@ -118,19 +118,15 @@ function createMainWindow() {
         resizable: false,
         maximizable: true,
         fullscreenable: true,
-        // session: loginWindow.webContents.session,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-            devTools: true
         },
     });
 
     mainWindow.setMenuBarVisibility(false);
     mainWindow.loadFile(path.join(__dirname, '..', 'html', 'index.html'));
     mainWindow.setBackgroundColor('black');
-
-    mainWindow.webContents.openDevTools();
 
     mainWindow.on('close', async (event) => {
         if (!isQuiting) {
@@ -167,11 +163,19 @@ function createTray() {
         {
             label: 'Show App',
             click: () => {
-                // Focus or show main/login window
-                if (mainWindow && mainWindow.isVisible()) mainWindow.focus();
-                else if (mainWindow) mainWindow.show();
-                else if (loginWindow && loginWindow.isVisible()) loginWindow.focus();
-                else if (loginWindow) loginWindow.show();
+                // Show main window if it exists
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.show();
+                    mainWindow.focus();
+                } 
+                // Otherwise create and show login window
+                else {
+                    if (!loginWindow || loginWindow.isDestroyed()) {
+                        createLoginWindow();
+                    }
+                    loginWindow.show();
+                    loginWindow.focus();
+                }
             },
         },
         { type: 'separator' },
@@ -188,18 +192,44 @@ function createTray() {
     tray.setContextMenu(trayMenu);
 
     tray.on('double-click', () => {
-        if (mainWindow && !mainWindow.isVisible()) mainWindow.show();
-        else if (loginWindow && !loginWindow.isVisible()) loginWindow.show();
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.show();
+            mainWindow.focus();
+        } else {
+            if (!loginWindow || loginWindow.isDestroyed()) {
+                createLoginWindow();
+            }
+            loginWindow.show();
+            loginWindow.focus();
+        }
     });
 }
 
 // ------------------- App Ready Logic -------------------
 app.whenReady().then(async () => {
-    // Start YOLOv8 Python process
+    // Start YOLOv8 Python process with proper I/O handling
     const yoloScriptPath = path.join(__dirname, '..', 'py', 'app.py');
-    yoloProcess = spawn('python', [yoloScriptPath]);
-    yoloProcess.stdout.on('data', (data) => console.log(`[YOLOv8] ${data}`));
-    yoloProcess.stderr.on('data', (data) => console.error(`[YOLOv8 Error] ${data}`));
+    yoloProcess = spawn('python', [yoloScriptPath], {
+        detached: false,
+        stdio: ['ignore', 'pipe', 'pipe'] // Don't inherit, use pipes
+    });
+
+    // Handle stdout/stderr without blocking terminal
+    if (yoloProcess.stdout) {
+        yoloProcess.stdout.on('data', (data) => {
+            console.log(`[YOLOv8] ${data.toString().trim()}`);
+        });
+    }
+
+    if (yoloProcess.stderr) {
+        yoloProcess.stderr.on('data', (data) => {
+            console.error(`[YOLOv8 Error] ${data.toString().trim()}`);
+        });
+    }
+
+    yoloProcess.on('error', (err) => {
+        console.error('[YOLOv8] Process error:', err);
+    });
 
     // Create system tray
     createTray();
@@ -234,7 +264,10 @@ app.whenReady().then(async () => {
 
 // Handle login success
 ipcMain.on('login-success', () => {
-    if (loginWindow) loginWindow.hide();
+    if (loginWindow) {
+        loginWindow.destroy();  // ✅ Properly destroy instead of hide
+        loginWindow = null;
+    }
 
     if (!mainWindow) {
         createMainWindow();
@@ -250,18 +283,21 @@ ipcMain.on('minimize-window', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win && !win.isDestroyed()) win.minimize();
 });
+
 ipcMain.on('close-window', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win && !win.isDestroyed()) {
         handleExitRequest(win);
     }
 });
+
 ipcMain.on('request-app-exit', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win && !win.isDestroyed()) {
         handleExitRequest(win);
     }
 });
+
 ipcMain.on('toggle-maximize', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win || win.isDestroyed()) return;
@@ -274,13 +310,13 @@ ipcMain.on('toggle-maximize', (event) => {
         event.sender.send('window-maximize-changed', true);
     }
 });
+
 ipcMain.on('get-maximize-state', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win || win.isDestroyed()) return;
     event.sender.send('window-maximize-changed', win.isMaximized());
 });
 
-// Logout user
 // ------------------- Logout Handler -------------------
 ipcMain.on('logout', async (event) => {
     try {
@@ -292,7 +328,7 @@ ipcMain.on('logout', async (event) => {
 
         // 2️⃣ Disconnect desktop server
         if (desktopServerProcess && !desktopServerProcess.killed) {
-            desktopServerProcess.kill('SIGINT');
+            desktopServerProcess.kill('SIGTERM');
             console.log("Desktop server disconnected via process kill.");
             desktopServerProcess = null;
         } else {
@@ -311,22 +347,24 @@ ipcMain.on('logout', async (event) => {
             mainWindow = null;
         }
 
-        // 4️⃣ Show login window
-        if (!loginWindow) createLoginWindow();
-        loginWindow.webContents.send('reset-login-fields');
+        // 4️⃣ Create NEW login window (since we destroyed the previous one)
+        createLoginWindow();
         loginWindow.show();
         loginWindow.focus();
 
         // 5️⃣ Inform renderer
-        event.sender.send('logout-success', { message: 'Logged out successfully' });
+        if (!event.sender.isDestroyed()) {
+            event.sender.send('logout-success', { message: 'Logged out successfully' });
+        }
         console.log("Logout flow complete");
 
     } catch (err) {
         console.error("Logout failed:", err.message);
-        event.sender.send('logout-failed', { message: err.message });
+        if (!event.sender.isDestroyed()) {
+            event.sender.send('logout-failed', { message: err.message });
+        }
     }
 });
-
 
 // ------------------- Desktop Server Handling -------------------
 
@@ -341,7 +379,7 @@ function getLocalIP() {
     return 'localhost';
 }
 
-// Connect desktop server
+// Connect desktop server with proper I/O handling
 ipcMain.on('connect-desktop-server', async (event) => {
     try {
         // Check if already running
@@ -351,16 +389,32 @@ ipcMain.on('connect-desktop-server', async (event) => {
         event.sender.send('desktop-server-status', { success: true, ip });
         return;
     } catch (_) {
-        // Start desktop server process
+        // Start desktop server process with proper I/O
         const desktopServerPath = path.join(__dirname, '..', 'DesktopServer', 'desktop_server.py');
-        desktopServerProcess = spawn('python', [desktopServerPath]);
+        desktopServerProcess = spawn('python', [desktopServerPath], {
+            detached: false,
+            stdio: ['ignore', 'pipe', 'pipe']
+        });
 
-        desktopServerProcess.stdout.on('data', (data) => console.log(`[Desktop Server] ${data}`));
-        desktopServerProcess.stderr.on('data', (data) => console.error(`[Desktop Server Error] ${data}`));
+        if (desktopServerProcess.stdout) {
+            desktopServerProcess.stdout.on('data', (data) => {
+                console.log(`[Desktop Server] ${data.toString().trim()}`);
+            });
+        }
+
+        if (desktopServerProcess.stderr) {
+            desktopServerProcess.stderr.on('data', (data) => {
+                console.error(`[Desktop Server Error] ${data.toString().trim()}`);
+            });
+        }
 
         desktopServerProcess.on('exit', (code, signal) => {
             console.log(`Desktop server exited (code: ${code}, signal: ${signal})`);
             desktopServerProcess = null;
+        });
+
+        desktopServerProcess.on('error', (err) => {
+            console.error('[Desktop Server] Process error:', err);
         });
 
         // Wait a moment and confirm server is ready
@@ -378,27 +432,46 @@ ipcMain.on('connect-desktop-server', async (event) => {
     }
 });
 
-// ------------------- App Quit Handling -------------------
-app.on('window-all-closed', (event) => {
-    if (!isQuiting) {
-        event.preventDefault();
-        return;
+// ------------------- App Quit Handling (FIXED) -------------------
+function stopAllServersSync() {
+    console.log("Stopping all background servers...");
+    
+    if (yoloProcess && !yoloProcess.killed) {
+        console.log("Stopping YOLO process...");
+        try {
+            yoloProcess.kill('SIGTERM');
+            yoloProcess = null;
+        } catch (err) {
+            console.error("Error killing YOLO process:", err);
+        }
     }
 
-    if (yoloProcess && !yoloProcess.killed) yoloProcess.kill('SIGINT');
-    if (desktopServerProcess && !desktopServerProcess.killed) desktopServerProcess.kill('SIGINT');
+    if (desktopServerProcess && !desktopServerProcess.killed) {
+        console.log("Stopping Desktop Server process...");
+        try {
+            desktopServerProcess.kill('SIGTERM');
+            desktopServerProcess = null;
+        } catch (err) {
+            console.error("Error killing Desktop Server process:", err);
+        }
+    }
+    
+    console.log("Cleanup complete.");
+}
 
+// Use 'will-quit' for synchronous cleanup
+app.on('will-quit', () => {
+    console.log("App will quit - cleaning up...");
+    stopAllServersSync();
+});
+
+app.on('window-all-closed', () => {
+    if (!isQuiting) {
+        console.log("All windows closed, app staying in tray.");
+        return; // app goes to tray, don't quit
+    }
+    // If isQuiting is true, quit the app (will trigger 'will-quit')
     app.quit();
-});
-
-app.on('quit', () => {
-    if (yoloProcess && !yoloProcess.killed) yoloProcess.kill('SIGINT');
-    if (desktopServerProcess && !desktopServerProcess.killed) desktopServerProcess.kill('SIGINT');
-});
-
-app.on('before-quit', () => {
-    if (yoloProcess && !yoloProcess.killed) yoloProcess.kill('SIGINT');
-    if (desktopServerProcess && !desktopServerProcess.killed) desktopServerProcess.kill('SIGINT');
 });
 
 // ------------------- Uploads Folder Watcher -------------------

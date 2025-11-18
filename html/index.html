@@ -62,8 +62,18 @@
     <!-- Dropdown Menu -->
     <div class="user-dropdown" id="userDropdown">
         <div class="dropdown-header">
-            <div class="user-name" id="dropdownUserName">User</div>
-            <div class="user-email" id="dropdownUserEmail">user@example.com</div>
+            <div class="user-name" id="dropdownUserName" title="Click top copy email address">
+                <div class="user-slide">
+                    <span>User</span>
+                </div>
+            </div>
+
+            
+            <!-- IP Address Section with clipboard icon -->
+            <div class="user-ip">
+                IP: <span id="ipAddress">192.168.1.100</span>
+                <i id="copyIPBtn" class="bi bi-clipboard" style="margin-left: 5px; cursor: pointer;" title="Click to copy IP"></i>
+            </div>
         </div>
         <div class="dropdown-menu-items">
             <button class="dropdown-item" id="changeProfileBtn">
@@ -72,11 +82,10 @@
             </button>
             <div class="dropdown-item d-flex align-items-center justify-content-start" id="changeAppearanceBtn">
                 <i class="bi bi-circle-half"></i>
-                <span>Apperance</span>
+                <span>Appearance</span>
                 <label class="switch mb-0">
                     <input type="checkbox" id="appearanceToggle">
-                    <span class="slider round">
-                    </span>
+                    <span class="slider round"></span>
                 </label>
             </div>
 
@@ -88,8 +97,40 @@
         </div>
     </div>
     <!-- End of dropdown menu -->
-    </div>
+
+</div>
         </div>
+        <!-- Account Selection Modal -->
+            <div id="accountSelectionModal" class="account-modal">
+                <div class="account-modal-overlay"></div>
+                <div class="account-modal-content">
+                    <h2>Choose Your Avatar</h2>
+
+                    <!-- Avatar Carousel -->
+                    <div class="avatar-carousel">
+                    <button id="prevAvatar" class="arrow-btn">&#10094;</button>
+                    
+                    <div class="avatar-display">
+                        <img id="currentAvatar" src="../images/Earl.png" alt="Avatar">
+                        <span id="avatarLabel">LABRADOR</span>
+                    </div>
+
+                    <button id="nextAvatar" class="arrow-btn">&#10095;</button>
+                    </div>
+
+                    <!-- Name Inputs -->
+                    <div class="name-inputs">
+                    <label for="firstName">First Name</label>
+                    <input type="text" id="firstName" placeholder="First Name">
+
+                    <label for="lastName">Last Name</label>
+                    <input type="text" id="lastName" placeholder="Last Name">
+                    </div>
+
+                    <!-- Apply Button -->
+                    <button id="applyAvatarChanges" class="apply-btn">Apply</button>
+                </div>
+            </div>
     </nav>
 
         <!-- Main container -->
@@ -124,42 +165,42 @@
                         <div class="stat-card">
                             <div class="card-top">
                                 <span>Raw</span>
-                                <span class="number">12</span>
+                                <span class="number">0</span>
                             </div>
                             <button class="view-btn">View</button>
                         </div>
                         <div class="stat-card">
                             <div class="card-top">
                                 <span>Analyzed</span>
-                                <span class="number">48</span>
+                                <span class="number">0</span>
                             </div>
                             <button class="view-btn">View</button>
                         </div>
                         <div class="stat-card">
                             <div class="card-top">
                                 <span>Dermatitis</span>
-                                <span class="number">300</span>
+                                <span class="number">0</span>
                             </div>
                             <button class="view-btn">View</button>
                         </div>
                         <div class="stat-card">
                             <div class="card-top">
                                 <span>Mange</span>
-                                <span class="number">10</span>
+                                <span class="number">0</span>
                             </div>
                             <button class="view-btn">View</button>
                         </div>
                         <div class="stat-card">
                             <div class="card-top">
                                 <span>Hotspot</span>
-                                <span class="number">8</span>
+                                <span class="number">0</span>
                             </div>
                             <button class="view-btn">View</button>
                         </div>
                         <div class="stat-card">
                             <div class="card-top">
                                 <span>Healthy</span>
-                                <span class="number">15</span>
+                                <span class="number">0</span>
                             </div>
                             <button class="view-btn">View</button>
                         </div>
@@ -226,9 +267,9 @@
 
 
                     </div>
-
                 </div>
             </div>
+
         </div>
 
 
@@ -241,53 +282,53 @@
                 <div class="left-controls">
                     <div class="gallery-controls">
                         <div class="sort-dropdown-container">
-                            <button class="btn btn-secondary dropdown-toggle sort-dropdown" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-filter-left"></i> Sort image
+                            <button class="btn sort-dropdown" id="sortDropdown">
+                                <i class="bi bi-filter-left"></i> Sort
+                                <i class="bi bi-chevron-down ms-2"></i>
                             </button>
-                            <ul class="dropdown-menu p-2" aria-labelledby="sortDropdown" style="min-width: 200px;">
-                                <li>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="Analyzed" id="sortAnalyzed">
-                                    <label class="form-check-label" for="sortAnalyzed">Analyzed</label>
+                            <div class="sort-dropdown-menu">
+                                <div class="sort-dropdown-item">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="sortAnalyzed">
+                                        <label class="form-check-label" for="sortAnalyzed">Analyzed</label>
+                                    </div>
                                 </div>
-                                </li>
-                                <li>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="Raw" id="sortRaw">
-                                    <label class="form-check-label" for="sortRaw">Raw</label>
+                                <div class="sort-dropdown-item">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="sortRaw">
+                                        <label class="form-check-label" for="sortRaw">Raw</label>
+                                    </div>
                                 </div>
-                                </li>
-                                <li>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="" id="sortDermatitis">
-                                    <label class="form-check-label" for="sortDermatitis">Dermatitis</label>
+                                <div class="sort-dropdown-item">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="sortDermatitis">
+                                        <label class="form-check-label" for="sortDermatitis">Dermatitis</label>
+                                    </div>
                                 </div>
-                                </li>
-                                <li>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="" id="sortMange">
-                                    <label class="form-check-label" for="sortMange">Mange</label>
+                                <div class="sort-dropdown-item">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="sortMange">
+                                        <label class="form-check-label" for="sortMange">Mange</label>
+                                    </div>
                                 </div>
-                                </li>
-                                <li>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="" id="sortHotspot">
-                                    <label class="form-check-label" for="sortHotspot">Hotspot</label>
+                                <div class="sort-dropdown-item">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="sortHotspot">
+                                        <label class="form-check-label" for="sortHotspot">Hotspot</label>
+                                    </div>
                                 </div>
-                                </li>
-                                <li>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="" id="sortHealthy">
-                                    <label class="form-check-label" for="sortHealthy">Healthy</label>
+                                <div class="sort-dropdown-item">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="sortHealthy">
+                                        <label class="form-check-label" for="sortHealthy">Healthy</label>
+                                    </div>
                                 </div>
-                                </li>
-                            </ul>
+                            </div>
                         </div>
-
                     </div>
 
                     <button id="minimizeDetail" class="btn btn-light minimize-detail">
-                        <i class="bi bi-layout-text-sidebar-reverse"></i> Show Details
+                        <i class="bi bi-layout-text-sidebar-reverse"></i> Details
                     </button>
 
                     <button id="refreshButton" class="btn btn-light refresh-button">
@@ -296,15 +337,15 @@
                 </div>
 
                 <!-- Right Controls: Analyze and Delete Buttons -->
-                <div class="right-controls" style="display: flex; gap: 0.5rem;">
-                    <button id="deleteSelectedButton" class="btn btn-light delete-selected-button">
-                        <i class="bi bi-trash"></i> Delete
+                <div class="actions-dropdown" id="actionsDropdown">
+                    <button class="actions-dropdown-button shadow-sm" id="actionsDropdownButton">
+                        <i class="bi bi-check2-square"></i> Select Images
                     </button>
-                    <button id="analyzeModeButton" class="btn btn-light analyze-mode-button">
-                        <i class="bi bi-box-arrow-in-down"></i> Analyze Images
-                    </button>
+                    <div class="actions-dropdown-content" id="actionsDropdownMenu">
+                        <div id="dropdownAnalyzeBtn"> <i class="bi bi-search"></i> Analyze Selected</div>
+                        <div id="dropdownDeleteBtn"> <i class="bi bi-trash-fill"></i> Delete Selected</div>
+                    </div>
                 </div>
-
             </div>
             <!-- End of Left Controls: Sort Dropdown + Show Details -->
 
@@ -312,24 +353,27 @@
             <div class="gallery-columns">
                 <!-- Left Column: Image Grid -->
                 <div class="gallery-left">
-                    <div class="gallery-upload-bar" style="display:flex; gap: 0.5rem; align-items:center; margin-bottom: 0.5rem;">
-                        <button id="galleryUploadBtn" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-upload"></i> Upload Image
-                        </button>
-                        <input id="galleryUploadInput" type="file" accept="image/*" style="display:none;" />
-                    </div>
                     <div id="imageGrid" class="image-grid">
                         <div class="image-item">Image 1</div>
                         <div class="image-item">Image 2</div>
                         <div class="image-item">Image 3</div>
                         <div class="image-item">Image 4</div>
                     </div>
+                    <!-- Upload Button fixed at bottom-right -->
+                    <button id="galleryUploadBtn" class=" btn upload-btn shadow-sm">
+                        <input id="galleryUploadInput" type="file" accept="image/*" style="display:none;" />
+                        <i class="bi bi-upload"></i>
+                        Upload
+                    </button>
                 </div>
 
                 <!-- Right Column: Detail Pane -->
                 <div class="gallery-right minimized" id="detailPane">
                     <div class="detail-content">
-                        <p>Details of selected image will appear here.</p>
+                            <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#888;">
+                                <i class="bi bi-image" style="font-size:3rem; margin-bottom:1rem;"></i>
+                            <div style="font-size:1.2rem; font-weight:500;">Select an image</div>
+                        </div>
                     </div>
                 </div>
 
@@ -350,7 +394,16 @@
                 <!-- Analyze Image Floating Box (Dominant) -->
                 <div class="floating-box analyze-image-box dominant">
                     <div class="box-header box-header--analyze-image">
-                        <h4><i class="bi bi-search"></i> Analyze Image</h4>
+                        <h4> Analyze Image</h4>
+                        <div class="dropdown">
+                            <button class="dropdown-button" id="dropdownButton">
+                                Select Model <span>▼</span>
+                            </button>
+                            <div class="dropdown-content" id="dropdownMenu">
+                                <div>YoloV8n</div>
+                                <div>YoloV11n</div>
+                            </div>
+                        </div>
                     </div>
                     <div class="box-content">
                         <div class="image-upload-area" id="imageUploadArea">
@@ -473,38 +526,6 @@
             </div>
         </div>
     </div>
-
-<!-- Account Selection Modal -->
-<div id="accountSelectionModal" class="account-modal">
-  <div class="account-modal-overlay"></div>
-  <div class="account-modal-content">
-    <h2>Choose Your Avatar</h2>
-
-    <!-- Avatar Carousel -->
-    <div class="avatar-carousel">
-      <button id="prevAvatar" class="arrow-btn">&#10094;</button>
-      
-      <div class="avatar-display">
-        <img id="currentAvatar" src="../images/Earl.png" alt="Avatar">
-        <span id="avatarLabel">LABRADOR</span>
-      </div>
-
-      <button id="nextAvatar" class="arrow-btn">&#10095;</button>
-    </div>
-
-    <!-- Name Inputs -->
-    <div class="name-inputs">
-      <label for="firstName">First Name</label>
-      <input type="text" id="firstName" placeholder="First Name">
-
-      <label for="lastName">Last Name</label>
-      <input type="text" id="lastName" placeholder="Last Name">
-    </div>
-
-    <!-- Apply Button -->
-    <button id="applyAvatarChanges" class="apply-btn">Apply</button>
-  </div>
-</div>
 
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
