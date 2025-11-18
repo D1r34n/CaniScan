@@ -250,7 +250,6 @@ loadAnalysisHistory();
 // UTILITY FUNCTIONS
 // ================================
 export function restoreChatInputClickability() {
-export function restoreChatInputClickability() {
     const chatInput = document.getElementById('chatInput');
     const sendMessageBtn = document.getElementById('sendMessageBtn');
     const chatInputArea = document.querySelector('.chat-input-area');
@@ -575,6 +574,18 @@ function setupGallerySelection() {
     });
 }
 
+function autoAnalyzeSelectedImage() {
+    if (window.currentAnalysisSource?.type !== 'gallery') return;
+
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const previewImage = document.getElementById('previewImage');
+    if (!analyzeBtn || !previewImage || !previewImage.src) return;
+
+    if (!analyzeBtn.disabled) {
+        analyzeBtn.click();
+    }
+}
+
 async function fetchImageAsDataURL(url) {
     const response = await fetch(url);
     if (!response.ok) {
@@ -635,6 +646,46 @@ async function saveAnalyzedImageToGallery(imageSrc, disease, confidence) {
     } catch (error) {
         console.error('Error saving image to gallery:', error);
         throw error;
+    }
+}
+
+// Load and populate breeds from CSV
+async function loadBreeds() {
+    try {
+        const response = await fetch('../csv/fci-breeds.csv');
+        const csvText = await response.text();
+        
+        const lines = csvText.split('\n');
+        const breeds = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line) {
+                const columns = line.split(',');
+                const breedName = columns[1];
+                if (breedName) {
+                    breeds.push(breedName);
+                }
+            }
+        }
+        
+        // Populate dropdown
+        const select = document.getElementById('dogBreed-box');
+        
+        breeds.forEach(breed => {
+            const option = document.createElement('option');
+            const formattedBreed = breed.toLowerCase()
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            
+            option.value = breed.toLowerCase().replace(/\s+/g, '-');
+            option.textContent = formattedBreed;
+            select.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('Error loading breeds:', error);
     }
 }
 
