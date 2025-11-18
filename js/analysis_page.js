@@ -251,19 +251,43 @@ loadAnalysisHistory();
 // ================================
 export function restoreChatInputClickability() {
     const chatInput = document.getElementById('chatInput');
+    const sendMessageBtn = document.getElementById('sendMessageBtn');
     const chatInputArea = document.querySelector('.chat-input-area');
+    const inputGroup = document.querySelector('.input-group');
     const recommendationsBox = document.querySelector('.recommendations-box');
+    const chatContainer = document.querySelector('.chat-container');
     
     if (chatInput) {
         chatInput.disabled = false;
         chatInput.style.pointerEvents = 'auto';
         chatInput.style.zIndex = '20';
+        chatInput.style.opacity = '1';
+        chatInput.removeAttribute('readonly');
         chatInput.focus();
+    }
+    
+    if (sendMessageBtn) {
+        sendMessageBtn.disabled = false;
+        sendMessageBtn.style.pointerEvents = 'auto';
+        sendMessageBtn.style.zIndex = '30';
+        sendMessageBtn.style.opacity = '1';
+        sendMessageBtn.style.cursor = 'pointer';
     }
     
     if (chatInputArea) {
         chatInputArea.style.pointerEvents = 'auto';
         chatInputArea.style.zIndex = '20';
+        chatInputArea.style.opacity = '1';
+    }
+    
+    if (inputGroup) {
+        inputGroup.style.pointerEvents = 'auto';
+        inputGroup.style.zIndex = '20';
+    }
+    
+    if (chatContainer) {
+        chatContainer.style.pointerEvents = 'auto';
+        chatContainer.style.zIndex = '10';
     }
     
     if (recommendationsBox) {
@@ -271,10 +295,11 @@ export function restoreChatInputClickability() {
         recommendationsBox.style.pointerEvents = 'auto';
     }
     
-    // Remove any lingering popup overlays
-    const blockingOverlays = document.querySelectorAll('.popup-overlay:not(.analysis-details-popup .popup-overlay), .analysis-details-popup');
+    // Remove any lingering popup overlays that might be blocking
+    const blockingOverlays = document.querySelectorAll('.popup-overlay');
     blockingOverlays.forEach(overlay => {
         const popup = overlay.closest('.analysis-details-popup');
+        // Only remove if it's not part of an active popup
         if (!popup || !document.body.contains(popup)) {
             if (overlay.parentNode) {
                 overlay.parentNode.removeChild(overlay);
@@ -282,6 +307,30 @@ export function restoreChatInputClickability() {
         }
     });
     
+    // Remove any invisible blocking elements
+    const allElements = document.querySelectorAll('*');
+    allElements.forEach(el => {
+        const style = window.getComputedStyle(el);
+        // Check if element is positioned and might be blocking
+        if (style.position === 'fixed' || style.position === 'absolute') {
+            const zIndex = parseInt(style.zIndex) || 0;
+            // If it's a high z-index element that's not visible but might block
+            if (zIndex > 10 && zIndex < 9999 && (style.opacity === '0' || style.display === 'none')) {
+                // Don't remove it, but ensure it's not blocking
+                if (el.classList.contains('popup-overlay') || el.classList.contains('analysis-details-popup')) {
+                    // Already handled above
+                }
+            }
+        }
+    });
+    
+    // Force a reflow to ensure styles are applied
+    if (chatInput) {
+        void chatInput.offsetHeight;
+    }
+    if (sendMessageBtn) {
+        void sendMessageBtn.offsetHeight;
+    }
 }
 
 // ============================================
@@ -600,7 +649,16 @@ function setupAnalysisButton() {
             );
             
             // Show initial LLM recommendation in chat
-            showInitialRecommendation(analysisResult.recommendation);
+            if (window.showInitialRecommendation) {
+                window.showInitialRecommendation(analysisResult.recommendation);
+            } else {
+                // Fallback: setupChatInterface might not be called yet
+                setTimeout(() => {
+                    if (window.showInitialRecommendation) {
+                        window.showInitialRecommendation(analysisResult.recommendation);
+                    }
+                }, 100);
+            }
             
             // Store current analysis data for chat context
             window.currentAnalysis = {
@@ -615,7 +673,13 @@ function setupAnalysisButton() {
             // Ensure chat input is clickable and focused after analysis
             setTimeout(() => {
                 restoreChatInputClickability();
-            }, 100);
+                // Also ensure send button is properly initialized
+                const sendMessageBtn = document.getElementById('sendMessageBtn');
+                if (sendMessageBtn && !sendMessageBtn.hasAttribute('data-listener-attached')) {
+                    // Re-attach listener if needed (shouldn't be necessary but just in case)
+                    sendMessageBtn.setAttribute('data-listener-attached', 'true');
+                }
+            }, 200);
             
         } catch (error) {
             console.error('Analysis failed:', error);
@@ -659,13 +723,29 @@ function setupChatInterface() {
     const sendMessageBtn = document.getElementById('sendMessageBtn');
     const chatMessages = document.getElementById('chatMessages');
     
+    if (!chatInput || !sendMessageBtn || !chatMessages) {
+        console.warn('Chat interface elements not found');
+        return;
+    }
+    
+    // Check if already initialized to prevent duplicate listeners
+    if (chatInput.hasAttribute('data-chat-initialized')) {
+        // Already initialized, just ensure it's clickable
+        restoreChatInputClickability();
+        return;
+    }
+    
     function sendMessage() {
-        const message = chatInput.value.trim();
+        // Get current chat input from DOM (in case it was replaced)
+        const currentChatInput = document.getElementById('chatInput');
+        if (!currentChatInput) return;
+        
+        const message = currentChatInput.value.trim();
         if (!message) return;
         
         // Add user message
         addChatMessage(message, 'user');
-        chatInput.value = '';
+        currentChatInput.value = '';
         
         // Show typing indicator
         const typingIndicator = addTypingIndicator();
@@ -753,7 +833,10 @@ function setupChatInterface() {
         addChatMessage(recommendation, 'bot');
     }
     
+    // Attach event listeners
     sendMessageBtn.addEventListener('click', sendMessage);
+    sendMessageBtn.setAttribute('data-listener-attached', 'true');
+    
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             sendMessage();
@@ -771,6 +854,9 @@ function setupChatInterface() {
         }
     });
     
+    // Mark as initialized
+    chatInput.setAttribute('data-chat-initialized', 'true');
+    
     // Auto-focus chat input when analysis page is shown
     const analysisPage = document.getElementById('analysisPage');
     if (analysisPage) {
@@ -778,7 +864,11 @@ function setupChatInterface() {
             if (analysisPage.style.display !== 'none') {
                 // Small delay to ensure page is fully rendered
                 setTimeout(() => {
-                    chatInput.focus();
+                    const currentChatInput = document.getElementById('chatInput');
+                    if (currentChatInput) {
+                        currentChatInput.focus();
+                        restoreChatInputClickability();
+                    }
                 }, 100);
             }
         });
@@ -794,10 +884,26 @@ function setupChatInterface() {
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
+    
+    // Store showInitialRecommendation for use outside
+    window.showInitialRecommendation = showInitialRecommendation;
 }
 
 //setup image upload functionality
 setupImageUpload();
+
+// Initialize chat interface and analysis button
+// Use DOMContentLoaded to ensure elements exist, or call immediately if already loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setupChatInterface();
+        setupAnalysisButton();
+    });
+} else {
+    // DOM already loaded
+    setupChatInterface();
+    setupAnalysisButton();
+}
 
 // ================================
 // EXPORT FUNCTIONS FOR USE IN OTHER FILES

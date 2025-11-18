@@ -317,7 +317,25 @@ if (!window._functionReloadProtected) {
 
     if (homeBtn) homeBtn.addEventListener("click", () => showPage(homePage));
     if (galleryBtn) galleryBtn.addEventListener('click', () => { showPage(galleryPage); loadGalleryImages(); });
-    if (analysisBtn) analysisBtn.addEventListener("click", () => showPage(analysisPage));
+    if (analysisBtn) analysisBtn.addEventListener("click", () => {
+        showPage(analysisPage);
+        // Ensure chat interface and analysis button are initialized when page is shown
+        setTimeout(() => {
+            if (window.analysisPageFunctions) {
+                // Re-initialize to ensure event listeners are attached
+                if (window.analysisPageFunctions.setupChatInterface) {
+                    window.analysisPageFunctions.setupChatInterface();
+                }
+                if (window.analysisPageFunctions.setupAnalysisButton) {
+                    window.analysisPageFunctions.setupAnalysisButton();
+                }
+                // Restore clickability
+                if (window.analysisPageFunctions.restoreChatInputClickability) {
+                    window.analysisPageFunctions.restoreChatInputClickability();
+                }
+            }
+        }, 100);
+    });
 
     showPage(homePage);
 
