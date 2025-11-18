@@ -84,6 +84,7 @@
 }
 
 .box-content:has(.image-preview[style*="display: block"]) {
+  grid-template-columns: 1fr 400px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: start;
@@ -283,17 +284,23 @@
   pointer-events: auto;
 }
 
+.analysis-result-box {
+  flex-direction: column;
+  gap: 8px;
+  grid-template-columns: 1fr 400px;
+}
+
 .analysis-results {
   grid-column: 2;
   margin-top: 0;
-  padding: 2rem;
+  padding: 1.5rem;
   background: white;
   border-radius: 15px;
   border: 2px solid #e9ecef;
   height: 100%;
   position: sticky;
   top: 0;
-  display: block !important; /* Always show, override inline styles */
+  display: block !important;
 }
 
 .box-content:not(:has(.image-preview[style*="display: block"])) .analysis-results {
@@ -313,7 +320,8 @@
 }
 
 .diagnosis-result,
-.confidence-result {
+.confidence-result,
+.inference-time-result {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -986,6 +994,48 @@
 
 .dropdown-content > div:not(:last-child) {
   border-bottom: 1px solid #f0f0f0;
+}
+
+/* Form field container */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 3px;
+}
+
+/* Labels */
+.form-field label {
+  color: #282624;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+/* Input and Select fields */
+.form-field input,
+.form-field select {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background: #f8f9fa;
+  color: #495057;
+  transition: all 0.3s ease;
+}
+
+/* Focus states */
+.form-field input:focus,
+.form-field select:focus {
+  outline: none;
+  border-color: #d9b99b;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(217, 185, 155, 0.1);
+}
+
+/* Placeholder text */
+.form-field input::placeholder {
+  color: #adb5bd;
 }
 
 /* Responsive adjustments */

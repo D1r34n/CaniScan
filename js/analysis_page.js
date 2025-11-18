@@ -250,6 +250,7 @@ loadAnalysisHistory();
 // UTILITY FUNCTIONS
 // ================================
 export function restoreChatInputClickability() {
+export function restoreChatInputClickability() {
     const chatInput = document.getElementById('chatInput');
     const sendMessageBtn = document.getElementById('sendMessageBtn');
     const chatInputArea = document.querySelector('.chat-input-area');
@@ -385,13 +386,10 @@ function handleImageFile(file) {
     const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
     const imagePreview = document.getElementById('imagePreview');
     const previewImage = document.getElementById('previewImage');
-    
-    if (!uploadArea || !uploadPlaceholder || !imagePreview || !previewImage) {
-        console.error('Required elements not found');
-        return;
-    }
-    
-    console.log('Processing image file:', file.name);
+        
+    // Check if this is a different image
+    const isDifferentImage = !window.currentAnalysisSource || 
+                            window.currentAnalysisSource.filename !== file.name;
     
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -403,7 +401,35 @@ function handleImageFile(file) {
             type: 'upload',
             filename: file.name || 'uploaded-image'
         };
-        console.log('Image loaded successfully');
+        
+        // If it's a different image, hide results and show form
+        if (isDifferentImage) {
+            const analysisResults = document.getElementById('analysisResults');
+            const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
+            const analysisForm = document.getElementById('analysisForm');
+            
+            if (analysisResults) {
+                analysisResults.style.display = 'none';
+            }
+            
+            if (analysisResultsDisplay) {
+                analysisResultsDisplay.style.display = 'none';
+            }
+            
+            if (analysisForm) {
+                analysisForm.style.display = 'block';
+            }
+            
+            // Scroll to form after a short delay
+            setTimeout(() => {
+                if (analysisForm) {
+                    analysisForm.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }
+            }, 100);
+        }
     };
     reader.onerror = (e) => {
         console.error('Error reading file:', e);
@@ -412,70 +438,81 @@ function handleImageFile(file) {
     reader.readAsDataURL(file);
 }
 
-// Image upload and preview functionality
 function setupImageUpload() {
-const uploadArea = document.getElementById('imageUploadArea');
-const uploadPlaceholder = uploadArea.querySelector('.upload-placeholder');
-const imagePreview = document.getElementById('imagePreview');
-const previewImage = document.getElementById('previewImage');
-const changeImageBtn = document.getElementById('changeImageBtn');
+    const uploadArea = document.getElementById('imageUploadArea');
+    const uploadPlaceholder = uploadArea.querySelector('.upload-placeholder');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImage = document.getElementById('previewImage');
+    const changeImageBtn = document.getElementById('changeImageBtn');
 
-// Drag and drop functionality
-uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadPlaceholder.style.borderColor = '#c4a484';
-    uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.1)';
-});
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadPlaceholder.style.borderColor = '#c4a484';
+        uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.1)';
+    });
 
-uploadArea.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    uploadPlaceholder.style.borderColor = '#d9b99b';
-    uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
-});
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadPlaceholder.style.borderColor = '#d9b99b';
+        uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
+    });
 
-uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadPlaceholder.style.borderColor = '#d9b99b';
-    uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        handleImageFile(files[0]);
-    }
-});
-
-// File input functionality
-uploadPlaceholder.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Create a new file input each time
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*';
-    fileInput.style.display = 'none';
-    
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files && e.target.files.length > 0) {
-            handleImageFile(e.target.files[0]);
-        }
-        // Clean up immediately after use
-        if (fileInput.parentNode) {
-            fileInput.parentNode.removeChild(fileInput);
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadPlaceholder.style.borderColor = '#d9b99b';
+        uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleImageFile(files[0]);
         }
     });
-    
-    // Add to DOM, trigger click, then remove
-    document.body.appendChild(fileInput);
-    fileInput.click();
-    
-    // Clean up after a short delay to ensure the file dialog has opened
-    setTimeout(() => {
-        if (fileInput.parentNode) {
-            fileInput.parentNode.removeChild(fileInput);
+
+    // File input functionality (click on placeholder)
+    uploadPlaceholder.addEventListener('click', (e) => {
+        // Don't open file picker if clicking on the gallery button or change image button
+        const selectFromGalleryBtn = document.getElementById('selectFromGalleryBtn');
+        const changeImageBtn = document.getElementById('changeImageBtn');
+        
+        if (selectFromGalleryBtn && (e.target === selectFromGalleryBtn || selectFromGalleryBtn.contains(e.target))) {
+            return; // Let the gallery button handle its own click
         }
-    }, 100);
-});
+        
+        if (changeImageBtn && (e.target === changeImageBtn || changeImageBtn.contains(e.target))) {
+            return; // Let the change image button handle its own click
+        }
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Create a new file input each time
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleImageFile(e.target.files[0]);
+            }
+            // Clean up immediately after use
+            if (fileInput.parentNode) {
+                fileInput.parentNode.removeChild(fileInput);
+            }
+        });
+        
+        // Add to DOM, trigger click, then remove
+        document.body.appendChild(fileInput);
+        fileInput.click();
+        
+        // Clean up after a short delay to ensure the file dialog has opened
+        setTimeout(() => {
+            if (fileInput.parentNode) {
+                fileInput.parentNode.removeChild(fileInput);
+            }
+        }, 100);
+    });
 
 // Change image button
 changeImageBtn.addEventListener('click', () => {
@@ -607,48 +644,65 @@ function setupAnalysisButton() {
     const analysisResults = document.getElementById('analysisResults');
     const resultDiagnosis = document.getElementById('resultDiagnosis');
     const resultConfidence = document.getElementById('resultConfidence');
+    const resultInferenceTime = document.getElementById('resultInferenceTime');
     
     analyzeBtn.addEventListener('click', async () => {
-
-    if (!window.selectedModel) {
-        alert('Please select a model first (YoloV8n or YoloV11n)');
-        return;
-        }
-
         const previewImage = document.getElementById('previewImage');
         if (!previewImage.src) return;
+        
+        // Get form values
+        const dogName = document.getElementById('dogName');
+        const dogBreed = document.getElementById('dogBreed');
+        const modelSelect = document.getElementById('modelSelect');
+        
+        // Validate model selection
+        if (!modelSelect || !modelSelect.value) {
+            alert('Please select a model first');
+            return;
+        }
+        
+        const selectedModel = modelSelect.value;
         
         // Show loading state
         analyzeBtn.disabled = true;
         analyzeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
         
         try {
-
             // Call real YOLO analysis API
-            const analysisResult = await performRealAnalysis(previewImage.src, window.selectedModel);
+            const analysisResult = await performRealAnalysis(previewImage.src, selectedModel);
             
-            // Show results
-            analysisResults.style.display = 'block';
-            resultDiagnosis.textContent = analysisResult.disease;
-            resultConfidence.textContent = `${analysisResult.confidence}%`;
-            const resultInferenceTime = document.getElementById('resultInferenceTime');
+            // Hide form, show results
+            const analysisForm = document.getElementById('analysisForm');
+            const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
+            const resultsTitle = document.getElementById('resultsTitle');
+            
+            if (analysisForm) analysisForm.style.display = 'none';
+            if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'flex';
+            if (resultsTitle) resultsTitle.textContent = dogName?.value || 'Analysis Results';
             if (resultInferenceTime && analysisResult.inference_time !== undefined) {
-                resultInferenceTime.textContent = `${analysisResult.inference_time}s`;
-            }
+                    resultInferenceTime.textContent = `${analysisResult.inference_time}s`;
+                }
+
+            // Update results
+            const resultDiagnosis = document.getElementById('resultDiagnosis');
+            const resultConfidence = document.getElementById('resultConfidence');
             
-            // Save analyzed image to gallery
+            if (resultDiagnosis) resultDiagnosis.textContent = analysisResult.disease;
+            if (resultConfidence) resultConfidence.textContent = `${analysisResult.confidence}%`;
+            
+            // Save to gallery
             const savedFilename = await saveAnalyzedImageToGallery(
-            previewImage.src, 
-            analysisResult.disease, 
-            analysisResult.confidence
-            ); 
+                previewImage.src, 
+                analysisResult.disease, 
+                analysisResult.confidence
+            );
             
-            // Add to history with filename
-            await addToAnalysisHistory(
-            previewImage.src, 
-            analysisResult.disease, 
-            `${analysisResult.confidence}%`, 
-            savedFilename
+            // Add to history
+            await window.analysisPageFunctions.addToAnalysisHistory(
+                previewImage.src, 
+                analysisResult.disease, 
+                `${analysisResult.confidence}%`, 
+                savedFilename
             );
             
             // Show initial LLM recommendation in chat
@@ -667,13 +721,14 @@ function setupAnalysisButton() {
             window.currentAnalysis = {
                 diagnosis: analysisResult.disease,
                 confidence: analysisResult.confidence,
-                model: window.selectedModel
+                model: selectedModel,
+                dogName: dogName?.value || '',
+                dogBreed: dogBreed?.value || ''
             };
             
-            // Debug: Log the stored analysis data
-            console.log('DEBUG: Stored analysis data:', window.currentAnalysis);
+            // Show initial recommendation
+            showInitialRecommendation(analysisResult.recommendation);
             
-            // Ensure chat input is clickable and focused after analysis
             setTimeout(() => {
                 restoreChatInputClickability();
                 // Also ensure send button is properly initialized
@@ -893,6 +948,7 @@ function setupChatInterface() {
 }
 
 //setup image upload functionality
+loadBreeds();
 setupImageUpload();
 
 // Initialize chat interface and analysis button
@@ -921,5 +977,6 @@ window.analysisPageFunctions = {
     handleImageFile,
     setupImageUpload,
     setupAnalysisButton,
-    setupChatInterface
+    setupChatInterface,
+    autoAnalyzeSelectedImage
 };

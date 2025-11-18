@@ -1,7 +1,15 @@
 // Home Page Functions
-import { loadGalleryImages, analyzeModeActive, exitAnalyzeMode } from './gallery_page.js';
-import { restoreChatInputClickability } from './analysis_page.js';
+import { 
+    loadGalleryImages, 
+    analyzeModeActive, 
+    exitAnalyzeMode 
+} from './gallery_page.js';
 
+import {
+    restoreChatInputClickability
+} from './analysis_page.js';
+
+// Protect against multiple loads of this script
 if (!window._functionReloadProtected) {
     window._functionReloadProtected = true;
     console.log("%c⚙️ Initializing functions.js...", "color: cyan; font-weight: bold;");
