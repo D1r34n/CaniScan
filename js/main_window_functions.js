@@ -1,300 +1,262 @@
 // Home Page Functions
 import { loadGalleryImages, analyzeModeActive, exitAnalyzeMode } from './gallery_page.js';
-// Protect against multiple loads of this script
+import { restoreChatInputClickability } from './analysis_page.js';
+
 if (!window._functionReloadProtected) {
-  
-  window._functionReloadProtected = true;
+    window._functionReloadProtected = true;
 
-  console.log("%c⚙️ Initializing functions.js...", "color: cyan; font-weight: bold;");
+    console.log("%c⚙️ Initializing functions.js...", "color: cyan; font-weight: bold;");
 
-  // Variables
-  const minimizeBtn = document.getElementById('minimize');
-  const closeBtn = document.getElementById('close');  
+    // ================================
+    // VARIABLES
+    // ================================
+    const minimizeBtn = document.getElementById('minimize');
+    const closeBtn = document.getElementById('close');
 
-  const loadingScreenContainer = document.getElementById("loadingScreenContainer");
-  const galleryOverview = document.getElementById("galleryOverview");
+    const loadingScreenContainer = document.getElementById("loadingScreenContainer");
+    const galleryOverview = document.getElementById("galleryOverview");
 
-  const galleryBtn = document.getElementById("galleryBtn");
-  const analysisBtn = document.getElementById("analysisBtn");
+    const galleryBtn = document.getElementById("galleryBtn");
+    const analysisBtn = document.getElementById("analysisBtn");
 
-  let serverConnected = false;
+    let isOnline = navigator.onLine;
+    let serverConnected = false;
+    let wasOnline = isOnline;
+    let wasServerConnected = serverConnected;
 
-  const userNameElement = document.getElementById("userName");
-  const dropdownUserName = document.getElementById("dropdownUserName");
-  const dropdownUserEmail = document.getElementById("dropdownUserEmail");
+    const userNameElement = document.getElementById("userName");
+    const dropdownUserName = document.getElementById("dropdownUserName");
+    const slideContainer = dropdownUserName.querySelector(".user-slide span");
 
-  const userGreeting = document.getElementById('userGreeting');
-  const userDropdown = document.getElementById('userDropdown');
+    const userGreeting = document.getElementById('userGreeting');
+    const userDropdown = document.getElementById('userDropdown');
 
-  let loggedInUserName = ""; // store user name globally
-  
-  // Minimize and Close Button
-  let ipcRenderer;
-  try {
-    const electron = require('electron');
-    ipcRenderer = electron.ipcRenderer;
-    console.log("Electron detected, ipcRenderer loaded.");
-  } catch (err) {
-    console.log("Not running in Electron, skipping ipcRenderer.");
-  }
+    let loggedInUserName = "";
 
-  if (minimizeBtn) minimizeBtn.addEventListener('click', () => ipcRenderer.send('minimize-window'));
-  if (closeBtn) closeBtn.addEventListener('click', () => ipcRenderer.send('close-window'));
-  
-  // Check Log-in session and connect to gallery server
-  async function initUserSession() {
-    if (!userNameElement) return;
-
+    // ================================
+    // ELECTRON IPC
+    // ================================
+    let ipcRenderer;
     try {
-        // Fetch session info from Flask
-        const res = await fetch("http://127.0.0.1:5000/status", {
-            method: "GET",
-            credentials: "include" // send cookies for session
-        });
+        const electron = require('electron');
+        ipcRenderer = electron.ipcRenderer;
+        console.log("Electron detected, ipcRenderer loaded.");
+    } catch (err) {
+        console.log("Not running in Electron, skipping ipcRenderer.");
+    }
 
-        const data = await res.json();
+    if (minimizeBtn && ipcRenderer) minimizeBtn.addEventListener('click', () => ipcRenderer.send('minimize-window'));
+    if (closeBtn && ipcRenderer) closeBtn.addEventListener('click', () => ipcRenderer.send('close-window'));
 
-        if (data.logged_in) {
-            console.log("%c📧 Logged in user data from session:", "color: yellow;", data);
+    // ================================
+    // FADE UTILS
+    // ================================
+    function fadeIn(element, duration = 400) {
+        if (!element) return;
+        element.style.display = "flex";
+        element.style.opacity = 0;
+        let opacity = 0;
+        const interval = 20;
+        const increment = interval / duration;
+        const fade = setInterval(() => {
+            opacity += increment;
+            element.style.opacity = opacity;
+            if (opacity >= 1) clearInterval(fade);
+        }, interval);
+    }
 
-            loggedInUserName = data.name || "User"; // fallback if name not sent
-            userNameElement.textContent = `Hello, ${loggedInUserName}!`;
-
-            if (dropdownUserName) dropdownUserName.textContent = loggedInUserName;
-            if (dropdownUserEmail && data.email) {
-                dropdownUserEmail.textContent = data.email;
+    function fadeOut(element, duration = 400, callback) {
+        if (!element) { if(callback) callback(); return; }
+        element.style.opacity = 1;
+        let opacity = 1;
+        const interval = 20;
+        const decrement = interval / duration;
+        const fade = setInterval(() => {
+            opacity -= decrement;
+            element.style.opacity = opacity;
+            if (opacity <= 0) {
+                clearInterval(fade);
+                element.style.display = "none";
+                if (callback) callback();
             }
+        }, interval);
+    }
 
-            console.log("%c👤 Logged-in user set to:", "color: cyan;", loggedInUserName);
+    // ================================
+    // ONLINE / OFFLINE
+    // ================================
+    function updateOnlineStatus() {
+        isOnline = navigator.onLine;
+        if (isOnline === wasOnline && serverConnected === wasServerConnected) return;
+        wasOnline = isOnline;
+        wasServerConnected = serverConnected;
 
-            // Connect to local desktop server
-            console.log("%c🖧 Connecting to server...", "color: limegreen;");
+        if (!isOnline) {
+            console.warn("%c📡 You are offline", "color: orange;");
+            fadeIn(loadingScreenContainer, 200);
+            fadeOut(galleryOverview, 200);
+        } else {
+            console.log("%c✅ App is online", "color: limegreen;");
+            if (serverConnected) {
+                fadeOut(loadingScreenContainer, 200);
+                fadeIn(galleryOverview, 200);
+            }
+        }
+    }
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
 
-            if (!ipcRenderer) {
-                console.warn("ipcRenderer not available. Running outside Electron?");
+    // ================================
+    // SERVER CONNECTION
+    // ================================
+    async function checkServerConnection() {
+        if (!isOnline) return;
+        try {
+            const res = await fetch('http://127.0.0.1:5000/status');
+            serverConnected = res.ok;
+        } catch {
+            serverConnected = false;
+        }
+        updateOnlineStatus();
+    }
+    setInterval(checkServerConnection, 5000);
+
+    // ================================
+    // DESKTOP SERVER RETRY LOGIC
+    // ================================
+    const retryDelay = 5000;
+    function tryConnectDesktopServer() {
+        if (!ipcRenderer) return;
+        ipcRenderer.send('connect-desktop-server');
+
+        ipcRenderer.once('desktop-server-status', (event, status) => {
+            if (status.success) {
+                console.log("%c✅ Desktop server started successfully.", "color: limegreen;");
+                serverConnected = true;
+                fadeOut(loadingScreenContainer, 400, () => fadeIn(galleryOverview, 400));
+                if (galleryBtn) galleryBtn.disabled = false;
+                if (analysisBtn) analysisBtn.disabled = false;
+
+                // optionally show server IP
+                const ipSpan = document.getElementById("ipAddress");
+                const copyIPBtn = document.getElementById("copyIPBtn");
+                if (ipSpan && status.ip) {
+                    const originalIP = `${status.ip}:5001`;
+                    ipSpan.textContent = originalIP;
+                    if (copyIPBtn) {
+                        copyIPBtn.addEventListener("click", () => {
+                            navigator.clipboard.writeText(originalIP)
+                                .then(() => {
+                                    ipSpan.textContent = "IP copied!";
+                                    ipSpan.style.color = "#4caf50";
+                                    copyIPBtn.style.visibility = "hidden";
+                                    setTimeout(() => { ipSpan.textContent = originalIP; ipSpan.style.color = "#2f3035"; copyIPBtn.style.visibility = "visible"; }, 1500);
+                                }).catch(err => console.error("Failed to copy IP:", err));
+                        });
+                    }
+                }
+            } else {
+                console.error("%c❌ Failed to start desktop server:", "color: red;", status.message);
+                console.log(`Retrying in ${retryDelay / 1000} seconds...`);
+                setTimeout(tryConnectDesktopServer, retryDelay);
+            }
+        });
+    }
+
+    // ================================
+    // INIT USER SESSION
+    // ================================
+    async function initUserSession() {
+        if (!userNameElement) return;
+
+        try {
+            const res = await fetch("http://127.0.0.1:5000/status", {
+                method: "GET",
+                credentials: "include"
+            });
+            const data = await res.json();
+
+            if (!data.logged_in) {
+                console.log("%c❌ No user logged in.", "color: red;");
+                serverConnected = false; // ensure serverConnected is false
+                updateOnlineStatus();    // immediately update UI
                 return;
             }
 
-            ipcRenderer.send('connect-desktop-server');
+            loggedInUserName = data.name || "User";
+            const fullName = (data.name || "") + " " + (data.lastname || "");
+            userNameElement.textContent = `Hello, ${loggedInUserName}!`;
+            slideContainer.textContent = fullName || 'User';
 
-            ipcRenderer.once('desktop-server-status', (event, status) => {
-                if (status.success) {
-                    console.log("%c✅ Desktop server started successfully.", "color: limegreen;");
+            dropdownUserName.addEventListener('mouseenter', () => {
+                if(!slideContainer) return;
+                slideContainer.textContent = data.email || 'user@gmail.com';
+                dropdownUserName.querySelector(".user-slide").classList.add('slide');
+            });
 
-                    fadeOut(loadingScreenContainer, 400, () => fadeIn(galleryOverview, 400));
-                    serverConnected = true;
-                    if (galleryBtn) galleryBtn.disabled = false;
-                    if (analysisBtn) analysisBtn.disabled = false;
+            dropdownUserName.addEventListener('mouseleave', () => {
+                if(!slideContainer) return;
+                slideContainer.textContent = fullName || 'User';
+                dropdownUserName.querySelector(".user-slide").classList.remove('slide');
+            });
 
-                    // Show server IP
-                    const statusSpan = document.getElementById("serverStatus");
-                    const ipSpan = document.getElementById("serverIP");
-                    const copyIPBtn = document.getElementById("copyIPBtn");
 
-                    if (statusSpan && ipSpan && status.ip) {
-                        statusSpan.textContent = "active";
-                        const originalIP = `${status.ip}:5001`;
-                        ipSpan.textContent = originalIP;
+            // Click copies email
+            dropdownUserName.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(data.email);
+                    const originalText = dropdownUserName.textContent;
+                    slideContainer.textContent = 'Copied!';
+                    slideContainer.style.color = "#4caf50";
+                    dropdownUserName.style.userSelect = 'none';
+                    dropdownUserName.querySelector(".user-slide").classList.remove('slide');
 
-                        if (copyIPBtn) {
-                            copyIPBtn.addEventListener("click", () => {
-                                navigator.clipboard.writeText(originalIP)
-                                    .then(() => {
-                                        ipSpan.textContent = "IP copied!";
-                                        ipSpan.style.color = "limegreen";
-
-                                        setTimeout(() => {
-                                            ipSpan.textContent = originalIP;
-                                            ipSpan.style.color = "#333";
-                                        }, 1500);
-                                    })
-                                    .catch(err => console.error("Failed to copy IP:", err));
-                            });
-                        }
-                    }
-                } else {
-                    console.error("%c❌ Failed to start desktop server:", "color: red;", status.message);
-                    console.log(`Retrying in ${retryDelay / 1000} seconds...`);
-                    setTimeout(() => tryConnectDesktopServer(retryDelay), retryDelay);
+                    // Revert back after 1.5 seconds
+                    setTimeout(() => {
+                        slideContainer.textContent = data.email || 'user@gmail.com';
+                        slideContainer.style.color = "white";
+                        dropdownUserName.querySelector(".user-slide").classList.add('slide');
+                        
+                    }, 1500);
+                } catch (err) {
+                    console.error('Failed to copy email:', err);
                 }
             });
 
-        } else {
-            console.log("%c❌ No user logged in.", "color: red;");
-            // Optionally redirect to login page or show login form
+            console.log("%c👤 Logged-in user:", "color: cyan;", loggedInUserName);
+
+            serverConnected = true;     // mark server as connected
+            updateOnlineStatus();       // update UI after session check
+
+            tryConnectDesktopServer();  // existing logic for desktop server
+
+        } catch (err) {
+            console.error("Failed to check Flask session:", err);
+            serverConnected = false;    // mark server as offline
+            updateOnlineStatus();       // update UI accordingly
         }
-    } catch (err) {
-        console.error("Failed to check Flask session:", err);
     }
-  }
+    initUserSession();
 
-  
-  // Page switch variables
-  const homeBtn = document.getElementById("homeBtn");
-  const galleryPage = document.getElementById("galleryPage");
-  const analysisPage = document.getElementById("analysisPage");
-  const homePage = document.getElementById("homePage");
-
-  const navButtons = [homeBtn, galleryBtn, analysisBtn];
-
-  // Fade in and out function
-  function fadeIn(element, duration = 400) {
-    element.style.display = "flex";
-    element.style.opacity = 0;
-    let opacity = 0;
-    const interval = 20;
-    const increment = interval / duration;
-    const fade = setInterval(() => {
-      opacity += increment;
-      element.style.opacity = opacity;
-      if (opacity >= 1) clearInterval(fade);
-    }, interval);
-  }
-
-  function fadeOut(element, duration = 400, callback) {
-    element.style.opacity = 1;
-    let opacity = 1;
-    const interval = 20;
-    const decrement = interval / duration;
-    const fade = setInterval(() => {
-      opacity -= decrement;
-      element.style.opacity = opacity;
-      if (opacity <= 0) {
-        clearInterval(fade);
-        element.style.display = "none";
-        if (callback) callback();
-      }
-    }, interval);
-  }
-  // ================================
-  // PAGE SWITCHING WITH FADE
-  // ================================
-    function showPage(pageToShow) {
-        // Prevent re-showing the page if it’s already visible
-        if (pageToShow.style.display !== "none") return;
-
-        if (!serverConnected && (pageToShow === galleryPage || pageToShow === analysisPage)) {
-        alert("⚠️ You must connect to the server first!");
-        return;
-        }
-
-        const pages = [homePage, galleryPage, analysisPage];
-
-        const fadeOutPromises = pages.map(page => {
-        if (!page || page === pageToShow) return Promise.resolve();
-        return new Promise(resolve => fadeOut(page, 100, resolve));
+    // ================================
+    // USER DROPDOWN TOGGLE
+    // ================================
+    if (userGreeting && userDropdown) {
+        userGreeting.addEventListener("click", () => {
+            userDropdown.classList.toggle("show");
         });
 
-        Promise.all(fadeOutPromises).then(() => {
-        fadeIn(pageToShow, 100);
-
-        if (pageToShow !== galleryPage && analyzeModeActive) {
-            exitAnalyzeMode();
-        }
-
-        navButtons.forEach(btn => {
-            if (!btn) return;
-            btn.classList.toggle("active", (
-            (btn === homeBtn && pageToShow === homePage) ||
-            (btn === galleryBtn && pageToShow === galleryPage) ||
-            (btn === analysisBtn && pageToShow === analysisPage)
-            ));
-        });
+        // Close dropdown if clicking outside
+        document.addEventListener("click", (event) => {
+            if (!userGreeting.contains(event.target) &&
+                !userDropdown.contains(event.target)) {
+                userDropdown.classList.remove("show");
+            }
         });
     }
 
-    if (homeBtn) homeBtn.addEventListener("click", () => showPage(homePage));
-    if (analysisBtn) analysisBtn.addEventListener("click", () => {
-        openAnalysisPage(() => {
-        console.log('%c🔬 Analysis page ready', 'color: cyan;');
-        });
-    });
-
-  // Page Switching Using Fade
-  function openAnalysisPage(afterOpen) {
-    showPage(analysisPage);
-    if (typeof afterOpen === 'function') {
-      setTimeout(() => {
-        afterOpen();
-      }, 150);
-    }
-  }
-
-  if (homeBtn) homeBtn.addEventListener("click", () => showPage(homePage));
-
-  if (galleryBtn) {
-      galleryBtn.addEventListener('click', () => {
-      showPage(galleryPage);
-      loadGalleryImages();
-      });
-  }
-
-  if (analysisBtn) analysisBtn.addEventListener("click", () => {
-    openAnalysisPage(() => {
-      console.log('%c🔬 Analysis page ready', 'color: cyan;');
-    });
-  });
-  
-  // Setup Analysis Page Functions
-    setupImageUpload();
-    setupAnalysisButton();
-    setupChatInterface();
-    setupGallerySelection();
-
-  // User Dropdown Functionality
-  if (userGreeting && userDropdown) {
-
-    // Toggle dropdown on click
-    userGreeting.addEventListener('click', (e) => {
-      e.stopPropagation();
-      userDropdown.classList.toggle('show');
-      userGreeting.classList.toggle('active');
-      console.log("%c👆 Dropdown toggled", "color: cyan;");
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!userGreeting.contains(e.target)) {
-        userDropdown.classList.remove('show');
-        userGreeting.classList.remove('active');
-      }
-    });
-
-    // Prevent dropdown from closing when clicking inside it
-    userDropdown.addEventListener('click', (e) => e.stopPropagation());
-
-    // Dropdown menu item handlers
-    const changeProfileBtn = document.getElementById('changeProfileBtn');
-    const changeAppearanceBtn = document.getElementById('changeAppearanceBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-
-    if (changeProfileBtn) {
-      changeProfileBtn.addEventListener('click', () => {
-        // Show account selection modal
-        const accountModal = document.getElementById('accountSelectionModal');
-        if (accountModal) {
-          accountModal.classList.add('show');
-          console.log("%c👥 Account selection modal opened", "color: cyan;");
-        }
-
-        // Close dropdown
-        userDropdown.classList.remove('show');
-        userGreeting.classList.remove('active');
-      });
-    }
-
-    if (changeAppearanceBtn) {
-      changeAppearanceBtn.addEventListener('change', (e) => {
-          if (e.target.checked) {
-              document.body.classList.add('dark-mode');
-          } else {
-              document.body.classList.remove('dark-mode');
-          }
-      });
-    }
-
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', () => {
+    //Log out Button
+    logoutBtn.addEventListener('click', () => {
         console.log('Logout clicked');
 
         if (!confirm('Are you sure you want to log out?')) return;
@@ -321,128 +283,126 @@ if (!window._functionReloadProtected) {
         // Close the dropdown immediately
         userDropdown.classList.remove('show');
         userGreeting.classList.remove('active');
-      });
+    });
+
+    // ================================
+    // PAGE SWITCHING
+    // ================================
+    const homeBtn = document.getElementById("homeBtn");
+    const galleryPage = document.getElementById("galleryPage");
+    const analysisPage = document.getElementById("analysisPage");
+    const homePage = document.getElementById("homePage");
+    const navButtons = [homeBtn, galleryBtn, analysisBtn];
+
+    function showPage(pageToShow) {
+        if (!pageToShow || pageToShow.style.display !== "none") return;
+        if (!serverConnected && (pageToShow === galleryPage || pageToShow === analysisPage)) {
+            alert("⚠️ You must connect to the server first!"); return;
+        }
+        const pages = [homePage, galleryPage, analysisPage];
+        const fadeOutPromises = pages.map(p => p && p!==pageToShow ? new Promise(r=>fadeOut(p,100,r)) : Promise.resolve());
+        Promise.all(fadeOutPromises).then(() => {
+            fadeIn(pageToShow,100);
+            if (pageToShow !== galleryPage && analyzeModeActive) exitAnalyzeMode();
+            navButtons.forEach(btn => {
+                if(!btn) return;
+                btn.classList.toggle("active", (
+                    (btn===homeBtn && pageToShow===homePage) ||
+                    (btn===galleryBtn && pageToShow===galleryPage) ||
+                    (btn===analysisBtn && pageToShow===analysisPage)
+                ));
+            });
+        });
     }
-  }
 
-  // AVATAR + NAME MODAL LOGIC
-  const axios = require('axios'); // Node-style import for Electron renderer
+    if (homeBtn) homeBtn.addEventListener("click", () => showPage(homePage));
+    if (galleryBtn) galleryBtn.addEventListener('click', () => { showPage(galleryPage); loadGalleryImages(); });
+    if (analysisBtn) analysisBtn.addEventListener("click", () => showPage(analysisPage));
 
-  const accountModal = document.getElementById('accountSelectionModal');
-  const accountModalOverlay = accountModal?.querySelector('.account-modal-overlay');
-  const navbarUserAvatar = document.getElementById('navbarUserAvatar');
-  const navbarUserName = document.getElementById('userName'); // optional element for showing name
-  const prevBtn = document.getElementById('prevAvatar');
-  const nextBtn = document.getElementById('nextAvatar');
-  const currentAvatarImg = document.getElementById('currentAvatar');
-  const avatarLabel = document.getElementById('avatarLabel');
-  const applyBtn = document.getElementById('applyAvatarChanges');
-  const firstNameInput = document.getElementById('firstName');
-  const lastNameInput = document.getElementById('lastName');
+    showPage(homePage);
 
-  // Avatar list
-  const avatars = [
-    { id: 0, src: '../images/Earl.png', label: 'LABRADOR' },
-    { id: 1, src: '../images/Edrian.png', label: 'POMERANIAN' },
-    { id: 2, src: '../images/Joaquin.png', label: 'SHIH TZU' },
-    { id: 3, src: '../images/Jigs.png', label: 'CORGI' },
-  ];
+    // ================================
+    // Account Modal
+    // ================================
+    const axios = require('axios');
+    const accountModal = document.getElementById('accountSelectionModal');
+    const accountModalOverlay = accountModal?.querySelector('.account-modal-overlay');
+    const navbarUserAvatar = document.getElementById('navbarUserAvatar');
+    const prevBtn = document.getElementById('prevAvatar');
+    const nextBtn = document.getElementById('nextAvatar');
+    const currentAvatarImg = document.getElementById('currentAvatar');
+    const avatarLabel = document.getElementById('avatarLabel');
+    const applyBtn = document.getElementById('applyAvatarChanges');
+    const firstNameInput = document.getElementById('firstName');
+    const lastNameInput = document.getElementById('lastName');
 
-  let currentIndex = 0;
+    const avatars = [
+        { id: 0, src: '../images/Earl.png', label: 'LABRADOR' },
+        { id: 1, src: '../images/Edrian.png', label: 'POMERANIAN' },
+        { id: 2, src: '../images/Joaquin.png', label: 'SHIH TZU' },
+        { id: 3, src: '../images/Jigs.png', label: 'CORGI' },
+    ];
+    let currentIndex = 0;
 
-  // Show avatar in modal
-  function updateModalAvatar() {
-    const avatar = avatars[currentIndex];
-    currentAvatarImg.src = avatar.src;
-    avatarLabel.textContent = avatar.label;
-  }
-
-  // Carousel arrows
-  prevBtn.addEventListener('click', () => {
-    currentIndex = (currentIndex - 1 + avatars.length) % avatars.length;
-    updateModalAvatar();
-  });
-  nextBtn.addEventListener('click', () => {
-    currentIndex = (currentIndex + 1) % avatars.length;
-    updateModalAvatar();
-  });
-
-  // Close modal on overlay click
-  accountModalOverlay.addEventListener('click', () => {
-    accountModal.classList.remove('show');
-  });
-
-  // === Apply Changes (Save to DB) ===
-  applyBtn.addEventListener('click', async () => {
-    const avatar = avatars[currentIndex];
-    const firstName = firstNameInput.value.trim();
-    const lastName = lastNameInput.value.trim();
-
-    const payload = {};
-    if (firstName) payload.first_name = firstName;
-    if (lastName) payload.last_name = lastName;
-    payload.avatar_id = avatar.id; // <-- Send integer ID, not path
-
-    try {
-      await axios.post('http://127.0.0.1:5000/update-user', payload, { withCredentials: true });
-
-      console.log('✅ User updated successfully');
-
-      // Reflect in UI immediately — keep old name if no new one provided
-      const currentName = navbarUserName.textContent;
-      const newName = `${firstName || ''} ${lastName || ''}`.trim();
-      navbarUserAvatar.src = avatar.src;
-      if (loggedInUserName) loggedInUserName = newName || currentName || 'User';
-
-      // Save locally for instant reload
-      localStorage.setItem('userAvatar', avatar.src);
-      localStorage.setItem('userAvatarID', avatar.id);
-      if (firstName) localStorage.setItem('userFirstName', firstName);
-      if (lastName) localStorage.setItem('userLastName', lastName);
-
-      accountModal.classList.remove('show');
-    } catch (err) {
-      console.error('❌ Failed to update user in DB:', err);
-      alert('Failed to save changes. Please try again.');
-    }
-  });
-
-  // === Load on Page Start ===
-  window.addEventListener('DOMContentLoaded', async () => {
-    try {
-      // 1️⃣ Get user info from backend
-      const res = await axios.get('http://127.0.0.1:5000/status', { withCredentials: true });
-      const user = res.data;
-
-      if (user.logged_in) {
-        const savedAvatarID = user.avatar_id ?? 0;
-        currentIndex = savedAvatarID < avatars.length ? savedAvatarID : 0;
-
-        // Update navbar and modal
+    function updateModalAvatar() {
         const avatar = avatars[currentIndex];
-        navbarUserAvatar.src = avatar.src;
-        if (loggedInUserName) loggedInUserName = user.name || 'User';
-      }
-
-      updateModalAvatar();
-    } catch (err) {
-      console.error('⚠️ Could not fetch user status:', err);
-      updateModalAvatar(); // fallback
+        currentAvatarImg.src = avatar.src;
+        avatarLabel.textContent = avatar.label;
     }
-  });
 
+    prevBtn?.addEventListener('click', () => { currentIndex = (currentIndex-1+avatars.length)%avatars.length; updateModalAvatar(); });
+    nextBtn?.addEventListener('click', () => { currentIndex = (currentIndex+1)%avatars.length; updateModalAvatar(); });
+    accountModalOverlay?.addEventListener('click', () => accountModal.classList.remove('show'));
 
-    ipcRenderer.on('uploads-changed', async (event, data) => {
-        console.log('Uploads changed:', data);
-
-        // Wait for cards to update
-        await loadStatsCards();
-
-        // Update the chart after cards are updated
-        if (typeof updateStatsChart === 'function') {
-            updateStatsChart();
+    applyBtn?.addEventListener('click', async () => {
+        const avatar = avatars[currentIndex];
+        const payload = {
+            avatar_id: avatar.id,
+            first_name: firstNameInput.value.trim() || undefined,
+            last_name: lastNameInput.value.trim() || undefined
+        };
+        try {
+            await axios.post('http://127.0.0.1:5000/update-user', payload, { withCredentials:true });
+            navbarUserAvatar.src = avatar.src;
+            if(payload.first_name || payload.last_name){
+                loggedInUserName = `${payload.first_name||''} ${payload.last_name||''}`.trim() || loggedInUserName;
+            }
+            localStorage.setItem('userAvatar', avatar.src);
+            localStorage.setItem('userAvatarID', avatar.id);
+            accountModal.classList.remove('show');
+        } catch(err){
+            console.error('❌ Failed to update user in DB:', err);
+            alert('Failed to save changes. Please try again.');
         }
     });
+
+    (async () => {
+        try {
+            const res = await axios.get('http://127.0.0.1:5000/status', {withCredentials:true});
+            const user = res.data;
+            if(user.logged_in){
+                const savedAvatarID = user.avatar_id ?? 0;
+                currentIndex = savedAvatarID < avatars.length ? savedAvatarID : 0;
+                navbarUserAvatar.src = avatars[currentIndex].src;
+            }
+            updateModalAvatar();
+        } catch(err){
+            console.error('⚠️ Could not fetch user status:', err);
+            updateModalAvatar();
+        }
+    })();
+
+    // Open Account Modal
+    const openAccountModal = document.getElementById("changeProfileBtn");
+
+    openAccountModal?.addEventListener("click", () => {
+        accountModal.classList.add("show");
+    });
+
+    // ================================
+    // STATS CARDS WITH RETRY
+    // ================================
+    const statsRetryDelay = 5000; // retry every 5 seconds if failed
 
     async function loadStatsCards() {
         try {
@@ -456,9 +416,10 @@ if (!window._functionReloadProtected) {
 
             const images = data.images;
 
+            // ===========================
             // Initialize counters
+            // ===========================
             let rawCount = 0;
-            let healthyCount = 0;
             const diseaseCounts = {
                 'Allergic Dermatitis': 0,
                 'Fungal Infection': 0,
@@ -467,38 +428,25 @@ if (!window._functionReloadProtected) {
                 'Healthy': 0
             };
 
-            // Count images
             images.forEach(img => {
-                if (img.analyzed) {
-                    if (img.disease) {
-                        const diseaseName = img.disease.toLowerCase(); // normalize
-                        switch (diseaseName) {
-                            case 'allergic dermatitis':
-                                diseaseCounts['Allergic Dermatitis']++;
-                                break;
-                            case 'fungal infection':
-                                diseaseCounts['Fungal Infection']++;
-                                break;
-                            case 'hotspot':
-                                diseaseCounts['Hotspot']++;
-                                break;
-                            case 'mange':
-                                diseaseCounts['Mange']++;
-                                break;
-                            case 'healthy':
-                                diseaseCounts['Healthy']++;
-                                break;
-                            default:
-                                // unknown disease, ignore or log
-                                break;
-                        }
-                    }
-                } else {
+                if (!img.analyzed) {
                     rawCount++;
+                } else if (img.disease) {
+                    const diseaseName = img.disease.toLowerCase();
+                    switch(diseaseName) {
+                        case 'allergic dermatitis': diseaseCounts['Allergic Dermatitis']++; break;
+                        case 'fungal infection': diseaseCounts['Fungal Infection']++; break;
+                        case 'hotspot': diseaseCounts['Hotspot']++; break;
+                        case 'mange': diseaseCounts['Mange']++; break;
+                        case 'healthy': diseaseCounts['Healthy']++; break;
+                        default: break; // ignore unknown diseases
+                    }
                 }
             });
 
-            // Build cards array in fixed order
+            // ===========================
+            // Build & render stats cards
+            // ===========================
             const cardsData = [
                 { label: 'Raw', count: rawCount },
                 { label: 'Healthy', count: diseaseCounts['Healthy'] },
@@ -508,23 +456,26 @@ if (!window._functionReloadProtected) {
                 { label: 'Mange', count: diseaseCounts['Mange'] }
             ];
 
-            // Render stats cards
             const cardsContainer = document.getElementById('statsCardsRow');
-            cardsContainer.innerHTML = '';
-            cardsData.forEach(card => {
-                const cardEl = document.createElement('div');
-                cardEl.className = 'stat-card';
-                cardEl.innerHTML = `
-                    <div class="card-top">
-                        <span>${card.label}</span>
-                        <span class="number">${card.count}</span>
-                    </div>
-                    <button class="view-btn">View</button>
-                `;
-                cardsContainer.appendChild(cardEl);
-            });
+            if (cardsContainer) {
+                cardsContainer.innerHTML = '';
+                cardsData.forEach(card => {
+                    const cardEl = document.createElement('div');
+                    cardEl.className = 'stat-card';
+                    cardEl.innerHTML = `
+                        <div class="card-top">
+                            <span>${card.label}</span>
+                            <span class="number">${card.count}</span>
+                        </div>
+                        <button class="view-btn">View</button>
+                    `;
+                    cardsContainer.appendChild(cardEl);
+                });
+            }
 
-            // Update Healthy insight
+            // ===========================
+            // Insight 1: Healthy scans
+            // ===========================
             const healthyInsightCard = document.getElementById("healthyInsight");
             if (healthyInsightCard) {
                 const totalOther = Object.entries(diseaseCounts)
@@ -537,27 +488,30 @@ if (!window._functionReloadProtected) {
                 if (diseaseCounts['Healthy'] === 0) {
                     healthyIcon.classList.remove("bi-arrow-up-circle");
                     healthyIcon.classList.add("bi-arrow-down-circle");
-                    healthyText.textContent = `No Healthy scans detected yet.`;
+                    healthyText.textContent = 'No Healthy scans detected yet.';
                     healthyInsightCard.classList.add("decline");
                 } else if (diseaseCounts['Healthy'] < totalOther) {
                     healthyIcon.classList.remove("bi-arrow-up-circle");
                     healthyIcon.classList.add("bi-arrow-down-circle");
-                    healthyText.textContent = `Healthy scans decreased, showing overall decline.`;
+                    healthyText.textContent = 'Healthy scans decreased, showing overall decline.';
                     healthyInsightCard.classList.add("decline");
                 } else {
                     healthyIcon.classList.remove("bi-arrow-down-circle");
                     healthyIcon.classList.add("bi-arrow-up-circle");
-                    healthyText.textContent = `Healthy scans increased, showing overall improvement.`;
+                    healthyText.textContent = 'Healthy scans increased, showing overall improvement.';
                     healthyInsightCard.classList.remove("decline");
                 }
             }
 
-            // Update top disease insight
+            // ===========================
+            // Insight 2: Top Disease
+            // ===========================
             const topDiseaseEl = document.getElementById('topDisease');
             if (topDiseaseEl) {
                 const sorted = Object.entries(diseaseCounts)
                     .filter(([disease]) => disease !== 'Healthy')
                     .sort((a, b) => b[1] - a[1]);
+
                 if (sorted.length > 0 && sorted[0][1] > 0) {
                     topDiseaseEl.textContent = sorted[0][0];
                 } else {
@@ -565,35 +519,28 @@ if (!window._functionReloadProtected) {
                 }
             }
 
-            // Update third insight card (lowest disease excluding Healthy)
+            // ===========================
+            // Insight 3: Lowest Disease
+            // ===========================
             const lowestInsightCard = document.getElementById("lowestInsight");
             if (lowestInsightCard) {
                 const mainDiseases = ['Allergic Dermatitis', 'Fungal Infection', 'Hotspot', 'Mange'];
-
-                // Ensure all main diseases exist in normalizedCounts with their counts
                 const normalizedCounts = {};
-                mainDiseases.forEach(disease => {
-                    const key = Object.keys(diseaseCounts).find(k => k.toLowerCase() === disease.toLowerCase());
-                    normalizedCounts[disease] = key ? diseaseCounts[key] : 0;
-                });
+                mainDiseases.forEach(disease => normalizedCounts[disease] = diseaseCounts[disease] ?? 0);
 
-                // Filter out diseases with 0 count
                 const filteredCounts = Object.entries(normalizedCounts).filter(([_, count]) => count > 0);
 
                 if (filteredCounts.length > 0) {
-                    // Sort by count ascending and take the first one (lowest)
                     filteredCounts.sort((a, b) => a[1] - b[1]);
                     const [lowestDisease, lowestCount] = filteredCounts[0];
-
-                    const totalAnalyzed = Object.values(normalizedCounts).reduce((sum, count) => sum + count, 0);
+                    const totalAnalyzed = Object.values(normalizedCounts).reduce((sum, c) => sum + c, 0);
                     const percentage = totalAnalyzed > 0 ? ((lowestCount / totalAnalyzed) * 100).toFixed(1) : 0;
 
                     const lowestIcon = lowestInsightCard.querySelector('i');
                     const lowestText = lowestInsightCard.querySelector('.insight-text strong');
 
                     lowestText.textContent = `${lowestDisease} accounts for only ${percentage}% of all analyzed images.`;
-                    console.log(`Lowest: ${lowestDisease} with ${lowestCount} images`);
-                    
+
                     if (percentage < 10) {
                         lowestIcon.classList.remove("bi-search");
                         lowestIcon.classList.add("bi-exclamation-circle");
@@ -604,41 +551,25 @@ if (!window._functionReloadProtected) {
                         lowestInsightCard.classList.remove("alert");
                     }
                 } else {
-                    // No disease detected at all
                     lowestInsightCard.querySelector('.insight-text strong').textContent = "No disease detected yet.";
                 }
             }
 
+            // ===========================
+            // Optional: chart update
+            // ===========================
+            if (typeof updateStatsChart === 'function') updateStatsChart();
 
-            // Update chart
-            if (typeof updateStatsChart === 'function') {
-                updateStatsChart();
-            }
+            console.log("%c✅ Synced gallery overview with gallery server.", "color: limegreen;");
 
         } catch (err) {
             console.error("Error loading stats cards:", err);
+            setTimeout(loadStatsCards, statsRetryDelay);
         }
     }
 
-    // Load stats cards on page load
-    await loadStatsCards();
-    if (typeof updateStatsChart === 'function') {
-        updateStatsChart();
-    }
-
-  // Check if session is initiated and connect automatically to gallery server
-  initUserSession();
-
-  // Start with home page
-  showPage(homePage);
-
-    //CHECK IF UI HAS FULLY LOADED
-    document.addEventListener("DOMContentLoaded", () => {
-        console.log("%c📄 DOM fully loaded.", "color: green;");  
-        setupTabs();
-        setupClearHistoryButton();
-        loadAnalysisHistory();  
-    });
+    // initial load
+    loadStatsCards();
 
     // Shared image handling function
     function handleImageFile(file) {
@@ -678,582 +609,6 @@ if (!window._functionReloadProtected) {
         reader.readAsDataURL(file);
     }
     
-    // Image upload and preview functionality
-    function setupImageUpload() {
-        const uploadArea = document.getElementById('imageUploadArea');
-        const uploadPlaceholder = uploadArea.querySelector('.upload-placeholder');
-        const imagePreview = document.getElementById('imagePreview');
-        const previewImage = document.getElementById('previewImage');
-        const changeImageBtn = document.getElementById('changeImageBtn');
-        
-        // Drag and drop functionality
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadPlaceholder.style.borderColor = '#c4a484';
-            uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.1)';
-        });
-        
-        uploadArea.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            uploadPlaceholder.style.borderColor = '#d9b99b';
-            uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
-        });
-        
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadPlaceholder.style.borderColor = '#d9b99b';
-            uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleImageFile(files[0]);
-            }
-        });
-        
-        // File input functionality
-        uploadPlaceholder.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Create a new file input each time
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'image/*';
-            fileInput.style.display = 'none';
-            
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                    handleImageFile(e.target.files[0]);
-                }
-                // Clean up immediately after use
-                if (fileInput.parentNode) {
-                    fileInput.parentNode.removeChild(fileInput);
-                }
-            });
-            
-            // Add to DOM, trigger click, then remove
-            document.body.appendChild(fileInput);
-            fileInput.click();
-            
-            // Clean up after a short delay to ensure the file dialog has opened
-            setTimeout(() => {
-                if (fileInput.parentNode) {
-                    fileInput.parentNode.removeChild(fileInput);
-                }
-            }, 100);
-        });
-        
-        // Change image button
-        changeImageBtn.addEventListener('click', () => {
-            uploadPlaceholder.style.display = 'flex';
-            imagePreview.style.display = 'none';
-            const analysisResults = document.getElementById('analysisResults');
-            const resultDiagnosis = document.getElementById('resultDiagnosis');
-            const resultConfidence = document.getElementById('resultConfidence');
-            const resultInferenceTime = document.getElementById('resultInferenceTime');
-            
-            if (analysisResults) {
-                analysisResults.style.display = 'block'; 
-                resultDiagnosis.textContent = 'Pending...'; 
-                resultConfidence.textContent = '--'; 
-                if (resultInferenceTime) {
-                    resultInferenceTime.textContent = '--';
-                }
-            }
-            previewImage.src = '';
-            previewImage.dataset.sourceFilename = '';
-            window.currentAnalysisSource = null;
-        });
-    }
-    
-    // Gallery selection functionality
-    function setupGallerySelection() {
-        const selectFromGalleryBtn = document.getElementById('selectFromGalleryBtn');
-        
-        selectFromGalleryBtn.addEventListener('click', (e) => {
-            console.log('Select from gallery button clicked');
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Create a new file input each time
-            const galleryFileInput = document.createElement('input');
-            galleryFileInput.type = 'file';
-            galleryFileInput.accept = 'image/*';
-            galleryFileInput.style.display = 'none';
-            
-            galleryFileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                    handleImageFile(e.target.files[0]);
-                }
-                // Clean up immediately after use
-                if (galleryFileInput.parentNode) {
-                    galleryFileInput.parentNode.removeChild(galleryFileInput);
-                }
-            });
-            
-            // Add to DOM, trigger click, then remove
-            document.body.appendChild(galleryFileInput);
-            galleryFileInput.click();
-            
-            // Clean up after a short delay to ensure the file dialog has opened
-            setTimeout(() => {
-                if (galleryFileInput.parentNode) {
-                    galleryFileInput.parentNode.removeChild(galleryFileInput);
-                }
-            }, 100);
-        });
-    }
-
-    async function fetchImageAsDataURL(url) {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch image (${response.status})`);
-        }
-
-        const blob = await response.blob();
-        return await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    }
-
-    async function displayImageFromGallery(image) {
-        if (!image || !image.filename) {
-            throw new Error('Invalid image data provided.');
-        }
-
-        const uploadArea = document.getElementById('imageUploadArea');
-        const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
-        const imagePreview = document.getElementById('imagePreview');
-        const previewImage = document.getElementById('previewImage');
-        const analysisResults = document.getElementById('analysisResults');
-
-        if (!uploadArea || !uploadPlaceholder || !imagePreview || !previewImage) {
-            throw new Error('Analysis components are not available.');
-        }
-
-        const imageUrl = `http://localhost:5001/images/${image.filename}`;
-        const dataUrl = await fetchImageAsDataURL(imageUrl);
-
-        previewImage.src = dataUrl;
-        previewImage.alt = image.filename;
-        previewImage.dataset.sourceFilename = image.filename;
-        uploadPlaceholder.style.display = 'none';
-        imagePreview.style.display = 'block';
-        if (analysisResults) {
-            analysisResults.style.display = 'none';
-        }
-        const resultDiagnosis = document.getElementById('resultDiagnosis');
-        const resultConfidence = document.getElementById('resultConfidence');
-        const resultInferenceTime = document.getElementById('resultInferenceTime');
-        if (resultDiagnosis) {
-            resultDiagnosis.textContent = '-';
-        }
-        if (resultConfidence) {
-            resultConfidence.textContent = '-';
-        }
-        if (resultInferenceTime) {
-            resultInferenceTime.textContent = '-';
-        }
-
-        window.currentAnalysisSource = {
-            type: 'gallery',
-            filename: image.filename,
-            disease: image.disease || '',
-            confidence: image.confidence || '',
-            analyzed: Boolean(image.analyzed)
-        };
-    }
-
-    function autoAnalyzeSelectedImage() {
-        if (window.currentAnalysisSource?.type !== 'gallery') return;
-
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const previewImage = document.getElementById('previewImage');
-        if (!analyzeBtn || !previewImage || !previewImage.src) return;
-
-        if (!analyzeBtn.disabled) {
-            analyzeBtn.click();
-        }
-    }
-    
-    // Save analyzed image to gallery with metadata
-    async function saveAnalyzedImageToGallery(imageSrc, disease, confidence) {
-        try {
-            // Convert data URL to blob
-            const response = await fetch(imageSrc);
-            const blob = await response.blob();
-            
-            // Create FormData
-            const formData = new FormData();
-            formData.append('image', blob, 'analyzed_image.jpg');
-            formData.append('analyzed', 'true');
-            formData.append('disease', disease);
-            formData.append('confidence', confidence.toString());
-            if (window.currentAnalysisSource?.type === 'gallery' && window.currentAnalysisSource.filename) {
-                formData.append('source_filename', window.currentAnalysisSource.filename);
-            }
-            
-            // Upload to desktop server
-            const uploadResponse = await fetch('http://localhost:5001/upload', {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (!uploadResponse.ok) {
-                throw new Error('Failed to upload image');
-            }
-            
-            const result = await uploadResponse.json();
-            console.log('Image saved to gallery:', result);
-            
-            // Refresh gallery if on gallery page
-            const galleryPage = document.getElementById('galleryPage');
-            if (galleryPage && galleryPage.style.display !== 'none') {
-                setTimeout(() => {
-                    loadGalleryImages();
-                }, 500);
-            }
-            
-            return result.filename;
-        } catch (error) {
-            console.error('Error saving image to gallery:', error);
-            throw error;
-        }
-    }
-    
-  // ============================================
-  // CUSTOM DROPDOWN MENU FOR ANALYSIS PAGE LOGIC
-  // ============================================
-  const dropdownButton = document.getElementById('dropdownButton');
-  const dropdownMenu = document.getElementById('dropdownMenu');
-
-  if (dropdownButton && dropdownMenu) {
-    // Toggle dropdown on button click
-    dropdownButton.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dropdownMenu.classList.toggle('show');
-      console.log('Dropdown toggled');
-    });
-
-    // Handle dropdown item selection
-    const dropdownItems = dropdownMenu.querySelectorAll('div');
-    dropdownItems.forEach(item => {
-      item.addEventListener('click', (e) => {
-        const selectedValue = e.target.textContent.trim();
-        
-        // Update button text (keep the arrow)
-        dropdownButton.innerHTML = `${selectedValue} <span>▼</span>`;
-        
-        // Close dropdown
-        dropdownMenu.classList.remove('show');
-        
-        // Store selected model
-        window.selectedModel = selectedValue;
-        
-        console.log('Selected model:', selectedValue);
-      });
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!dropdownButton.contains(e.target) && !dropdownMenu.contains(e.target)) {
-        dropdownMenu.classList.remove('show');
-      }
-    });
-    
-    console.log('%c✅ Simple dropdown initialized', 'color: limegreen;');
-  }
-
-    // Analysis button functionality
-    function setupAnalysisButton() {
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const analysisResults = document.getElementById('analysisResults');
-        const resultDiagnosis = document.getElementById('resultDiagnosis');
-        const resultConfidence = document.getElementById('resultConfidence');
-        
-        analyzeBtn.addEventListener('click', async () => {
-
-          if (!window.selectedModel) {
-            alert('Please select a model first (YoloV8n or YoloV11n)');
-            return;
-            }
-
-            const previewImage = document.getElementById('previewImage');
-            if (!previewImage.src) return;
-            
-            // Show loading state
-            analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
-            
-            try {
-
-                // Call real YOLO analysis API
-                const analysisResult = await performRealAnalysis(previewImage.src, window.selectedModel);
-                
-                // Show results
-                analysisResults.style.display = 'block';
-                resultDiagnosis.textContent = analysisResult.disease;
-                resultConfidence.textContent = `${analysisResult.confidence}%`;
-                const resultInferenceTime = document.getElementById('resultInferenceTime');
-                if (resultInferenceTime && analysisResult.inference_time !== undefined) {
-                    resultInferenceTime.textContent = `${analysisResult.inference_time}s`;
-                }
-                
-                // Save analyzed image to gallery
-                const savedFilename = await saveAnalyzedImageToGallery(
-                  previewImage.src, 
-                  analysisResult.disease, 
-                  analysisResult.confidence
-                ); 
-                
-                // Add to history with filename
-                await addToAnalysisHistory(
-                  previewImage.src, 
-                  analysisResult.disease, 
-                  `${analysisResult.confidence}%`, 
-                  savedFilename
-                );
-                
-                // Show initial LLM recommendation in chat
-                showInitialRecommendation(analysisResult.recommendation);
-                
-                // Store current analysis data for chat context
-                window.currentAnalysis = {
-                    diagnosis: analysisResult.disease,
-                    confidence: analysisResult.confidence,
-                    model: window.selectedModel
-                };
-                
-                // Debug: Log the stored analysis data
-                console.log('DEBUG: Stored analysis data:', window.currentAnalysis);
-                
-                // Ensure chat input is clickable and focused after analysis
-                setTimeout(() => {
-                    restoreChatInputClickability();
-                }, 100);
-                
-            } catch (error) {
-                console.error('Analysis failed:', error);
-                alert('Analysis failed. Please try again.');
-            } finally {
-                // Reset button
-                analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'Analyze';
-            }
-        });
-        
-        async function performRealAnalysis(imageSrc, modelName) {
-            try {
-                const response = await fetch('http://localhost:5000/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        frame: imageSrc,
-                        model: modelName
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const result = await response.json();
-                return result;
-            } catch (error) {
-                console.error('Error calling analysis API:', error);
-                throw error;
-            }
-        }
-    }
-    
-    // Chat interface functionality
-    function setupChatInterface() {
-        const chatInput = document.getElementById('chatInput');
-        const sendMessageBtn = document.getElementById('sendMessageBtn');
-        const chatMessages = document.getElementById('chatMessages');
-        
-        function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message) return;
-            
-            // Add user message
-            addChatMessage(message, 'user');
-            chatInput.value = '';
-            
-            // Show typing indicator
-            const typingIndicator = addTypingIndicator();
-            
-            // Call LLM API for response
-            callLLMAPI(message)
-                .then(response => {
-                    // Remove typing indicator
-                    removeTypingIndicator(typingIndicator);
-                    
-                    // Add bot response
-                    addChatMessage(response.response, 'bot');
-                })
-                .catch(error => {
-                    console.error('Error getting LLM response:', error);
-                    // Remove typing indicator
-                    removeTypingIndicator(typingIndicator);
-                    
-                    // Add error message
-                    addChatMessage("I apologize, but I'm having trouble processing your request right now. Please try again or consult a veterinarian for immediate assistance.", 'bot');
-                });
-        }
-        
-        async function callLLMAPI(message) {
-            // LLM works with or without analysis - if analysis exists, it enhances the response
-            const currentAnalysis = window.currentAnalysis || { diagnosis: '', confidence: 0 };
-            
-            // Debug: Log the data being sent to the API
-            console.log('DEBUG: Sending to chat API:', {
-                message: message,
-                diagnosis: currentAnalysis.diagnosis || 'None',
-                confidence: currentAnalysis.confidence || 0
-            });
-            
-            const response = await fetch('http://localhost:5000/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',  // Include session cookie
-                body: JSON.stringify({
-                    message: message,
-                    diagnosis: currentAnalysis.diagnosis || '',
-                    confidence: currentAnalysis.confidence || 0
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            return await response.json();
-        }
-        
-        function addTypingIndicator() {
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'chat-message bot-message typing-indicator';
-            typingDiv.innerHTML = `
-                <div class="message-content">
-                    <span class="typing-dots">
-                        <span>.</span><span>.</span><span>.</span>
-                    </span>
-                </div>
-            `;
-            chatMessages.appendChild(typingDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            return typingDiv;
-        }
-        
-        function removeTypingIndicator(typingDiv) {
-            if (typingDiv && typingDiv.parentNode) {
-                typingDiv.parentNode.removeChild(typingDiv);
-            }
-        }
-        
-        function showInitialRecommendation(recommendation) {
-            // Clear existing messages except the welcome message
-            const welcomeMessage = chatMessages.querySelector('.bot-message');
-            chatMessages.innerHTML = '';
-            if (welcomeMessage) {
-                chatMessages.appendChild(welcomeMessage);
-            }
-            
-            // Add the initial recommendation
-            addChatMessage(recommendation, 'bot');
-        }
-        
-        sendMessageBtn.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-        
-        // Ensure chat input is always focusable
-        chatInput.addEventListener('click', () => {
-            chatInput.focus();
-            if (window.require && window.require('electron')) {
-                const { ipcRenderer } = window.require('electron');
-                if (ipcRenderer) {
-                    ipcRenderer.send('focus-window');
-                }
-            }
-        });
-        
-        // Auto-focus chat input when analysis page is shown
-        const analysisPage = document.getElementById('analysisPage');
-        if (analysisPage) {
-            const observer = new MutationObserver(() => {
-                if (analysisPage.style.display !== 'none') {
-                    // Small delay to ensure page is fully rendered
-                    setTimeout(() => {
-                        chatInput.focus();
-                    }, 100);
-                }
-            });
-            observer.observe(analysisPage, { attributes: true, attributeFilter: ['style'] });
-        }
-        
-        function addChatMessage(message, sender) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `chat-message ${sender}-message`;
-            messageDiv.innerHTML = `
-                <div class="message-content">${message}</div>
-            `;
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-    }
-    
-    // Function to restore chat input clickability
-    function restoreChatInputClickability() {
-        const chatInput = document.getElementById('chatInput');
-        const chatInputArea = document.querySelector('.chat-input-area');
-        const recommendationsBox = document.querySelector('.recommendations-box');
-        
-        if (chatInput) {
-            // Remove any disabled state
-            chatInput.disabled = false;
-            chatInput.style.pointerEvents = 'auto';
-            chatInput.style.zIndex = '20';
-            // Focus the input to ensure it's interactive
-            chatInput.focus();
-        }
-        
-        if (chatInputArea) {
-            chatInputArea.style.pointerEvents = 'auto';
-            chatInputArea.style.zIndex = '20';
-        }
-        
-        if (recommendationsBox) {
-            recommendationsBox.style.zIndex = '2';
-            recommendationsBox.style.pointerEvents = 'auto';
-        }
-        
-        // Remove any lingering popup overlays
-        const blockingOverlays = document.querySelectorAll('.popup-overlay:not(.analysis-details-popup .popup-overlay), .analysis-details-popup');
-        blockingOverlays.forEach(overlay => {
-            // Only remove if it's not part of an active popup
-            const popup = overlay.closest('.analysis-details-popup');
-            if (!popup || !document.body.contains(popup)) {
-                if (overlay.parentNode) {
-                    overlay.parentNode.removeChild(overlay);
-                }
-            }
-        });
-        
-        console.log('DEBUG: Chat input clickability restored');
-    }
-    
     // Global handler to restore clickability after alerts
     const originalAlert = window.alert;
     window.alert = function(message) {
@@ -1263,145 +618,6 @@ if (!window._functionReloadProtected) {
         }, 100);
         return result;
     };
-    
-    function addToAnalysisHistory(imageSrc, diagnosis, confidence, filename) {
-    // Get existing history from localStorage
-    const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
-    
-    // Create new history item
-    const newItem = {
-        imageSrc,
-        diagnosis,
-        confidence,
-        filename: filename || 'Analysis Result',
-        timestamp: new Date().toISOString()
-    };
-    
-    // Add to beginning of array
-    history.unshift(newItem);
-    
-    // Keep only last 10 items
-    if (history.length > 10) {
-        history.pop();
-    }
-    
-    // Save back to localStorage
-    localStorage.setItem('analysisHistory', JSON.stringify(history));
-    
-    // Update the display using your existing function
-    addHistoryItem(imageSrc, diagnosis, confidence, newItem.timestamp);
-    
-    console.log('Added to history:', newItem);
-    }
-    
-    function addHistoryItem(imageSrc, diagnosis, confidence, timestamp = null) {
-    const historyList = document.getElementById('historyList');
-    
-    // Remove empty state if it exists
-    const emptyState = historyList.querySelector('.empty-state');
-    if (emptyState) {
-        emptyState.remove();
-    }
-    
-    const historyItem = document.createElement('div');
-    historyItem.className = 'history-item';
-    historyItem.style.cursor = 'pointer';
-    
-    const displayDate = timestamp ? new Date(timestamp).toLocaleDateString() : new Date().toLocaleDateString();
-    
-    historyItem.innerHTML = `
-        <div class="history-image">
-            <img src="${imageSrc}" alt="Analysis Image" class="history-img">
-        </div>
-        <div class="history-details">
-            <div class="history-name">${displayDate}</div>
-            <div class="history-diagnosis">${diagnosis}</div>
-            <div class="history-confidence">${confidence}</div>
-        </div>
-    `;
-    
-    // Add click event to show details popup
-    historyItem.addEventListener('click', () => {
-        showAnalysisDetailsPopup(imageSrc, diagnosis, confidence, timestamp);
-    });
-    
-    // Add to top of list
-    historyList.insertBefore(historyItem, historyList.firstChild);
-}
-
-// Load all history items from localStorage
-function loadAnalysisHistory() {
-    const historyList = document.getElementById('historyList');
-    const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
-    
-    // Clear current display
-    historyList.innerHTML = '';
-    
-    if (history.length === 0) {
-        // Show empty state
-        historyList.innerHTML = `
-            <div class="empty-state">
-                <i class="bi bi-inbox"></i>
-                <p>No analysis history yet</p>
-            </div>
-        `;
-    } else {
-        // Display all history items
-        history.forEach(item => {
-            addHistoryItem(item.imageSrc, item.diagnosis, item.confidence, item.timestamp);
-        });
-    }
-    
-    console.log(`Loaded ${history.length} history items`);
-}
-
-// Clear History Functionality (integrated with your backend)
-function setupClearHistoryButton() {
-    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-    if (!clearHistoryBtn) return;
-    
-    clearHistoryBtn.addEventListener('click', async () => {
-        // Confirm before clearing
-        const confirmed = confirm(
-            'Are you sure you want to clear all analysis history? This will delete:\n\n' +
-            '- All analysis history in the app\n' +
-            '- All diagnosis records in the CSV file\n\n' +
-            'This action cannot be undone.'
-        );
-        
-        if (confirmed) {
-            try {
-                // Clear localStorage
-                localStorage.removeItem('analysisHistory');
-                
-                // Clear from CSV via API
-                const response = await fetch('http://localhost:5000/clear-analysis-history', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include'
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('History cleared:', result);
-                    
-                    // Reload history display (will show empty state)
-                    loadAnalysisHistory();
-                    
-                    // Show success message
-                    alert('Analysis history has been cleared successfully.');
-                } else {
-                    throw new Error('Failed to clear history from server');
-                }
-            } catch (error) {
-                console.error('Error clearing history:', error);
-                alert('Error clearing history. Please try again.');
-            }
-        }
-    });
-}
     
     /*function showAnalysisDetailsPopup(imageSrc, diagnosis, confidence, timestamp) {
         const displayDate = timestamp ? new Date(timestamp).toLocaleString() : new Date().toLocaleString();
@@ -1463,77 +679,4 @@ function setupClearHistoryButton() {
     }
 
     */
-
-
-  }; // end DOMContentLoaded
-
-// Tab Switching Functionality
-function setupTabs() {
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const recommendationsTab = document.getElementById('recommendationsTab');
-    const historyTab = document.getElementById('historyTab');
-    
-    tabButtons.forEach((button, index) => {
-        button.addEventListener('click', () => {
-            const tabName = button.getAttribute('data-tab');
-            
-            // Remove active class from all buttons and tabs
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            
-            // Add active class to clicked button
-            button.classList.add('active');
-            
-            // Show/hide appropriate tab content
-            if (tabName === 'recommendations') {
-                recommendationsTab.classList.add('active');
-                historyTab.classList.remove('active');
-            } else if (tabName === 'history') {
-                historyTab.classList.add('active');
-                recommendationsTab.classList.remove('active');
-            }
-        });
-    });
 }
-
-// Clear history functionality
-    function setupClearHistoryButton() {
-        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-        if (!clearHistoryBtn) return;
-        
-        clearHistoryBtn.addEventListener('click', async () => {
-            // Confirm before clearing
-            const confirmed = confirm('Are you sure you want to clear all analysis history? This will delete:\n\n- All analysis history in the app\n- All diagnosis records in the CSV file\n\nThis action cannot be undone.');
-            
-            if (confirmed) {
-                try {
-                    // Clear localStorage
-                    localStorage.removeItem('analysisHistory');
-                    
-                    // Clear from CSV via API
-                    const response = await fetch('http://localhost:5000/clear-analysis-history', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        credentials: 'include'
-                    });
-                    
-                    if (response.ok) {
-                        const result = await response.json();
-                        console.log('History cleared:', result);
-                        
-                        // Reload history display (will be empty)
-                        loadAnalysisHistory();
-                        
-                        // Show success message
-                        alert('Analysis history has been cleared successfully.');
-                    } else {
-                        throw new Error('Failed to clear history from server');
-                    }
-                } catch (error) {
-                    console.error('Error clearing history:', error);
-                    alert('Error clearing history. Please try again.');
-                }
-            }
-        });
-    }

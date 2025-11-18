@@ -14,7 +14,7 @@ function getChartData() {
         if (!labelEl || !numberEl) return; // skip if missing
 
         labels.push(labelEl.textContent.trim());
-        data.push(parseInt(numberEl.textContent.trim()));
+        data.push(parseInt(numberEl.textContent.trim()) || 0);
         const style = window.getComputedStyle(card);
         backgroundColors.push(style.backgroundColor || '#000'); // fallback color
     });
@@ -39,7 +39,7 @@ function initStatsChart(type = 'pie') {
             datasets: [{
                 data: data,
                 backgroundColor: backgroundColors,
-                borderColor: type === 'bar' ? '#000' : null,
+                borderColor: type === 'bar' ? '#000' : undefined,
                 borderWidth: type === 'bar' ? 1 : 0
             }]
         },
