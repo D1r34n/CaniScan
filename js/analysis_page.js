@@ -249,7 +249,7 @@ loadAnalysisHistory();
 // ================================
 // UTILITY FUNCTIONS
 // ================================
-function restoreChatInputClickability() {
+export function restoreChatInputClickability() {
     const chatInput = document.getElementById('chatInput');
     const chatInputArea = document.querySelector('.chat-input-area');
     const recommendationsBox = document.querySelector('.recommendations-box');
@@ -336,13 +336,10 @@ function handleImageFile(file) {
     const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
     const imagePreview = document.getElementById('imagePreview');
     const previewImage = document.getElementById('previewImage');
-    
-    if (!uploadArea || !uploadPlaceholder || !imagePreview || !previewImage) {
-        console.error('Required elements not found');
-        return;
-    }
-    
-    console.log('Processing image file:', file.name);
+        
+    // Check if this is a different image
+    const isDifferentImage = !window.currentAnalysisSource || 
+                            window.currentAnalysisSource.filename !== file.name;
     
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -354,7 +351,35 @@ function handleImageFile(file) {
             type: 'upload',
             filename: file.name || 'uploaded-image'
         };
-        console.log('Image loaded successfully');
+        
+        // If it's a different image, hide results and show form
+        if (isDifferentImage) {
+            const analysisResults = document.getElementById('analysisResults');
+            const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
+            const analysisForm = document.getElementById('analysisForm');
+            
+            if (analysisResults) {
+                analysisResults.style.display = 'none';
+            }
+            
+            if (analysisResultsDisplay) {
+                analysisResultsDisplay.style.display = 'none';
+            }
+            
+            if (analysisForm) {
+                analysisForm.style.display = 'block';
+            }
+            
+            // Scroll to form after a short delay
+            setTimeout(() => {
+                if (analysisForm) {
+                    analysisForm.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }
+            }, 100);
+        }
     };
     reader.onerror = (e) => {
         console.error('Error reading file:', e);
@@ -363,92 +388,136 @@ function handleImageFile(file) {
     reader.readAsDataURL(file);
 }
 
-// Image upload and preview functionality
 function setupImageUpload() {
-const uploadArea = document.getElementById('imageUploadArea');
-const uploadPlaceholder = uploadArea.querySelector('.upload-placeholder');
-const imagePreview = document.getElementById('imagePreview');
-const previewImage = document.getElementById('previewImage');
-const changeImageBtn = document.getElementById('changeImageBtn');
+    const uploadArea = document.getElementById('imageUploadArea');
+    const uploadPlaceholder = uploadArea.querySelector('.upload-placeholder');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImage = document.getElementById('previewImage');
+    const changeImageBtn = document.getElementById('changeImageBtn');
 
-// Drag and drop functionality
-uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadPlaceholder.style.borderColor = '#c4a484';
-    uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.1)';
-});
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadPlaceholder.style.borderColor = '#c4a484';
+        uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.1)';
+    });
 
-uploadArea.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    uploadPlaceholder.style.borderColor = '#d9b99b';
-    uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
-});
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadPlaceholder.style.borderColor = '#d9b99b';
+        uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
+    });
 
-uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadPlaceholder.style.borderColor = '#d9b99b';
-    uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        handleImageFile(files[0]);
-    }
-});
-
-// File input functionality
-uploadPlaceholder.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Create a new file input each time
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*';
-    fileInput.style.display = 'none';
-    
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files && e.target.files.length > 0) {
-            handleImageFile(e.target.files[0]);
-        }
-        // Clean up immediately after use
-        if (fileInput.parentNode) {
-            fileInput.parentNode.removeChild(fileInput);
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadPlaceholder.style.borderColor = '#d9b99b';
+        uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleImageFile(files[0]);
         }
     });
-    
-    // Add to DOM, trigger click, then remove
-    document.body.appendChild(fileInput);
-    fileInput.click();
-    
-    // Clean up after a short delay to ensure the file dialog has opened
-    setTimeout(() => {
-        if (fileInput.parentNode) {
-            fileInput.parentNode.removeChild(fileInput);
-        }
-    }, 100);
-});
 
-// Change image button
-changeImageBtn.addEventListener('click', () => {
-    uploadPlaceholder.style.display = 'flex';
-    imagePreview.style.display = 'none';
-    const analysisResults = document.getElementById('analysisResults');
-    const resultDiagnosis = document.getElementById('resultDiagnosis');
-    const resultConfidence = document.getElementById('resultConfidence');
-    const resultInferenceTime = document.getElementById('resultInferenceTime');
-    
-    if (analysisResults) {
-        analysisResults.style.display = 'block'; 
-        resultDiagnosis.textContent = 'Pending...'; 
-        resultConfidence.textContent = '--'; 
-        if (resultInferenceTime) {
-            resultInferenceTime.textContent = '--';
+    // File input functionality (click on placeholder)
+    uploadPlaceholder.addEventListener('click', (e) => {
+        // Don't open file picker if clicking on the gallery button or change image button
+        const selectFromGalleryBtn = document.getElementById('selectFromGalleryBtn');
+        const changeImageBtn = document.getElementById('changeImageBtn');
+        
+        if (selectFromGalleryBtn && (e.target === selectFromGalleryBtn || selectFromGalleryBtn.contains(e.target))) {
+            return; // Let the gallery button handle its own click
         }
+        
+        if (changeImageBtn && (e.target === changeImageBtn || changeImageBtn.contains(e.target))) {
+            return; // Let the change image button handle its own click
+        }
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Create a new file input each time
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleImageFile(e.target.files[0]);
+            }
+            // Clean up immediately after use
+            if (fileInput.parentNode) {
+                fileInput.parentNode.removeChild(fileInput);
+            }
+        });
+        
+        // Add to DOM, trigger click, then remove
+        document.body.appendChild(fileInput);
+        fileInput.click();
+        
+        // Clean up after a short delay to ensure the file dialog has opened
+        setTimeout(() => {
+            if (fileInput.parentNode) {
+                fileInput.parentNode.removeChild(fileInput);
+            }
+        }, 100);
+    });
+
+    if (changeImageBtn) {
+        changeImageBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Reset analysis results when changing image
+            const analysisResults = document.getElementById('analysisResults');
+            if (analysisResults) {
+                analysisResults.style.display = 'none';
+            }
+            
+            // Clear previous analysis data
+            window.currentAnalysis = null;
+            window.currentAnalysisSource = null;
+            
+            // Create a new file input each time
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.style.display = 'none';
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    handleImageFile(e.target.files[0]);
+                    
+                    // Scroll back to the analysis form after successful image change
+                    const analysisForm = document.getElementById('analysisForm');
+                    if (analysisForm) {
+                        analysisForm.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'start' 
+                        });
+                    }
+                }
+                // If no files selected (user cancelled), don't scroll
+                
+                // Clean up immediately after use
+                    if (fileInput.parentNode) {
+                        fileInput.parentNode.removeChild(fileInput);
+                    }
+            });
+            
+            // Add to DOM, trigger click, then remove
+            document.body.appendChild(fileInput);
+            fileInput.click();
+            
+            // Clean up after a short delay to ensure the file dialog has opened
+            setTimeout(() => {
+                if (fileInput.parentNode) {
+                    fileInput.parentNode.removeChild(fileInput);
+                }
+            }, 100);
+        });
     }
-    previewImage.src = '';
-    previewImage.dataset.sourceFilename = '';
-    window.currentAnalysisSource = null;
-});
 }
 
 // Analysis button functionality
@@ -457,64 +526,79 @@ function setupAnalysisButton() {
     const analysisResults = document.getElementById('analysisResults');
     const resultDiagnosis = document.getElementById('resultDiagnosis');
     const resultConfidence = document.getElementById('resultConfidence');
+    const resultInferenceTime = document.getElementById('resultInferenceTime');
     
     analyzeBtn.addEventListener('click', async () => {
-
-    if (!window.selectedModel) {
-        alert('Please select a model first (YoloV8n or YoloV11n)');
-        return;
-        }
-
         const previewImage = document.getElementById('previewImage');
         if (!previewImage.src) return;
+        
+        // Get form values
+        const dogName = document.getElementById('dogName');
+        const dogBreed = document.getElementById('dogBreed');
+        const modelSelect = document.getElementById('modelSelect');
+        
+        // Validate model selection
+        if (!modelSelect || !modelSelect.value) {
+            alert('Please select a model first');
+            return;
+        }
+        
+        const selectedModel = modelSelect.value;
         
         // Show loading state
         analyzeBtn.disabled = true;
         analyzeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
         
         try {
-
             // Call real YOLO analysis API
-            const analysisResult = await performRealAnalysis(previewImage.src, window.selectedModel);
+            const analysisResult = await performRealAnalysis(previewImage.src, selectedModel);
             
-            // Show results
-            analysisResults.style.display = 'block';
-            resultDiagnosis.textContent = analysisResult.disease;
-            resultConfidence.textContent = `${analysisResult.confidence}%`;
-            const resultInferenceTime = document.getElementById('resultInferenceTime');
+            // Hide form, show results
+            const analysisForm = document.getElementById('analysisForm');
+            const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
+            const resultsTitle = document.getElementById('resultsTitle');
+            
+            if (analysisForm) analysisForm.style.display = 'none';
+            if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'flex';
+            if (resultsTitle) resultsTitle.textContent = dogName?.value || 'Analysis Results';
             if (resultInferenceTime && analysisResult.inference_time !== undefined) {
-                resultInferenceTime.textContent = `${analysisResult.inference_time}s`;
-            }
+                    resultInferenceTime.textContent = `${analysisResult.inference_time}s`;
+                }
+
+            // Update results
+            const resultDiagnosis = document.getElementById('resultDiagnosis');
+            const resultConfidence = document.getElementById('resultConfidence');
             
-            // Save analyzed image to gallery
+            if (resultDiagnosis) resultDiagnosis.textContent = analysisResult.disease;
+            if (resultConfidence) resultConfidence.textContent = `${analysisResult.confidence}%`;
+            
+            // Save to gallery
             const savedFilename = await saveAnalyzedImageToGallery(
-            previewImage.src, 
-            analysisResult.disease, 
-            analysisResult.confidence
-            ); 
-            
-            // Add to history with filename
-            await addToAnalysisHistory(
-            previewImage.src, 
-            analysisResult.disease, 
-            `${analysisResult.confidence}%`, 
-            savedFilename
+                previewImage.src, 
+                analysisResult.disease, 
+                analysisResult.confidence
             );
             
-            // Show initial LLM recommendation in chat
-            showInitialRecommendation(analysisResult.recommendation);
+            // Add to history
+            await window.analysisPageFunctions.addToAnalysisHistory(
+                previewImage.src, 
+                analysisResult.disease, 
+                `${analysisResult.confidence}%`, 
+                savedFilename
+            );
             
-            // Store current analysis data for chat context
+            // Store analysis data with dog info
             window.currentAnalysis = {
                 diagnosis: analysisResult.disease,
                 confidence: analysisResult.confidence,
-                model: window.selectedModel
+                model: selectedModel,
+                dogName: dogName?.value || '',
+                dogBreed: dogBreed?.value || ''
             };
             
-            // Debug: Log the stored analysis data
-            console.log('DEBUG: Stored analysis data:', window.currentAnalysis);
+            // Show initial recommendation
+            showInitialRecommendation(analysisResult.recommendation);
             
-            // Ensure chat input is clickable and focused after analysis
             setTimeout(() => {
                 restoreChatInputClickability();
             }, 100);
@@ -698,8 +782,206 @@ function setupChatInterface() {
     }
 }
 
+function autoAnalyzeSelectedImage() {
+    if (window.currentAnalysisSource?.type !== 'gallery') return;
+
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const previewImage = document.getElementById('previewImage');
+    if (!analyzeBtn || !previewImage || !previewImage.src) return;
+
+    if (!analyzeBtn.disabled) {
+        analyzeBtn.click();
+    }
+}
+
+// Setup gallery selection button (call this separately)
+function setupGallerySelection() {
+    const selectFromGalleryBtn = document.getElementById('selectFromGalleryBtn');
+    
+    if (selectFromGalleryBtn) {
+        selectFromGalleryBtn.addEventListener('click', (e) => {
+            console.log('Select from Gallery button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Create a new file input each time
+            const galleryFileInput = document.createElement('input');
+            galleryFileInput.type = 'file';
+            galleryFileInput.accept = 'image/*';
+            galleryFileInput.style.display = 'none';
+            
+            galleryFileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    handleImageFile(e.target.files[0]);
+                }
+                // Clean up immediately after use
+                if (galleryFileInput.parentNode) {
+                    galleryFileInput.parentNode.removeChild(galleryFileInput);
+                }
+            });
+            
+            // Add to DOM, trigger click, then remove
+            document.body.appendChild(galleryFileInput);
+            galleryFileInput.click();
+            
+            // Clean up after a short delay to ensure the file dialog has opened
+            setTimeout(() => {
+                if (galleryFileInput.parentNode) {
+                    galleryFileInput.parentNode.removeChild(galleryFileInput);
+                }
+            }, 100);
+        });
+    }
+}
+
+async function displayImageFromGallery(image) {
+    if (!image || !image.filename) {
+        throw new Error('Invalid image data provided.');
+    }
+
+    const uploadArea = document.getElementById('imageUploadArea');
+    const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImage = document.getElementById('previewImage');
+    const analysisResults = document.getElementById('analysisResults');
+
+    if (!uploadArea || !uploadPlaceholder || !imagePreview || !previewImage) {
+        throw new Error('Analysis components are not available.');
+    }
+
+    const imageUrl = `http://localhost:5001/images/${image.filename}`;
+    const dataUrl = await fetchImageAsDataURL(imageUrl);
+
+    previewImage.src = dataUrl;
+    previewImage.alt = image.filename;
+    previewImage.dataset.sourceFilename = image.filename;
+    uploadPlaceholder.style.display = 'none';
+    imagePreview.style.display = 'block';
+    if (analysisResults) {
+        analysisResults.style.display = 'none';
+    }
+    const resultDiagnosis = document.getElementById('resultDiagnosis');
+    const resultConfidence = document.getElementById('resultConfidence');
+    const resultInferenceTime = document.getElementById('resultInferenceTime');
+    if (resultDiagnosis) {
+        resultDiagnosis.textContent = '-';
+    }
+    if (resultConfidence) {
+        resultConfidence.textContent = '-';
+    }
+    if (resultInferenceTime) {
+        resultInferenceTime.textContent = '-';
+    }
+
+    window.currentAnalysisSource = {
+        type: 'gallery',
+        filename: image.filename,
+        disease: image.disease || '',
+        confidence: image.confidence || '',
+        analyzed: Boolean(image.analyzed)
+    };
+}
+
+// Save analyzed image to gallery with metadata
+async function saveAnalyzedImageToGallery(imageSrc, disease, confidence) {
+    try {
+        // Convert data URL to blob
+        const response = await fetch(imageSrc);
+        const blob = await response.blob();
+        
+        // Create FormData
+        const formData = new FormData();
+        formData.append('image', blob, 'analyzed_image.jpg');
+        formData.append('analyzed', 'true');
+        formData.append('disease', disease);
+        formData.append('confidence', confidence.toString());
+        if (window.currentAnalysisSource?.type === 'gallery' && window.currentAnalysisSource.filename) {
+            formData.append('source_filename', window.currentAnalysisSource.filename);
+        }
+        
+        // Upload to desktop server
+        const uploadResponse = await fetch('http://localhost:5001/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!uploadResponse.ok) {
+            throw new Error('Failed to upload image');
+        }
+        
+        const result = await uploadResponse.json();
+        console.log('Image saved to gallery:', result);
+        
+        // Refresh gallery if on gallery page
+        const galleryPage = document.getElementById('galleryPage');
+        if (galleryPage && galleryPage.style.display !== 'none') {
+            setTimeout(() => {
+                loadGalleryImages();
+            }, 500);
+        }
+        
+        return result.filename;
+    } catch (error) {
+        console.error('Error saving image to gallery:', error);
+        throw error;
+    }
+}
+
+// Load and populate breeds from CSV
+async function loadBreeds() {
+    try {
+        const response = await fetch('../csv/fci-breeds.csv');
+        const csvText = await response.text();
+        
+        // Parse CSV
+        const lines = csvText.split('\n');
+        const breeds = [];
+        
+        // Skip header row, start from index 1
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line) {
+                // Split by comma and get the name column (index 1)
+                const columns = line.split(',');
+                const breedName = columns[1];
+                if (breedName) {
+                    breeds.push(breedName);
+                }
+            }
+        }
+        
+        // Populate dropdown
+        const select = document.getElementById('dogBreed-box');
+        
+        breeds.forEach(breed => {
+            const option = document.createElement('option');
+            // Format: lowercase with first letter capital
+            const formattedBreed = breed.toLowerCase()
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            
+            option.value = breed.toLowerCase().replace(/\s+/g, '-');
+            option.textContent = formattedBreed;
+            select.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('Error loading breeds:', error);
+    }
+}
+
+// Call when page loads
+document.addEventListener('DOMContentLoaded', loadBreeds);
+
 //setup image upload functionality
+loadBreeds();
 setupImageUpload();
+setupAnalysisButton();
+setupChatInterface();
+autoAnalyzeSelectedImage();
+setupGallerySelection();
+
 
 // ================================
 // EXPORT FUNCTIONS FOR USE IN OTHER FILES
@@ -714,5 +996,6 @@ window.analysisPageFunctions = {
     handleImageFile,
     setupImageUpload,
     setupAnalysisButton,
-    setupChatInterface
+    setupChatInterface,
+    autoAnalyzeSelectedImage
 };

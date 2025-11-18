@@ -88,7 +88,7 @@
         </div>
     </div>
     <!-- End of dropdown menu -->
-</div>
+    </div>
         </div>
     </nav>
 
@@ -351,15 +351,6 @@
                 <div class="floating-box analyze-image-box dominant">
                     <div class="box-header box-header--analyze-image">
                         <h4><i class="bi bi-search"></i> Analyze Image</h4>
-                        <div class="dropdown">
-                            <button class="dropdown-button" id="dropdownButton">
-                                Select Model <span>▼</span>
-                            </button>
-                            <div class="dropdown-content" id="dropdownMenu">
-                                <div>YoloV8n</div>
-                                <div>YoloV11n</div>
-                            </div>
-                        </div>
                     </div>
                     <div class="box-content">
                         <div class="image-upload-area" id="imageUploadArea">
@@ -376,22 +367,52 @@
                                 </div>
                             </div>
                         </div>
+                        <div style="display: none;">
+                            <!--Put the analysis user input here-->
+                        </div>
                         <div class="analysis-results" id="analysisResults" style="display: none;">
                             <div class="result-header">
-                                <h5>Analysis Results:</h5>
+                                <h5 id="resultsTitle">Analysis Form</h5>
                             </div>
-                            <div class="result-content">
-                                <div class="diagnosis-result">
-                                    <span class="result-label">Diagnosis:</span>
-                                    <span class="result-value" id="resultDiagnosis">-</span>
+                            <div class="result-content" id="resultContent">
+                                <!-- Form fields (shown before analysis) -->
+                                <div id="analysisForm">
+                                    <div class="form-field">
+                                        <label for="dogName">Name:</label>
+                                        <input type="text" id="dogName" placeholder="Input name here">
+                                    </div>
+                                    
+                                    <div class="form-field">
+                                        <label for="dogBreed">Breed:</label>
+                                        <select id="dogBreed-box" >
+                                            <option value="" disabled selected>Select breed</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-field">
+                                        <label for="modelSelect">Model:</label>
+                                        <select id="modelSelect">
+                                            <option value="">Select model</option>
+                                            <option value="YoloV8n">YoloV8n</option>
+                                            <option value="YoloV11n">YoloV11n</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="confidence-result">
-                                    <span class="result-label">Confidence:</span>
-                                    <span class="result-value" id="resultConfidence">-</span>
-                                </div>
-                                <div class="inference-time-result">
-                                    <span class="result-label">Inference Time:</span>
-                                    <span class="result-value" id="resultInferenceTime">-</span>
+                                
+                                <!-- Results (shown after analysis) -->
+                                <div class="analysis-result-box" id="analysisResultsDisplay" style="display: none;">
+                                    <div class="confidence-result">
+                                        <span class="result-label">Confidence:</span>
+                                        <span class="result-value" id="resultConfidence">--</span>
+                                    </div>
+                                    <div class="diagnosis-result">
+                                        <span class="result-label">Diagnosis:</span>
+                                        <span class="result-value" id="resultDiagnosis">Pending...</span>
+                                    </div>
+                                    <div class="inference-time-result">
+                                        <span class="result-label">Inference Time:</span>
+                                        <span class="result-value" id="resultInferenceTime">-</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
