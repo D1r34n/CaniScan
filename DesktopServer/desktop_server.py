@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import os
 import uuid
@@ -9,6 +9,10 @@ import subprocess
 import platform
 import signal
 import sys
+
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import queue
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -147,13 +151,15 @@ def upload_file():
             metadata = {}
             if request.form.get('analyzed') == 'true':
                 metadata['analyzed'] = True
+                metadata['breed'] = request.form.get('breed', '')  # ✅ ADD THIS
                 metadata['disease'] = request.form.get('disease', '')
                 metadata['confidence'] = request.form.get('confidence', '0')
+                metadata['source_filename'] = request.form.get('source_filename', '')  # ✅ ADD THIS (if you want to track the original filename)
                 
                 # Save metadata to JSON file
                 metadata_file = os.path.join(UPLOAD_FOLDER, f"{unique_filename}.meta.json")
                 with open(metadata_file, 'w') as f:
-                    json.dump(metadata, f)
+                    json.dump(metadata, f, indent=2)  # Added indent for readability
             
             # Log the upload
             upload_info = {
@@ -240,6 +246,7 @@ def list_images():
                     'uploaded_at': datetime.fromtimestamp(file_time).isoformat(),
                     'path': os.path.join(path, item).replace('\\', '/') if path else item,
                     'analyzed': metadata.get('analyzed', False),
+                    'breed': metadata.get('breed', ''),
                     'disease': metadata.get('disease', ''),
                     'confidence': metadata.get('confidence', '0')
                 })
@@ -549,6 +556,39 @@ def dashboard():
     """
     return dashboard_html
 
+clients = []
+
+class UploadsHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        if not event.is_directory and allowed_file(event.src_path):
+            print(f"New file uploaded: {event.src_path}")
+            for q in clients:
+                q.put(f"Uploaded {os.path.basename(event.src_path)}")
+
+    def on_deleted(self, event):
+        if not event.is_directory and allowed_file(event.src_path):
+            print(f"File deleted: {event.src_path}")
+            for q in clients:
+                q.put(f"Deleted {os.path.basename(event.src_path)}")
+
+# Start the watchdog observer
+observer = Observer()
+observer.schedule(UploadsHandler(), path=UPLOAD_FOLDER, recursive=True)
+observer.start()
+
+@app.route('/events')
+def sse_stream():
+    def event_stream():
+        q = queue.Queue()
+        clients.append(q)
+        try:
+            while True:
+                msg = q.get()
+                yield f"data: {msg}\n\n"
+        except GeneratorExit:
+            clients.remove(q)
+    return Response(event_stream(), mimetype="text/event-stream")
+
 if __name__ == '__main__':
     # Handle SIGINT (Ctrl+C) and SIGTERM signals
     def signal_handler(sig, frame):
@@ -561,7 +601,7 @@ if __name__ == '__main__':
     print("Starting Caniscan Desktop Server...")
     print(f"Uploads folder location: {UPLOAD_FOLDER}")
     print("Ready to receive images from Android app")
-    print("Web dashboard available at: http://localhost:5000")
+    print("Web dashboard available at: http://localhost:5001")
     print("API endpoints:")
     print("   - POST /upload - Upload images")
     print("   - GET /images - List all images and folders")
@@ -589,3 +629,6 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("\n🛑 Server stopped by user.")
         sys.exit(0)
+    finally:
+        observer.stop()
+        observer.join()

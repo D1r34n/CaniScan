@@ -382,21 +382,36 @@ html, body {
 
 /* View button stays at bottom */
 .stat-card .view-btn {
-  width: 100%;              /* almost full width */
+  width: 100%; /* almost full width */
   margin: 8px auto 0 auto; /* top margin + centered horizontally */
-  padding: 0.2rem 0;       /* reduce horizontal padding since width is large */
+  padding: 0.2rem 0; /* reduce horizontal padding since width is large */
   background: #2f3035;
   color: #fff;
   border: none;
   border-radius: 16px;
   cursor: pointer;
   transition: 0.2s;
-  text-align: center;      /* center text inside button */
+  text-align: center; /* center text inside button */
 }
 
-.stat-card .view-btn:hover {
+/* Hover style for active buttons */
+.stat-card .view-btn:not(:disabled):hover {
   transform: translateY(-2px);
   background: #d9b99b;
+}
+
+.stat-card .view-btn:disabled {
+  background: #444549;
+  color: #a0a0a0;
+  cursor: not-allowed;
+  
+  transform: none; 
+  opacity: 0.7;
+}
+
+.stat-card.disabled-card {
+    opacity: 0.8; /* Dim the entire card */
+    pointer-events: none; /* Optional: ensures no interaction with the card background */
 }
 
 /* Example: card colors (keep your existing colors) */
@@ -639,9 +654,14 @@ html, body {
     margin-bottom: 0.5rem;
 }
 
+.user-name {
+    display: flex;
+    align-items: center;
+}
+
 .user-slide {
     display: inline-block;
-    max-width: 200px; /* adjust based on dropdown width */
+    max-width: 180px; /* adjust width */
     overflow: hidden;
     white-space: nowrap;
     vertical-align: bottom;
@@ -650,17 +670,20 @@ html, body {
 
 .user-slide span {
     display: inline-block;
-    padding-left: 0;       /* no extra padding when not sliding */
     animation: none;
 }
 
 .user-slide.slide span {
-    padding-left: 100%;    /* only push text when sliding */
-    animation: slide-text 5s linear infinite;
+    animation: slide-text 8s linear infinite;
+}
+
+#copyIPBtn {
+    flex-shrink: 0; /* prevent shrinking */
+    margin-left: 5px;
 }
 
 @keyframes slide-text {
-    0% { transform: translateX(0); }
+    0%   { transform: translateX(0); }
     100% { transform: translateX(-100%); }
 }
 

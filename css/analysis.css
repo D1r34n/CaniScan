@@ -616,11 +616,13 @@
 }
 
 .bot-message {
-  justify-content: flex-start;
+  text-align: justify;
+  white-space: pre-wrap;
 }
 
 .user-message {
-  justify-content: flex-end;
+  text-align: justify;
+  white-space: pre-wrap;
 }
 
 .message-content {

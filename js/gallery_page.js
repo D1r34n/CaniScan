@@ -54,9 +54,13 @@ sortDropdownButton.addEventListener('click', () => {
 
 // Close dropdown when clicking outside
 document.addEventListener('click', (e) => {
-  if (!sortDropdownContainer.contains(e.target)) {
-    sortDropdownContainer.classList.remove('show');
-  }
+    if (!sortDropdownContainer.classList.contains('show')) {
+        return; 
+    }
+
+    if (!sortDropdownContainer.contains(e.target)) {
+        sortDropdownContainer.classList.remove('show');
+    }
 });
 
 // Aggregate sort checkboxes for convenience
@@ -184,6 +188,7 @@ async function displayImageFromGallery(image) {
         filename: image.filename,
         disease: image.disease || '',
         confidence: image.confidence || '',
+        breed: image.breed || '',
         analyzed: Boolean(image.analyzed)
     };
 }
@@ -268,14 +273,25 @@ function renderGalleryImages() {
         lastSelectedFilename = null;
         lastSelectedIndex = null;
         lastActiveFilename = null;
-        imageGrid.innerHTML = '<div class="no-images">No images match the current filters.</div>';
+
+        // Show the empty-state div
+        if (emptyState) emptyState.style.display = 'block';
+
+        showSelectImagePlaceholder("No images available");
+        
+        // Clear image grid
+        imageGrid.innerHTML = '';
         return;
+    } else {
+        // Hide empty-state if images exist
+        if (emptyState) emptyState.style.display = 'none';
     }
 
     filtered.forEach((image, index) => {
         const div = document.createElement('div');
         div.classList.add('image-item');
         div.dataset.filename = image.filename;
+        div.dataset.breed = image.breed || '';
         div.dataset.disease = image.disease || '';
         div.dataset.analyzed = image.analyzed ? 'true' : 'false';
         div.dataset.confidence = image.confidence || '';
@@ -389,8 +405,6 @@ function showSelectImagePlaceholder(message = "Select an image") {
     const detailPane = document.getElementById("detailPane");
     if (!detailPane) return;
 
-    detailPane.classList.remove('minimized');
-
     let detailContent = detailPane.querySelector('.detail-content');
     if (!detailContent) {
         detailContent = document.createElement('div');
@@ -420,7 +434,7 @@ function showImageDetails(image) {
     if (!image) return;
 
     lastActiveFilename = image.filename || null;
-
+    console.log('Clicked image data:', image);
     // Show the pane using unified function
     showDetailsPane({ minimized: false, rightOffset: '26rem' });
 
@@ -430,6 +444,7 @@ function showImageDetails(image) {
     const sizeKB = image.size ? Math.round(image.size / 1024) : 0;
     const sizeStr = sizeKB > 0 ? `${sizeKB} KB` : 'Unknown';
     const isAnalyzed = image.analyzed || false;
+    const breed = image.breed || 'N/A';
     const diagnosis = image.disease || 'N/A';
     const confidence = image.confidence || '0';
     const analysisStatus = isAnalyzed
@@ -453,6 +468,11 @@ function showImageDetails(image) {
                     <span class="detail-label"><i class="bi bi-heart-pulse"></i> Diagnosis:</span>
                     <span class="detail-value ${displayNameClass}">${displayName}</span>
                 </div>
+                ${isAnalyzed ? `
+                <div class="detail-row">
+                    <span class="detail-label"><i class="bi bi-tag-fill"></i> Breed:</span>
+                    <span class="detail-value">${breed}</span>
+                </div>` : ''}
                 <div class="detail-row">
                     <span class="detail-label"><i class="bi bi-calendar"></i> Date:</span>
                     <span class="detail-value">${dateStr}</span>
@@ -572,7 +592,7 @@ if (galleryUploadBtn && galleryUploadInput) {
             const result = await response.json();
 
             if (result.success) {
-                console.log('Image uploaded successfully:', result.filename);
+                // console.log('Image uploaded successfully:', result.filename);
                 
                 // Refresh gallery to show new image
                 await loadGalleryImages();
@@ -593,7 +613,7 @@ if (galleryUploadBtn && galleryUploadInput) {
 }
 
 // Enter Analyze Mode: show selection and floating buttons
-function enterAnalyzeMode() {
+export function enterAnalyzeMode() {
     // Clear any previously active image
     document.querySelectorAll('.image-item.active').forEach(el => el.classList.remove('active'));
     lastActiveFilename = null;
@@ -844,7 +864,7 @@ if (dropdownDeleteBtn) {
                     alert(`Deleted ${successful.length} image(s). ${failed.length} image(s) could not be deleted.`);
                 }
             } else {
-                console.log(`Successfully deleted ${successful.length} image(s)`);
+                // console.log(`Successfully deleted ${successful.length} image(s)`);
             }
 
             // Refresh gallery
@@ -925,14 +945,18 @@ function selectImage(e, imageDataOverride = null) {
     }
 }
 
-// Permanent listener for empty-space clicks
+// Clicking on empty space will clear the details pane
 if (galleryColumn) {
     galleryColumn.addEventListener('click', (e) => {
         // Only clear if we didn't click on an image item
         if (!e.target.closest('.image-item')) {
             clearSelection(); // removes 'active' and selection
-            // Minimize the details pane using unified function
-            showDetailsPane({ minimized: true, rightOffset: '1rem' });
+
+            if (filteredGalleryImages.length === 0) {
+                showSelectImagePlaceholder("No images available");
+            } else {
+                showSelectImagePlaceholder("Select an image");
+            }
         }
     });
 }

@@ -62,11 +62,13 @@
     <!-- Dropdown Menu -->
     <div class="user-dropdown" id="userDropdown">
         <div class="dropdown-header">
-            <div class="user-name" id="dropdownUserName" title="Click top copy email address">
+            <div class="user-name" id="dropdownUserName">
                 <div class="user-slide">
                     <span>User</span>
                 </div>
+                <i id="copyEmailBtn" class="bi bi-clipboard" style="margin-left: 5px; cursor: pointer;" title="Click to copy email address"></i>
             </div>
+
 
             
             <!-- IP Address Section with clipboard icon -->
@@ -133,25 +135,25 @@
             </div>
     </nav>
 
+        <!-- Server Loading Screen Container -->
+        <div id="loadingScreenContainer" class="loading-screen-container">
+            <video autoplay loop muted playsinline class="loading-video">
+                <source src="../images/doggy_loading.mp4" type="video/mp4">
+            </video>
+
+            <div class="description">
+                <h5 class="card-title">Connecting...</h5>
+                <p class="card-text text-muted">
+                    The application is unable to reach the server. Make sure your connection is active.
+                </p>
+            </div>
+        </div>
+
         <!-- Main container -->
         <div class="main-container">
 
             <!-- Home Page -->
             <div id="homePage" class="home-page">
-
-            <!-- Server Loading Screen Container -->
-            <div id="loadingScreenContainer" class="loading-screen-container">
-                <video autoplay loop muted playsinline class="loading-video">
-                    <source src="../images/doggy_loading.mp4" type="video/mp4">
-                </video>
-
-                <div class="description">
-                    <h5 class="card-title">Connecting...</h5>
-                    <p class="card-text text-muted">
-                        The application is unable to reach the server. Make sure your connection is active.
-                    </p>
-                </div>
-            </div>
 
             <!-- Gallery Overview -->
             <div id="galleryOverview" class="gallery-overview">
@@ -162,47 +164,47 @@
 
                     <!-- ===== Top Stats Cards Row ===== -->
                     <div class="stats-cards-row" id="statsCardsRow">
-                        <div class="stat-card">
+                        <div class="stat-card" id="rawCard">
                             <div class="card-top">
                                 <span>Raw</span>
                                 <span class="number">0</span>
                             </div>
-                            <button class="view-btn">View</button>
+                            <button class="view-btn" id="rawViewBtn">View</button>
                         </div>
-                        <div class="stat-card">
+                        <div class="stat-card" id="dermatitisCard">
                             <div class="card-top">
-                                <span>Analyzed</span>
+                                <span>Allergic Dermatitis </span>
                                 <span class="number">0</span>
                             </div>
-                            <button class="view-btn">View</button>
+                            <button class="view-btn" id="dermatitisBtn">View</button>
                         </div>
-                        <div class="stat-card">
+                        <div class="stat-card" id="fungalCard">
                             <div class="card-top">
-                                <span>Dermatitis</span>
+                                <span>Fungal Infection</span>
                                 <span class="number">0</span>
                             </div>
-                            <button class="view-btn">View</button>
+                            <button class="view-btn" id="fungalBtn">View</button>
                         </div>
-                        <div class="stat-card">
+                        <div class="stat-card" id="hotspotCard">
+                            <div class="card-top">
+                                <span>Hot Spots</span>
+                                <span class="number">0</span>
+                            </div>
+                            <button class="view-btn" id="hotspotsBtn">View</button>
+                        </div>
+                        <div class="stat-card" id="mangeCard">
                             <div class="card-top">
                                 <span>Mange</span>
                                 <span class="number">0</span>
                             </div>
-                            <button class="view-btn">View</button>
+                            <button class="view-btn" id="mangeBtn">View</button>
                         </div>
-                        <div class="stat-card">
-                            <div class="card-top">
-                                <span>Hotspot</span>
-                                <span class="number">0</span>
-                            </div>
-                            <button class="view-btn">View</button>
-                        </div>
-                        <div class="stat-card">
+                        <div class="stat-card" id="healthyCard">
                             <div class="card-top">
                                 <span>Healthy</span>
                                 <span class="number">0</span>
                             </div>
-                            <button class="view-btn">View</button>
+                            <button class="view-btn" id="healthyBtn">View</button>
                         </div>
                     </div>
 
@@ -307,14 +309,20 @@
                                 </div>
                                 <div class="sort-dropdown-item">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="sortMange">
-                                        <label class="form-check-label" for="sortMange">Mange</label>
+                                        <input class="form-check-input" type="checkbox" id="sortFungal">
+                                        <label class="form-check-label" for="sortFungal">Fungal Infection</label>
                                     </div>
                                 </div>
                                 <div class="sort-dropdown-item">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="sortHotspot">
                                         <label class="form-check-label" for="sortHotspot">Hotspot</label>
+                                </div>
+                                </div>
+                                <div class="sort-dropdown-item">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="sortMange">
+                                        <label class="form-check-label" for="sortMange">Mange</label>
                                     </div>
                                 </div>
                                 <div class="sort-dropdown-item">
@@ -353,6 +361,11 @@
             <div class="gallery-columns">
                 <!-- Left Column: Image Grid -->
                 <div class="gallery-left">
+                    <!-- Empty state -->
+                    <div id="emptyState" class="empty-state">
+                        <img src="../images/gallery_empty.png" alt="Empty">
+                        <div>It's empty here...</div>
+                    </div>
                     <div id="imageGrid" class="image-grid">
                         <div class="image-item">Image 1</div>
                         <div class="image-item">Image 2</div>
@@ -395,15 +408,6 @@
                 <div class="floating-box analyze-image-box dominant">
                     <div class="box-header box-header--analyze-image">
                         <h4> Analyze Image</h4>
-                        <div class="dropdown">
-                            <button class="dropdown-button" id="dropdownButton">
-                                Select Model <span>▼</span>
-                            </button>
-                            <div class="dropdown-content" id="dropdownMenu">
-                                <div>YoloV8n</div>
-                                <div>YoloV11n</div>
-                            </div>
-                        </div>
                     </div>
                     <div class="box-content">
                         <div class="image-upload-area" id="imageUploadArea">
@@ -493,9 +497,7 @@
                 <div class="chat-container">
                     <div class="chat-messages" id="chatMessages">
                         <div class="chat-message bot-message">
-                            <div class="message-content">
-                                Hello! I'm here to help with recommendations for your dog's skin condition. How can I assist you today?
-                            </div>
+                            <div class="message-content">Hello! I'm here to help with recommendations for your dog's skin condition. How can I assist you today?</div>
                         </div>
                     </div>
                     <div class="chat-input-area">
