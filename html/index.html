@@ -82,6 +82,10 @@
                 <i class="bi bi-person"></i>
                 <span>Change Avatar</span>
             </button>
+            <button class="dropdown-item" id="openQRCodeBtn">
+                <i class="bi bi-qr-code"></i>
+                <span>Connect to phone</span>
+            </button>
             <div class="dropdown-item d-flex align-items-center justify-content-start" id="changeAppearanceBtn">
                 <i class="bi bi-circle-half"></i>
                 <span>Appearance</span>
@@ -100,7 +104,7 @@
     </div>
     <!-- End of dropdown menu -->
 
-</div>
+    </div>
         </div>
         <!-- Account Selection Modal -->
             <div id="accountSelectionModal" class="account-modal">
@@ -133,6 +137,76 @@
                     <button id="applyAvatarChanges" class="apply-btn">Apply</button>
                 </div>
             </div>
+
+        <!-- QR Code Popup -->
+            <div id="qrCodeContainer" class="qr-code-container">
+
+                <!-- Background Overlay -->
+                <div class="qr-code-overlay"></div>
+
+                <!-- Popup Content -->
+                <div class="qr-code-content">
+
+                    <!-- Close Button -->
+                    <button class="qr-close-btn" id="closeQRCodeBtn">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+
+                    <!-- Loading Section -->
+                    <div id="qrLoading" class="qr-section">
+                        <h2>Generating QR Code...</h2>
+                        <div class="loading-spinner">
+                            <i class="bi bi-arrow-clockwise" style="font-size: 48px;"></i>
+                        </div>
+                    </div>
+
+                    <!-- QR Code Display Section -->
+                    <div id="qrDisplay" class="qr-section" style="display: none;">
+                        <h2>Connect Your Phone</h2>
+                        <p>Scan this QR code with your phone</p>
+
+                        <div class="qr-image-wrapper">
+                            <img id="qrImage" class="qr-code-image" src="" alt="QR Code">
+                        </div>
+
+                        <div class="connection-info">
+                            <p><strong>Server:</strong> <span id="serverUrlLabel"></span></p>
+                            <p class="status-text" id="connectionStatusText">Waiting for connection...</p>
+                        </div>
+                    </div>
+
+                    <!-- Error Section -->
+                    <div id="qrError" class="qr-section" style="display: none;">
+                        <h2>Connection Error</h2>
+                        <p id="qrErrorMessage"></p>
+                        <button onclick="qrManager.showQRCodeOverlay()" class="retry-btn">
+                            <i class="bi bi-arrow-clockwise"></i> Retry
+                        </button>
+                    </div>
+
+                    <!-- Success Section -->
+                    <div id="qrSuccess" class="qr-section" style="display: none;">
+                        <div class="success-icon">
+                            <i class="bi bi-check-circle-fill" style="font-size: 72px; color: #4CAF50;"></i>
+                        </div>
+
+                        <h2>Successfully Connected!</h2>
+                        <p>Your phone is now connected to the desktop server.</p>
+
+                        <div class="connection-info">
+                            <p><strong>Device:</strong> <span id="deviceName"></span></p>
+                            <p><strong>IP:</strong> <span id="deviceIP"></span></p>
+                            <p><strong>Connected at:</strong> <span id="deviceTime"></span></p>
+                        </div>
+
+                        <button class="done-btn" onclick="qrManager.hideQRCode()">
+                            <i class="bi bi-check2"></i> Done
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
     </nav>
 
         <!-- Server Loading Screen Container -->

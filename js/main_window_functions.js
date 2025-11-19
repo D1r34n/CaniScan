@@ -42,8 +42,22 @@ if (!window._functionReloadProtected) {
     const lastNameInput = document.getElementById('lastName');
     const openAccountModal = document.getElementById("changeProfileBtn");
 
+    const qrContainer = document.getElementById('qrCodeContainer');
+    const openBtn = document.getElementById('openQRCodeBtn');
+    const closeBtnQR = document.getElementById('closeQRCodeBtn');
+
+    const loading = document.getElementById('qrLoading');
+    const qrDisplay = document.getElementById('qrDisplay');
+    const errorSection = document.getElementById('qrError');
+    const successSection = document.getElementById('qrSuccess');
+
+    const qrImage = document.getElementById('qrImage');
+    const serverUrlLabel = document.getElementById('serverUrlLabel');
+    const connectionStatusText = document.getElementById('connectionStatusText');
+
     const statsRetryDelay = 5000;
     const retryDelay = 5000;
+    const serverUrl = "http://127.0.0.1:5001";
 
     let isOnline = navigator.onLine;
     let serverConnected = false;
@@ -53,6 +67,8 @@ if (!window._functionReloadProtected) {
     let fadeLocked = false;
     let listenersAttached = false;
     let currentIndex = 0;
+    let checkInterval = null;
+    let connectionCheckCount = 0;
 
     const avatars = [
         { id: 0, src: '../images/Earl.png', label: 'LABRADOR' },
@@ -694,6 +710,137 @@ if (!window._functionReloadProtected) {
     });
 
     openAccountModal?.addEventListener("click",()=>accountModal.classList.add("show"));
+
+    // -------------------------------
+    // UI HELPERS
+    // -------------------------------
+    function showSection(section) {
+        loading.style.display = "none";
+        qrDisplay.style.display = "none";
+        errorSection.style.display = "none";
+        successSection.style.display = "none";
+
+        if (section === "loading") loading.style.display = "block";
+        if (section === "qr") qrDisplay.style.display = "block";
+        if (section === "error") errorSection.style.display = "block";
+        if (section === "success") successSection.style.display = "block";
+    }
+
+    function showQRCodeOverlay() {
+        // Make sure the QR container is visible
+        qrContainer.classList.add("active");
+
+        // Reset all sections
+        loading.style.display = "block";
+        qrDisplay.style.display = "none";
+        errorSection.style.display = "none";
+        successSection.style.display = "none";
+
+        // Reset connection status text for a fresh QR scan
+        connectionStatusText.innerText = "Waiting for connection...";
+        connectionStatusText.style.color = "";          // Restore default color
+        connectionStatusText.classList.add("status-text"); // Re-enable pulsing animation
+
+        // Generate QR code from the server
+        generateQRCode();
+    }
+
+    function hideQRCode() {
+        qrContainer.classList.remove("active");
+        stopConnectionCheck();
+    }
+
+    // -------------------------------
+    // QR GENERATION
+    // -------------------------------
+    async function generateQRCode() {
+        try {
+            const response = await fetch(`${serverUrl}/qr/generate`);
+            const data = await response.json();
+
+            if (!data.success) return showError("Failed to generate QR code.");
+
+            qrImage.src = data.qr_code;
+            serverUrlLabel.textContent = data.server_url;
+
+            showSection("qr");
+            startConnectionCheck();
+
+        } catch (e) {
+            showError("Cannot connect to server. Ensure it's running.");
+        }
+    }
+
+    function showError(message) {
+        document.getElementById("qrErrorMessage").innerText = message;
+        showSection("error");
+    }
+
+    // -------------------------------
+    // CONNECTION CHECKER
+    // -------------------------------
+    function startConnectionCheck() {
+        connectionCheckCount = 0;
+        const timeLimit = 5; // 5 checks
+
+        // Ensure any previous interval is cleared
+        if (checkInterval) clearInterval(checkInterval);
+
+        checkInterval = setInterval(() => {
+            connectionCheckCount++;
+
+            fetch(`${serverUrl}/connection-status`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.phoneConnected) {
+                        stopConnectionCheck();
+                        onPhoneConnected(data.connections[0]);
+                        return;
+                    }
+
+                    if (connectionCheckCount >= timeLimit) {
+                        stopConnectionCheck();
+                        showTimeoutMessage();
+                    }
+                })
+                .catch(err => {
+                    console.warn("Connection check failed:", err);
+
+                    if (connectionCheckCount >= timeLimit) {
+                        stopConnectionCheck();
+                        showTimeoutMessage();
+                    }
+                });
+
+        }, 1500);
+    }
+
+    function stopConnectionCheck() {
+        if (checkInterval) {
+            clearInterval(checkInterval);
+            checkInterval = null;
+        }
+    }
+
+    function showTimeoutMessage() {
+        connectionStatusText.innerText = "Connection timeout. Please try again.";
+        connectionStatusText.classList.remove("status-text");
+        connectionStatusText.style.color = "#ff9800";
+    }
+
+    function onPhoneConnected(info) {
+        stopConnectionCheck();
+
+        document.getElementById("deviceName").innerText = info.device_name;
+        document.getElementById("deviceIP").innerText = info.ip;
+        document.getElementById("deviceTime").innerText =
+            new Date(info.connected_at).toLocaleTimeString();
+
+        showSection("success");
+    }
+
+    openBtn?.addEventListener("click", showQRCodeOverlay);
+    closeBtnQR?.addEventListener("click", hideQRCode);
 
     // ================================
     // IMAGE UPLOAD HANDLER

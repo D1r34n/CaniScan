@@ -2,13 +2,16 @@ from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import socket
 import subprocess
 import platform
 import signal
 import sys
+import qrcode
+from io import BytesIO
+import base64
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -18,15 +21,13 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 # Configuration - Point to uploads folder outside of desktop server
-# Get the parent directory of the current script
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(os.path.dirname(BASE_DIR), 'uploads')
 
-# Alternative: Use absolute path
-# UPLOAD_FOLDER = r'C:\path\to\your\uploads'  # Windows
-# UPLOAD_FOLDER = '/path/to/your/uploads'      # Linux/Mac
-
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
+
+phone_connections = {}
+PHONE_TIMEOUT = 30
 
 # Create upload directory if it doesn't exist
 if not os.path.exists(UPLOAD_FOLDER):
@@ -54,7 +55,6 @@ def get_local_ip():
             hostname = socket.gethostname()
             local_ip = socket.gethostbyname(hostname)
             if local_ip.startswith('127.'):
-                # If it's localhost, try alternative method
                 return get_local_ip_alternative()
             return local_ip
         except Exception:
@@ -65,19 +65,16 @@ def get_local_ip_alternative():
     try:
         system = platform.system().lower()
         if system == "windows":
-            # Windows command
             result = subprocess.run(['ipconfig'], capture_output=True, text=True)
             lines = result.stdout.split('\n')
             for i, line in enumerate(lines):
                 if 'Wireless LAN adapter Wi-Fi:' in line or 'Ethernet adapter Ethernet:' in line:
-                    # Look for IPv4 address in next few lines
                     for j in range(i+1, min(i+10, len(lines))):
                         if 'IPv4 Address' in lines[j]:
                             ip = lines[j].split(':')[-1].strip()
                             if not ip.startswith('127.'):
                                 return ip
         else:
-            # Linux/Mac command
             result = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
             ips = result.stdout.strip().split()
             for ip in ips:
@@ -117,6 +114,174 @@ def get_ip():
             'timestamp': datetime.now().isoformat()
         }), 500
 
+@app.route('/qr/generate', methods=['GET'])
+def generate_qr():
+    """Generate QR code for server connection"""
+    try:
+        local_ip = get_local_ip()
+        port = request.args.get('port', '5001')
+        server_url = f"http://{local_ip}:{port}"
+        
+        # Generate QR code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(server_url)
+        qr.make(fit=True)
+        
+        # Create image
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convert to base64
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
+        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        return jsonify({
+            'success': True,
+            'qr_code': f'data:image/png;base64,{img_base64}',
+            'server_url': server_url,
+            'ip': local_ip,
+            'port': port
+        })
+    except Exception as e:
+        print(f"QR generation error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Failed to generate QR code: {str(e)}'
+        }), 500
+
+@app.route('/qr/image', methods=['GET'])
+def qr_image():
+    """Serve QR code as image"""
+    try:
+        local_ip = get_local_ip()
+        port = request.args.get('port', '5001')
+        server_url = f"http://{local_ip}:{port}"
+        
+        # Generate QR code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(server_url)
+        qr.make(fit=True)
+        
+        # Create image
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convert to bytes
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
+        
+        return Response(buffer.getvalue(), mimetype='image/png')
+    except Exception as e:
+        print(f"QR image error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Failed to generate QR image: {str(e)}'
+        }), 500
+
+@app.route('/phone/register', methods=['POST'])
+def register_phone():
+    """Register a phone connection"""
+    try:
+        data = request.get_json() or {}
+        phone_id = data.get('phone_id', str(uuid.uuid4()))
+        device_name = data.get('device_name', 'Unknown Device')
+        
+        phone_connections[phone_id] = {
+            'device_name': device_name,
+            'connected_at': datetime.now(),
+            'last_ping': datetime.now(),
+            'ip': request.remote_addr
+        }
+        
+        print(f"📱 Phone registered: {device_name} ({phone_id})")
+        
+        return jsonify({
+            'success': True,
+            'phone_id': phone_id,
+            'message': 'Phone registered successfully'
+        })
+    except Exception as e:
+        print(f"Phone registration error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Failed to register phone: {str(e)}'
+        }), 500
+
+@app.route('/phone/ping', methods=['POST'])
+def phone_ping():
+    """Keep-alive endpoint for phone connections"""
+    try:
+        data = request.get_json() or {}
+        phone_id = data.get('phone_id')
+        
+        if phone_id and phone_id in phone_connections:
+            phone_connections[phone_id]['last_ping'] = datetime.now()
+            return jsonify({
+                'success': True,
+                'message': 'Ping received'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Phone not registered'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ping failed: {str(e)}'
+        }), 500
+
+@app.route('/connection-status', methods=['GET'])
+def connection_status():
+    """Check if any phone is connected"""
+    try:
+        # Clean up old connections
+        current_time = datetime.now()
+        expired_phones = []
+        
+        for phone_id, info in phone_connections.items():
+            time_diff = (current_time - info['last_ping']).total_seconds()
+            if time_diff > PHONE_TIMEOUT:
+                expired_phones.append(phone_id)
+        
+        for phone_id in expired_phones:
+            print(f"📱 Phone disconnected (timeout): {phone_id}")
+            del phone_connections[phone_id]
+        
+        active_connections = len(phone_connections)
+        
+        return jsonify({
+            'success': True,
+            'phoneConnected': active_connections > 0,
+            'activeConnections': active_connections,
+            'connections': [
+                {
+                    'phone_id': phone_id,
+                    'device_name': info['device_name'],
+                    'connected_at': info['connected_at'].isoformat(),
+                    'ip': info['ip']
+                }
+                for phone_id, info in phone_connections.items()
+            ]
+        })
+    except Exception as e:
+        print(f"Connection status error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Failed to get connection status: {str(e)}'
+        }), 500
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle image uploads from Android app or analyzed images"""
@@ -147,19 +312,19 @@ def upload_file():
             # Get file info
             file_size = os.path.getsize(file_path)
             
-            # Save metadata if provided (for analyzed images)
+            # Save metadata if provided
             metadata = {}
             if request.form.get('analyzed') == 'true':
                 metadata['analyzed'] = True
-                metadata['breed'] = request.form.get('breed', '')  # ✅ ADD THIS
+                metadata['breed'] = request.form.get('breed', '')
                 metadata['disease'] = request.form.get('disease', '')
                 metadata['confidence'] = request.form.get('confidence', '0')
-                metadata['source_filename'] = request.form.get('source_filename', '')  # ✅ ADD THIS (if you want to track the original filename)
+                metadata['source_filename'] = request.form.get('source_filename', '')
                 
                 # Save metadata to JSON file
                 metadata_file = os.path.join(UPLOAD_FOLDER, f"{unique_filename}.meta.json")
                 with open(metadata_file, 'w') as f:
-                    json.dump(metadata, f, indent=2)  # Added indent for readability
+                    json.dump(metadata, f, indent=2)
             
             # Log the upload
             upload_info = {
@@ -197,10 +362,6 @@ def upload_file():
 @app.route('/images', methods=['GET'])
 def list_images():
     """List all uploaded images and folders"""
-    import sys
-    print("Refreshing gallery...")
-    sys.stdout.flush()  # ensures print appears immediately
-
     try:
         path = request.args.get('path', '')
         current_path = os.path.join(UPLOAD_FOLDER, path) if path else UPLOAD_FOLDER
@@ -265,13 +426,12 @@ def list_images():
         return jsonify({
             'success': False,
             'message': f'Failed to list images: {str(e)}'
-        }), 60000
+        }), 500
 
 @app.route('/images/<path:filepath>', methods=['GET'])
 def get_image(filepath):
     """Serve uploaded images from any path"""
     try:
-        # Security check - prevent directory traversal
         if '..' in filepath or filepath.startswith('/'):
             return jsonify({
                 'success': False,
@@ -315,27 +475,23 @@ def create_folder():
                 'message': 'Folder name is required'
             }), 400
         
-        # Security check - prevent directory traversal
         if '..' in folder_name or '/' in folder_name or '\\' in folder_name:
             return jsonify({
                 'success': False,
                 'message': 'Invalid folder name'
             }), 400
         
-        # Create folder path
         if parent_path:
             folder_path = os.path.join(UPLOAD_FOLDER, parent_path, folder_name)
         else:
             folder_path = os.path.join(UPLOAD_FOLDER, folder_name)
         
-        # Check if folder already exists
         if os.path.exists(folder_path):
             return jsonify({
                 'success': False,
                 'message': 'Folder already exists'
             }), 400
         
-        # Create the folder
         os.makedirs(folder_path, exist_ok=True)
         print(f"Folder created: {folder_path}")
         
@@ -357,7 +513,6 @@ def create_folder():
 def delete_image(filepath):
     """Delete uploaded images from any path and associated JSON metadata file"""
     try:
-        # Security check - prevent directory traversal
         if '..' in filepath or filepath.startswith('/'):
             return jsonify({
                 'success': False,
@@ -369,11 +524,9 @@ def delete_image(filepath):
         if os.path.exists(file_path) and os.path.isfile(file_path):
             filename = os.path.basename(file_path)
             if allowed_file(filename):
-                # Delete the image file
                 os.remove(file_path)
                 print(f"Image deleted: {filepath}")
                 
-                # Delete associated JSON metadata file if it exists
                 metadata_file = os.path.join(UPLOAD_FOLDER, f"{filename}.meta.json")
                 if os.path.exists(metadata_file):
                     os.remove(metadata_file)
@@ -407,7 +560,6 @@ def shutdown():
         print("Shutdown request received. Stopping server...")
         func = request.environ.get('werkzeug.server.shutdown')
         if func is None:
-            # For production servers, we need to use os._exit
             os._exit(0)
         func()
         return jsonify({
@@ -420,7 +572,7 @@ def shutdown():
 
 @app.route('/', methods=['GET'])
 def dashboard():
-    """Simple web dashboard to view uploaded images"""
+    """Simple web dashboard"""
     dashboard_html = """
     <!DOCTYPE html>
     <html>
@@ -428,129 +580,10 @@ def dashboard():
         <title>Caniscan Desktop Server</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                margin: 0;
-                padding: 20px;
-                background-color: #f5f5f5;
-            }
-            .container {
-                max-width: 1200px;
-                margin: 0 auto;
-                background: white;
-                padding: 20px;
-                border-radius: 8px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-            h1 {
-                color: #333;
-                text-align: center;
-                margin-bottom: 30px;
-            }
-            .status {
-                background: #e8f5e8;
-                border: 1px solid #4caf50;
-                padding: 15px;
-                border-radius: 5px;
-                margin-bottom: 20px;
-                text-align: center;
-            }
-            .images-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 20px;
-                margin-top: 20px;
-            }
-            .image-card {
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                overflow: hidden;
-                background: white;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            }
-            .image-card img {
-                width: 100%;
-                height: 150px;
-                object-fit: cover;
-            }
-            .image-info {
-                padding: 10px;
-                font-size: 12px;
-                color: #666;
-            }
-            .refresh-btn {
-                background: #007bff;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                cursor: pointer;
-                margin-bottom: 20px;
-            }
-            .refresh-btn:hover {
-                background: #0056b3;
-            }
-            .no-images {
-                text-align: center;
-                color: #666;
-                font-style: italic;
-                padding: 40px;
-            }
-        </style>
     </head>
     <body>
-        <div class="container">
-            <h1>📱 Caniscan Desktop Server</h1>
-            
-            <div class="status">
-                <strong>✅ Server Status:</strong> Running and ready to receive images from your Android device
-            </div>
-            
-            <button class="refresh-btn" onclick="loadImages()">🔄 Refresh Images</button>
-            
-            <div id="images-container">
-                <div class="no-images">Loading images...</div>
-            </div>
-        </div>
-
-        <script>
-            function loadImages() {
-                fetch('/images')
-                    .then(response => response.json())
-                    .then(data => {
-                        const container = document.getElementById('images-container');
-                        
-                        if (data.success && data.images.length > 0) {
-                            container.innerHTML = '<div class="images-grid">' +
-                                data.images.map(image => `
-                                    <div class="image-card">
-                                        <img src="/images/${image.filename}" alt="${image.filename}">
-                                        <div class="image-info">
-                                            <strong>${image.filename}</strong><br>
-                                            Size: ${(image.size / 1024).toFixed(1)} KB<br>
-                                            Uploaded: ${new Date(image.uploaded_at).toLocaleString()}
-                                        </div>
-                                    </div>
-                                `).join('') +
-                                '</div>';
-                        } else {
-                            container.innerHTML = '<div class="no-images">No images uploaded yet. Use the Android app to upload images!</div>';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading images:', error);
-                        document.getElementById('images-container').innerHTML = 
-                            '<div class="no-images">Error loading images. Please try again.</div>';
-                    });
-            }
-            
-            // Load images on page load
-            loadImages();
-            
-            // Auto-refresh every 5 seconds
-            setInterval(loadImages, 5000);
-        </script>
+        <h1>Caniscan Desktop Server</h1>
+        <p>Server is running and ready to receive connections.</p>
     </body>
     </html>
     """
@@ -571,7 +604,6 @@ class UploadsHandler(FileSystemEventHandler):
             for q in clients:
                 q.put(f"Deleted {os.path.basename(event.src_path)}")
 
-# Start the watchdog observer
 observer = Observer()
 observer.schedule(UploadsHandler(), path=UPLOAD_FOLDER, recursive=True)
 observer.start()
@@ -590,7 +622,6 @@ def sse_stream():
     return Response(event_stream(), mimetype="text/event-stream")
 
 if __name__ == '__main__':
-    # Handle SIGINT (Ctrl+C) and SIGTERM signals
     def signal_handler(sig, frame):
         print("\n🛑 Shutting down Desktop Server...")
         sys.exit(0)
@@ -605,22 +636,17 @@ if __name__ == '__main__':
     print("API endpoints:")
     print("   - POST /upload - Upload images")
     print("   - GET /images - List all images and folders")
-    print("   - GET /images/<path> - View specific image")
-    print("   - DELETE /images/<path> - Delete specific image")
-    print("   - POST /folders - Create new folder")
-    print("   - POST /shutdown - Shutdown server")
-    print("   - GET /health - Health check")
-    print("   - GET /ip - Get local IP address")
+    print("   - GET /qr/generate - Generate QR code")
+    print("   - POST /phone/register - Register phone connection")
+    print("   - GET /connection-status - Check phone connection")
     print("=" * 50)
     
-    # Display detected IP address on startup
     try:
         detected_ip = get_local_ip()
         print(f"Detected local IP address: {detected_ip}")
         print(f"Use this IP address in your phone app: http://{detected_ip}:5001")
     except Exception as e:
         print(f"Could not detect IP address: {e}")
-        print("Default IP address: 192.168.1.100")
     
     print("=" * 50)
     

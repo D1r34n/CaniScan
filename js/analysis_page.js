@@ -598,18 +598,6 @@ function setupGallerySelection() {
     });
 }
 
-function autoAnalyzeSelectedImage() {
-    if (window.currentAnalysisSource?.type !== 'gallery') return;
-
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    const previewImage = document.getElementById('previewImage');
-    if (!analyzeBtn || !previewImage || !previewImage.src) return;
-
-    if (!analyzeBtn.disabled) {
-        analyzeBtn.click();
-    }
-}
-
 async function fetchImageAsDataURL(url) {
     const response = await fetch(url);
     if (!response.ok) {
@@ -671,46 +659,6 @@ async function saveAnalyzedImageToGallery(imageSrc, dogBreed, disease, confidenc
     } catch (error) {
         console.error('Error saving image to gallery:', error);
         throw error;
-    }
-}
-
-// Load and populate breeds from CSV
-async function loadBreeds() {
-    try {
-        const response = await fetch('../csv/fci-breeds.csv');
-        const csvText = await response.text();
-        
-        const lines = csvText.split('\n');
-        const breeds = [];
-        
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line) {
-                const columns = line.split(',');
-                const breedName = columns[1];
-                if (breedName) {
-                    breeds.push(breedName);
-                }
-            }
-        }
-        
-        // Populate dropdown
-        const select = document.getElementById('dogBreed-box');
-        
-        breeds.forEach(breed => {
-            const option = document.createElement('option');
-            const formattedBreed = breed.toLowerCase()
-                .split(' ')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                .join(' ');
-            
-            option.value = breed.toLowerCase().replace(/\s+/g, '-');
-            option.textContent = formattedBreed;
-            select.appendChild(option);
-        });
-        
-    } catch (error) {
-        console.error('Error loading breeds:', error);
     }
 }
 
@@ -1006,46 +954,6 @@ function autoAnalyzeSelectedImage() {
     }
 }
 
-// Setup gallery selection button (call this separately)
-function setupGallerySelection() {
-    const selectFromGalleryBtn = document.getElementById('selectFromGalleryBtn');
-    
-    if (selectFromGalleryBtn) {
-        selectFromGalleryBtn.addEventListener('click', (e) => {
-            console.log('Select from Gallery button clicked');
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Create a new file input each time
-            const galleryFileInput = document.createElement('input');
-            galleryFileInput.type = 'file';
-            galleryFileInput.accept = 'image/*';
-            galleryFileInput.style.display = 'none';
-            
-            galleryFileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                    handleImageFile(e.target.files[0]);
-                }
-                // Clean up immediately after use
-                if (galleryFileInput.parentNode) {
-                    galleryFileInput.parentNode.removeChild(galleryFileInput);
-                }
-            });
-            
-            // Add to DOM, trigger click, then remove
-            document.body.appendChild(galleryFileInput);
-            galleryFileInput.click();
-            
-            // Clean up after a short delay to ensure the file dialog has opened
-            setTimeout(() => {
-                if (galleryFileInput.parentNode) {
-                    galleryFileInput.parentNode.removeChild(galleryFileInput);
-                }
-            }, 100);
-        });
-    }
-}
-
 async function displayImageFromGallery(image) {
     if (!image || !image.filename) {
         throw new Error('Invalid image data provided.');
@@ -1092,51 +1000,6 @@ async function displayImageFromGallery(image) {
         confidence: image.confidence || '',
         analyzed: Boolean(image.analyzed)
     };
-}
-
-// Save analyzed image to gallery with metadata
-async function saveAnalyzedImageToGallery(imageSrc, disease, confidence) {
-    try {
-        // Convert data URL to blob
-        const response = await fetch(imageSrc);
-        const blob = await response.blob();
-        
-        // Create FormData
-        const formData = new FormData();
-        formData.append('image', blob, 'analyzed_image.jpg');
-        formData.append('analyzed', 'true');
-        formData.append('disease', disease);
-        formData.append('confidence', confidence.toString());
-        if (window.currentAnalysisSource?.type === 'gallery' && window.currentAnalysisSource.filename) {
-            formData.append('source_filename', window.currentAnalysisSource.filename);
-        }
-        
-        // Upload to desktop server
-        const uploadResponse = await fetch('http://localhost:5001/upload', {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (!uploadResponse.ok) {
-            throw new Error('Failed to upload image');
-        }
-        
-        const result = await uploadResponse.json();
-        console.log('Image saved to gallery:', result);
-        
-        // Refresh gallery if on gallery page
-        const galleryPage = document.getElementById('galleryPage');
-        if (galleryPage && galleryPage.style.display !== 'none') {
-            setTimeout(() => {
-                loadGalleryImages();
-            }, 500);
-        }
-        
-        return result.filename;
-    } catch (error) {
-        console.error('Error saving image to gallery:', error);
-        throw error;
-    }
 }
 
 // Load and populate breeds from CSV
