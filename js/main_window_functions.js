@@ -165,16 +165,51 @@ if (!window._functionReloadProtected) {
         checkReadyToFadeOut();
     }
 
+    // ============================================
+    // SAFE WATCHDOG INITIALIZER (runs only once)
+    // ============================================
+    let watchdogInitialized = false;
+
+    function initWatchdog() {
+        if (watchdogInitialized) return; // prevent duplicates
+        watchdogInitialized = true;
+
+        console.log("%c🔍 Initializing watchdog listener...", "color: yellow;");
+
+        const evtSource = new EventSource(`http://${serverIP}/events`);
+
+        evtSource.onmessage = function(event) {
+            console.log("%c" + event.data, "color: limegreen; font-weight: bold;");
+            loadStatsCards();
+            loadGalleryImages(); // auto-refresh gallery
+        };
+
+        evtSource.onerror = function() {
+            console.warn("Watchdog lost connection. Will retry automatically.");
+        };
+    }
+
     function tryConnectDesktopServer() {
         if (!ipcRenderer) return;
         ipcRenderer.send('connect-desktop-server');
-        ipcRenderer.once('desktop-server-status', (event, status) => {
+        ipcRenderer.once('desktop-server-status', async (event, status) => {
             if (status.success) {
                 console.log("%c✅ Desktop server started successfully.", "color: limegreen;");
                 serverConnected = true;
+
                 galleryBtn?.removeAttribute('disabled');
                 analysisBtn?.removeAttribute('disabled');
+
+                // Load IP from desktop server BEFORE watchdog
+                try {
+                    await fetchServerIP();
+                    initWatchdog();
+                } catch (err) {
+                    console.error("Failed to fetch server IP before starting watchdog:", err);
+                }
+
                 checkReadyToFadeOut();
+
             } else {
                 console.error("%c❌ Failed to start desktop server:", "color: red;", status.message);
                 setTimeout(tryConnectDesktopServer, retryDelay);
@@ -280,7 +315,6 @@ if (!window._functionReloadProtected) {
                 });
             }
 
-            await fetchServerIP(); // update serverIP first
             document.getElementById('copyIPBtn').addEventListener('click', copyServerIP);   
 
             console.log("%c👤 Logged-in user:", "color: cyan;", loggedInUserName);
@@ -587,15 +621,6 @@ if (!window._functionReloadProtected) {
             setTimeout(loadStatsCards, statsRetryDelay);
         }
     }
-
-    // ================================
-    // WATCHDOG CHECK UPLOADS FOLDER
-    // ================================
-    const evtSource = new EventSource('http://127.0.0.1:5001/events');
-    evtSource.onmessage = function(event) {
-        console.log("%c" + event.data, "color: limegreen; font-weight: bold;");
-        loadStatsCards(); // optionally refresh gallery automatically
-    };
 
     // ================================
     // USER DROPDOWN TOGGLE
