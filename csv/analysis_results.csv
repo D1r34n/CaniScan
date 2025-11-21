@@ -1,1 +1,5 @@
 timestamp,email,diagnosis,confidence
+2025-11-21 13:07:26,anonymous,"[{""disease"": ""hotspot"", ""confidence"": 76.98, ""bbox"": [758, 257, 931, 551]}, {""disease"": ""mange"", ""confidence"": 38.08, ""bbox"": [96, 77, 433, 401]}, {""disease"": ""fungal infection"", ""confidence"": 25.26, ""bbox"": [158, 143, 446, 401]}]"
+2025-11-21 13:08:02,anonymous,"[{""disease"": ""fungal infection"", ""confidence"": 34.56, ""bbox"": [281, 261, 480, 450]}, {""disease"": ""fungal infection"", ""confidence"": 30.17, ""bbox"": [17, 19, 628, 540]}]"
+2025-11-21 13:08:09,anonymous,"[{""disease"": ""hotspot"", ""confidence"": 76.98, ""bbox"": [758, 257, 931, 551]}, {""disease"": ""mange"", ""confidence"": 38.08, ""bbox"": [96, 77, 433, 401]}, {""disease"": ""fungal infection"", ""confidence"": 25.26, ""bbox"": [158, 143, 446, 401]}]"
+2025-11-21 13:08:20,anonymous,"[{""disease"": ""hotspot"", ""confidence"": 76.98, ""bbox"": [758, 257, 931, 551]}, {""disease"": ""mange"", ""confidence"": 38.08, ""bbox"": [96, 77, 433, 401]}, {""disease"": ""fungal infection"", ""confidence"": 25.26, ""bbox"": [158, 143, 446, 401]}]"

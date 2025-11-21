@@ -3,6 +3,7 @@ CaniScan Flask Backend
 Disease detection API with YOLO model and LLM recommendations
 """
 
+import json
 import os
 import re
 import csv
@@ -63,13 +64,13 @@ os.makedirs(CSV_DIR, exist_ok=True)
 
 # YOLO Model
 MODEL_PATH = os.path.join(BASE_DIR, "runs", "v8", "n", "train_results2", "weights", "best.pt")
-model = YOLO(MODEL_PATH)
+model = YOLO(MODEL_PATH, verbose=False)
 
 # Initialize analysis CSV
 if not os.path.exists(ANALYSIS_CSV):
     with open(ANALYSIS_CSV, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["timestamp", "email", "diagnosis", "confidence"])
+        writer.writerow(["timestamp", "email", "disease", "confidence"])
 
 print("✅ Flask server initialized successfully")
 
@@ -127,15 +128,18 @@ def create_user(first_name: str, last_name: str, email: str, password: str) -> d
 # UTILITY FUNCTIONS - Analysis CSV
 # ========================================
 
-def save_analysis_to_csv(email: str, diagnosis: str, confidence: float) -> None:
-    """Save analysis results to CSV file."""
+def save_analysis_to_csv(email: str, detections: list) -> None:
+    """
+    Save all detections for an image in CSV as JSON.
+    detections: list of dicts like [{"disease": "hotspot", "confidence": 90.0, "bbox": [x1,y1,x2,y2]}, ...]
+    """
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     try:
         with open(ANALYSIS_CSV, mode="a", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
-            writer.writerow([timestamp, email, diagnosis, round(confidence, 2)])
-        print(f"✅ Saved analysis: {email} - {diagnosis} ({confidence:.2f}%)")
+            writer.writerow([timestamp, email, json.dumps(detections)])
+        print(f"✅ Saved analysis for {email} ({len(detections)} detections)")
     except Exception as e:
         print(f"❌ Error saving analysis: {e}")
 
@@ -149,16 +153,15 @@ def get_latest_analysis(email: str) -> dict | None:
     
     try:
         with open(ANALYSIS_CSV, mode="r", encoding="utf-8") as file:
-            reader = csv.DictReader(file)
+            reader = csv.DictReader(file, fieldnames=["timestamp","email","disease"])
             for row in reader:
                 if row["email"].strip().lower() == email.strip().lower():
                     timestamp = row["timestamp"]
                     if latest_timestamp is None or timestamp > latest_timestamp:
                         latest_timestamp = timestamp
                         latest_analysis = {
-                            "diagnosis": row["diagnosis"],
-                            "confidence": float(row["confidence"]),
-                            "timestamp": timestamp
+                            "timestamp": timestamp,
+                            "detections": json.loads(row["disease"])
                         }
     except Exception as e:
         print(f"Error reading analysis: {e}")
@@ -415,109 +418,122 @@ def update_user():
 # Load YOLO Model for Disease Detection
 # ----------------------------
 Yolov8 = YOLO(r"runs\v8\n\train_results2\weights\best.pt")  # Path to trained YOLOv8 weights
+print("Class names: ", Yolov8.names)
 Yolov11 = YOLO(r"runs\11\n\train_results\weights\best.pt")
+print("Class names: ", Yolov11.names)
 # actual path: C:\Users\Edrian\Documents\VSCodeProjects\CaniScan\runs\v8\n\train_results2\weights\best.pt
 
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    """Analyze image for disease detection using YOLO."""
+    """Analyze image for multiple disease detections using YOLO."""
     try:
+        print("🔹 Received /analyze request")
         data = request.get_json()
-        
-        # Decode image
+        user_email = session.get('email', 'anonymous')
+
+        # Decode base64 image
         frame_data = data.get('frame', '').split(',')[-1]
         frame_bytes = base64.b64decode(frame_data)
         np_arr = np.frombuffer(frame_bytes, np.uint8)
         img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        model_name = data.get('model', 'Yolov8')  # Default to Yolov8 if not provided
 
-        if model_name == 'YoloV11n':
-            model = Yolov11
-            print(f"Using YOLOv11n model for analysis")
-        else:  # Default to YoloV8n
-            model = Yolov8
-            print(f"Using YOLOv8n model for analysis")
-    
         if img is None:
-            return jsonify({
-                'success': False,
-                'message': 'Invalid image data'
-            }), 400
-        
-        # Run YOLO detection and measure inference time
+            return jsonify({'success': False, 'message': 'Invalid image data'}), 400
+        print(f"🔹 Image decoded: shape={img.shape}")
+
+        # Select model
+        model_name = data.get('model', 'Yolov8')
+        model = Yolov11 if model_name.lower() == 'yolov11n' else Yolov8
+        print(f"🔹 Using model: {model_name}")
+
+        # Run YOLO detection
         start_time = time.time()
         results = model(img)
         inference_time = time.time() - start_time
-        detections = results[0].boxes
-        
-        # Get user email
-        user_email = session.get('email', 'anonymous')
-        
-        # No disease detected
-        if detections is None or len(detections) == 0:
-            diagnosis = "No disease detected"
-            confidence = 0.0
-            
-            save_analysis_to_csv(user_email, diagnosis, confidence, model_name)
-            llm_response = llm_service.get_initial_recommendation(diagnosis, confidence)
-            
-            return jsonify({
-                'success': True,
-                'disease': diagnosis,
-                'confidence': confidence,
-                'inference_time': round(inference_time, 3),
-                'recommendation': llm_response
-            }), 200
-        
-        # Get highest confidence detection
-        top_conf_idx = np.argmax(detections.conf.cpu().numpy())
-        disease = model.names[int(detections.cls[top_conf_idx])]
-        confidence = float(detections.conf[top_conf_idx]) * 100
-        
-        # Save results
-        save_analysis_to_csv(user_email, disease, confidence)
-        
-        # Get LLM recommendation
-        llm_response = llm_service.get_initial_recommendation(disease, confidence)
-        
-        print(f"✅ Analysis complete: {disease} ({confidence:.2f}%)")
-        
+        print(f"🔹 YOLO inference completed in {inference_time:.3f}s")
+
+        boxes = results[0].boxes  # ultralytics Boxes object
+        names_map = getattr(model, "names", {})
+
+        detected_list = []
+        annotated_img = img.copy()
+
+        # Draw all detections regardless of confidence
+        if boxes is not None and len(boxes) > 0:
+            for box in boxes:
+                try:
+                    cls_idx = int(box.cls.cpu().numpy().item())
+                    conf = float(box.conf.cpu().numpy().item()) * 100
+                    disease = names_map.get(cls_idx, f"class_{cls_idx}")
+                    xy = box.xyxy.cpu().numpy()
+                    coords = xy[0].tolist() if xy.ndim == 2 else xy.tolist()
+                    x1, y1, x2, y2 = map(int, coords)
+
+                    detected_list.append({
+                        "disease": disease,
+                        "confidence": round(conf, 2),
+                        "bbox": [x1, y1, x2, y2]
+                    })
+
+                    # Draw bounding boxes on image
+                    cv2.rectangle(annotated_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(
+                        annotated_img,
+                        f"{disease} {conf:.1f}%",
+                        (x1, max(y1 - 10, 0)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        (0, 255, 0),
+                        2
+                    )
+                except Exception as e:
+                    print(f"❌ Error processing box: {e}")
+                    continue
+
+        # Create unique summary for LLM (highest confidence per disease)
+        unique_summary = {}
+        for det in detected_list:
+            disease = det["disease"]
+            if disease not in unique_summary or det["confidence"] > unique_summary[disease]["confidence"]:
+                unique_summary[disease] = det
+
+        # Save analysis (all detections)
+        save_analysis_to_csv(user_email, detected_list)
+
+        # Convert annotated image to base64
+        _, buffer = cv2.imencode('.jpg', annotated_img)
+        annotated_b64 = base64.b64encode(buffer).decode('utf-8')
+        annotated_uri = "data:image/jpeg;base64," + annotated_b64
+
+        # LLM summary
+        try:
+            llm_summary = llm_service.summarize_multiple_detections(list(unique_summary.values()))
+        except AttributeError:
+            print("❌ summarize_multiple_detections not implemented")
+            llm_summary = "Summary not available."
+
+        # For frontend
+        disease_str = ", ".join(unique_summary.keys()) if unique_summary else "No disease detected"
+        confidence_list = [det["confidence"] for det in detected_list]  # all confidences
+
+        print(f"✅ Multi-analysis complete ({len(detected_list)} detections)")
+
         return jsonify({
             'success': True,
-            'disease': disease,
-            'confidence': round(confidence, 2),
+            'detections': detected_list,
+            'disease': disease_str,
+            'confidence': confidence_list,
             'inference_time': round(inference_time, 3),
-            'recommendation': llm_response
+            'annotated_image': annotated_uri,
+            'summary': llm_summary
         }), 200
-        
+
     except Exception as e:
         print(f"❌ Analysis error: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'Analysis failed'
-        }), 500
-
-@app.route('/get-current-analysis', methods=['GET'])
-def get_current_analysis():
-    """Get latest analysis results for current user."""
-    user_email = session.get('email', 'anonymous')
-    latest_analysis = get_latest_analysis(user_email)
-    
-    if latest_analysis:
-        return jsonify({
-            "success": True,
-            "diagnosis": latest_analysis['diagnosis'],
-            "confidence": latest_analysis['confidence'],
-            "timestamp": latest_analysis['timestamp']
-        }), 200
-    else:
-        return jsonify({
-            "success": False,
-            "message": "No analysis found",
-            "diagnosis": "",
-            "confidence": 0
-        }), 404
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': 'Analysis failed'}), 500
 
 @app.route('/clear-analysis-history', methods=['POST'])
 def clear_analysis_history():
@@ -556,15 +572,12 @@ def chat():
         latest_analysis = get_latest_analysis(user_email)
         
         # Extract diagnosis and confidence
-        if latest_analysis:
-            diagnosis = latest_analysis['diagnosis']
-            confidence = latest_analysis['confidence']
-        else:
-            diagnosis = ''
-            confidence = 0
+        disease_list = latest_analysis['detections'] if latest_analysis else []
+        disease_str = ", ".join([d['disease'] for d in disease_list])
+        confidence_list = [d['confidence'] for d in disease_list]  # list of all confidences
         
         # Get LLM response
-        llm_response = llm_service.get_recommendation(diagnosis, confidence, user_message)
+        llm_response = llm_service.get_recommendation(disease_str, confidence_list, user_message)
         
         return jsonify({
             "success": True,

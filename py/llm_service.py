@@ -233,6 +233,99 @@ Provide a positive and supportive message to the pet owner about the healthy ski
             return f"Analysis complete: {diagnosis} detected with {confidence}% confidence. Please consult a veterinarian for proper treatment."
 
 
+    def summarize_multiple_detections(self, detections: List[Dict]) -> str:
+        """
+        Summarize multiple disease detections using the LLM.
+        Each item in detections is { 'disease': str, 'confidence': float, 'bbox': [...] }
+        """
+        if not self.model:
+            # Fallback (LLM not running)
+            if len(detections) == 0:
+                return "No diseases detected."
+            
+            if len(detections) == 1:
+                d = detections[0]
+                return f"The image detected {d['disease']} with a confidence score of {d['confidence']:.2f}%. Please consult a veterinarian for proper diagnosis and treatment."
+            
+            summary = "The image detected multiple skin conditions:\n"
+            for d in detections:
+                summary += f"- {d['disease']} with a confidence score of {d['confidence']:.2f}%\n"
+            summary += "\nPlease consult a veterinarian for diagnosis and treatment."
+            return summary
+
+        # Handle single detection
+        if len(detections) == 1:
+            d = detections[0]
+            prompt = f"""You are CaniScan AI. The YOLO model detected a skin disease in a dog's image.
+
+    Detection:
+    - Disease: {d['disease']}
+    - Confidence Score: {d['confidence']:.2f}%
+
+    Write a natural, conversational summary in plain text (NO markdown formatting like ** or __).
+
+    Start with: "The image detected {d['disease']} with a confidence score of {d['confidence']:.2f}%."
+
+    Then briefly explain:
+    1. What {d['disease']} generally means
+    2. Common symptoms to look for
+    3. General care recommendations
+    4. Remind the owner to consult a veterinarian for proper diagnosis and treatment
+
+    Keep it informative, friendly, and safe. Use 3-5 sentences total.
+    DO NOT use any markdown formatting (no **, __, or other special characters).
+    """
+        else:
+            # Handle multiple detections
+            detection_list = "\n".join(
+                [f"- {d['disease']} with a confidence score of {d['confidence']:.2f}%" 
+                for d in detections]
+            )
+
+            prompt = f"""You are CaniScan AI. The YOLO model detected multiple skin diseases in a dog's image.
+
+    Detections:
+    {detection_list}
+
+    Write a natural, conversational summary in plain text (NO markdown formatting like ** or __).
+
+    Start with: "The image detected multiple skin conditions:"
+
+    Then:
+    1. List each disease naturally in a sentence
+    2. Provide a brief overview of what these conditions generally mean
+    3. Give general care recommendations
+    4. Remind the owner to seek veterinary confirmation for accurate diagnosis and treatment
+
+    Keep it informative, friendly, and safe. Use 4-6 sentences total.
+    DO NOT use any markdown formatting (no **, __, #, or other special characters).
+    Write in plain, natural English.
+    """
+
+        try:
+            response = self.model.invoke(prompt)
+            cleaned = self._clean_response(str(response))
+            
+            # Additional cleaning to remove any remaining markdown
+            cleaned = cleaned.replace('**', '').replace('__', '').replace('~~', '')
+            cleaned = re.sub(r'\*([^\*]+)\*', r'\1', cleaned)  # Remove single asterisks
+            cleaned = re.sub(r'_([^_]+)_', r'\1', cleaned)     # Remove underscores
+            
+            return cleaned
+        except Exception as e:
+            print(f"Error in summarize_multiple_detections: {e}")
+            
+            # Better fallback message
+            if len(detections) == 1:
+                d = detections[0]
+                return f"The image detected {d['disease']} with a confidence score of {d['confidence']:.2f}%. Please consult a veterinarian for proper diagnosis and treatment."
+            
+            fallback = "The image detected multiple skin conditions:\n"
+            for d in detections:
+                fallback += f"- {d['disease']} with a confidence score of {d['confidence']:.2f}%\n"
+            fallback += "\nPlease consult a veterinarian for proper diagnosis and treatment."
+            return fallback
+
 # Global instance
 llm_service = CaniScanLLMService()
 

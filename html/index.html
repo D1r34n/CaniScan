@@ -206,8 +206,7 @@
 
                 </div>
             </div>
-
-    </nav>
+        </nav>
 
         <!-- Server Loading Screen Container -->
         <div id="loadingScreenContainer" class="loading-screen-container">
@@ -475,7 +474,6 @@
         <!-- End of Gallery Page -->
 
         <!-- Analysis Page -->
-                <!-- Analysis Page -->
         <div id="analysisPage" class="page-content" style="display:none;">
             <div class="analysis-container">
                 <!-- Analyze Image Floating Box (Dominant) -->
@@ -490,118 +488,112 @@
                                 <p>Upload image from gallery or drag & drop</p>
                                 <button class="btn btn-primary" id="selectFromGalleryBtn">Select from Gallery</button>
                             </div>
-                            <div class="image-preview" id="imagePreview" style="display: none;">
-                                <img id="previewImage" src="" alt="Preview">
-                                <div class="image-overlay">
+                            <div class="image-preview" id="imagePreview" style="display: none; position: relative;">
+                                <img id="previewImage" src="" alt="Preview" style="display: block; width: 100%;">
+                                <canvas id="overlayCanvas" style="position: absolute; top: 0; left: 0;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendations / History / Analysis Tabs -->
+                <div class="floating-box recommendations-box">
+                    <!-- Tab Header -->
+                    <div class="box-header box-header--recommendations">
+                        <div class="tab-buttons">
+                            <button class="tab-btn active" data-tab="analysis">
+                                <i class="bi bi-file-medical"></i> Analyze
+                            </button>
+                            <button class="tab-btn" data-tab="recommendations">
+                                <i class="bi bi-chat-dots"></i> Recommendations
+                            </button>
+                            <button class="tab-btn" data-tab="history">
+                                <i class="bi bi-clock-history"></i> History
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="box-content">
+                        <!-- Analysis Tab Content -->
+                        <div class="tab-content active" id="analysisTab">
+                            <div id="selectImageMessage">No image selected</div>
+                            <div class="analysis-results" id="analysisResults">
+                                <div class="result-header">
+                                    <h5 id="resultsTitle">Analysis Form</h5>
+                                </div>
+                                <div class="result-content" id="resultContent">
+                                    <!-- Form fields (shown before analysis) -->
+                                    <div id="analysisForm">
+                                        <div class="form-field">
+                                            <label for="dogBreed">Breed:</label>
+                                            <select id="dogBreed-box">
+                                                <option value="" disabled selected>Select breed</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-field">
+                                            <label for="modelSelect">Model:</label>
+                                            <select id="modelSelect">
+                                                <option value="">Select model</option>
+                                                <option value="YoloV8n">YoloV8n</option>
+                                                <option value="YoloV11n">YoloV11n</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <!-- Results (shown after analysis) -->
+                                    <div class="analysis-result-box" id="analysisResultsDisplay" style="display: none;">
+                                        <!-- Cards will be injected here dynamically -->
+                                    </div>
+                                    <div class="inference-time" id="resultInferenceTime">
+                                        Inference Time: -
+                                    </div>
+                                </div>
+                                <div class="analyzeButtonContainer">
                                     <button class="btn btn-success" id="analyzeBtn">Analyze</button>
                                     <button class="btn btn-secondary" id="changeImageBtn">Change Image</button>
                                 </div>
                             </div>
                         </div>
-                        <div style="display: none;">
-                            <!--Put the analysis user input here-->
-                        </div>
-                        <div class="analysis-results" id="analysisResults" style="display: none;">
-                            <div class="result-header">
-                                <h5 id="resultsTitle">Analysis Form</h5>
-                            </div>
-                            <div class="result-content" id="resultContent">
-                                <!-- Form fields (shown before analysis) -->
-                                <div id="analysisForm">
-                                    <div class="form-field">
-                                        <label for="dogName">Name:</label>
-                                        <input type="text" id="dogName" placeholder="Input name here">
-                                    </div>
-                                    
-                                    <div class="form-field">
-                                        <label for="dogBreed">Breed:</label>
-                                        <select id="dogBreed-box" >
-                                            <option value="" disabled selected>Select breed</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-field">
-                                        <label for="modelSelect">Model:</label>
-                                        <select id="modelSelect">
-                                            <option value="">Select model</option>
-                                            <option value="YoloV8n">YoloV8n</option>
-                                            <option value="YoloV11n">YoloV11n</option>
-                                        </select>
+
+                        <!-- Recommendations Tab Content -->
+                        <div class="tab-content" id="recommendationsTab">
+                            <div class="chat-container">
+                                <div class="chat-messages" id="chatMessages">
+                                    <div class="chat-message bot-message">
+                                        <div class="message-content">Hello! I'm here to help with recommendations for your dog's skin condition. How can I assist you today?</div>
                                     </div>
                                 </div>
-                                
-                                <!-- Results (shown after analysis) -->
-                                <div class="analysis-result-box" id="analysisResultsDisplay" style="display: none;">
-                                    <div class="confidence-result">
-                                        <span class="result-label">Confidence:</span>
-                                        <span class="result-value" id="resultConfidence">--</span>
-                                    </div>
-                                    <div class="diagnosis-result">
-                                        <span class="result-label">Diagnosis:</span>
-                                        <span class="result-value" id="resultDiagnosis">Pending...</span>
-                                    </div>
-                                    <div class="inference-time-result">
-                                        <span class="result-label">Inference Time:</span>
-                                        <span class="result-value" id="resultInferenceTime">-</span>
+                                <div class="chat-input-area">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="chatInput" placeholder="Ask about treatments, symptoms, or care...">
+                                        <button class="btn btn-primary" id="sendMessageBtn">
+                                            <i class="bi bi-send"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-    <div class="floating-box recommendations-box">
-
-    <!-- History and Analysis Combined-->
-    <!-- Tab Header -->
-        <div class="box-header box-header--recommendations">
-            <div class="tab-buttons">
-                <button class="tab-btn active" data-tab="recommendations">
-                    <i class="bi bi-chat-dots"></i> Recommendations
-                </button>
-                <button class="tab-btn" data-tab="history">
-                    <i class="bi bi-clock-history"></i> Analysis History
-                </button>
-            </div>
-        </div>
-    
-        <div class="box-content">
-            <!-- Recommendations Tab Content -->
-            <div class="tab-content active" id="recommendationsTab">
-                <div class="chat-container">
-                    <div class="chat-messages" id="chatMessages">
-                        <div class="chat-message bot-message">
-                            <div class="message-content">Hello! I'm here to help with recommendations for your dog's skin condition. How can I assist you today?</div>
+                        <!-- Analysis History Tab Content -->
+                        <div class="tab-content" id="historyTab">
+                            <div class="history-header">
+                                <button class="btn-clear-history" id="clearHistoryBtn">
+                                    <i class="bi bi-trash"></i> Clear History
+                                </button>
+                            </div>
+                            <div class="history-list" id="historyList">
+                                <div class="empty-state">
+                                    <i class="bi bi-inbox"></i>
+                                    <p>No analysis history yet</p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="chat-input-area">
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="chatInput" placeholder="Ask about treatments, symptoms, or care...">
-                            <button class="btn btn-primary" id="sendMessageBtn">
-                                <i class="bi bi-send"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Analysis History Tab Content -->
-            <div class="tab-content" id="historyTab">
-                <div class="history-header">
-                    <button class="btn-clear-history" id="clearHistoryBtn">
-                        <i class="bi bi-trash"></i> Clear History
-                    </button>
-                </div>
-                <div class="history-list" id="historyList">
-                    <!-- History items will be dynamically added here -->
-                    <div class="empty-state">
-                        <i class="bi bi-inbox"></i>
-                        <p>No analysis history yet</p>
+                        <!-- End of Analysis History Tab Content -->
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+
 
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
