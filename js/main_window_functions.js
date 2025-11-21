@@ -45,6 +45,7 @@ if (!window._functionReloadProtected) {
     const qrContainer = document.getElementById('qrCodeContainer');
     const openBtn = document.getElementById('openQRCodeBtn');
     const closeBtnQR = document.getElementById('closeQRCodeBtn');
+    const doneQRBtn = document.getElementById('doneQRBtn');
 
     const loading = document.getElementById('qrLoading');
     const qrDisplay = document.getElementById('qrDisplay');
@@ -779,40 +780,58 @@ if (!window._functionReloadProtected) {
     // -------------------------------
     // CONNECTION CHECKER
     // -------------------------------
-    function startConnectionCheck() {
-        connectionCheckCount = 0;
-        const timeLimit = 5; // 5 checks
+   function startConnectionCheck() {
+    connectionCheckCount = 0;
+    const timeLimit = 60; // Check for 90 seconds (60 checks * 1.5 seconds)
 
-        // Ensure any previous interval is cleared
-        if (checkInterval) clearInterval(checkInterval);
+    // Ensure any previous interval is cleared
+    if (checkInterval) clearInterval(checkInterval);
 
-        checkInterval = setInterval(() => {
+    console.log("🔍 Starting connection check...");
+
+        checkInterval = setInterval(async () => {
             connectionCheckCount++;
 
-            fetch(`${serverUrl}/connection-status`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.phoneConnected) {
-                        stopConnectionCheck();
-                        onPhoneConnected(data.connections[0]);
-                        return;
-                    }
+            try {
+                const response = await fetch(`${serverUrl}/connection-status`);
+                const data = await response.json();
 
-                    if (connectionCheckCount >= timeLimit) {
-                        stopConnectionCheck();
-                        showTimeoutMessage();
-                    }
-                })
-                .catch(err => {
-                    console.warn("Connection check failed:", err);
+                console.log(`Connection check #${connectionCheckCount}:`, data); // Debug log
 
-                    if (connectionCheckCount >= timeLimit) {
-                        stopConnectionCheck();
-                        showTimeoutMessage();
-                    }
-                });
+                // Check if phone is connected
+                if (data.success && data.phoneConnected && data.connections && data.connections.length > 0) {
+                    console.log("✅ Phone connected!", data.connections[0]);
+                    stopConnectionCheck();
+                    onPhoneConnected(data.connections[0]);
+                    return;
+                }
 
-        }, 1500);
+                // Update UI with check count
+                if (connectionStatusText) {
+                    connectionStatusText.innerText = `Waiting for connection... (${connectionCheckCount}/${timeLimit})`;
+                }
+
+                // Timeout after reaching limit
+                if (connectionCheckCount >= timeLimit) {
+                    console.warn("⏱️ Connection check timeout");
+                    stopConnectionCheck();
+                    showTimeoutMessage();
+                }
+            } catch (err) {
+                console.warn(`Connection check #${connectionCheckCount} failed:`, err);
+
+                // Update UI even on error
+                if (connectionStatusText) {
+                    connectionStatusText.innerText = `Checking connection... (${connectionCheckCount}/${timeLimit})`;
+                }
+
+                if (connectionCheckCount >= timeLimit) {
+                    console.error("❌ Connection check failed after timeout");
+                    stopConnectionCheck();
+                    showTimeoutMessage();
+                }
+            }
+        }, 1500); // Check every 1.5 seconds
     }
 
     function stopConnectionCheck() {
@@ -828,19 +847,42 @@ if (!window._functionReloadProtected) {
         connectionStatusText.style.color = "#ff9800";
     }
 
-    function onPhoneConnected(info) {
-        stopConnectionCheck();
+     function onPhoneConnected(connectionInfo) {
+    stopConnectionCheck();
 
-        document.getElementById("deviceName").innerText = info.device_name;
-        document.getElementById("deviceIP").innerText = info.ip;
-        document.getElementById("deviceTime").innerText =
-            new Date(info.connected_at).toLocaleTimeString();
+    console.log("📱 Phone connection info:", connectionInfo);
 
-        showSection("success");
+    // Extract device info
+    const deviceName = connectionInfo?.device_info?.model || "Unknown Device";
+    const deviceManufacturer = connectionInfo?.device_info?.manufacturer || "";
+    const fullDeviceName = deviceManufacturer ? `${deviceManufacturer} ${deviceName}` : deviceName;
+    
+    // Format the connection time
+    const connectedAt = connectionInfo?.connected_at ? 
+        new Date(connectionInfo.connected_at).toLocaleTimeString() : 
+        new Date().toLocaleTimeString();
+
+    // Update the UI
+    const deviceNameEl = document.getElementById("deviceName");
+    const deviceIPEl = document.getElementById("deviceIP");
+    const deviceTimeEl = document.getElementById("deviceTime");
+
+    if (deviceNameEl) deviceNameEl.innerText = fullDeviceName;
+    if (deviceIPEl) deviceIPEl.innerText = connectionInfo?.phone_id || "N/A";
+    if (deviceTimeEl) deviceTimeEl.innerText = connectedAt;
+
+    // Show success section first
+    showSection("success");
+
+    // Auto-close after 10 seconds (giving user time to see the success message)
+    setTimeout(() => {
+        hideQRCode();
+    }, 10000);
     }
 
     openBtn?.addEventListener("click", showQRCodeOverlay);
     closeBtnQR?.addEventListener("click", hideQRCode);
+    doneQRBtn?.addEventListener("click", hideQRCode);
 
     // ================================
     // IMAGE UPLOAD HANDLER

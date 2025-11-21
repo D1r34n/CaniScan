@@ -188,6 +188,100 @@ def qr_image():
             'success': False,
             'message': f'Failed to generate QR image: {str(e)}'
         }), 500
+    
+
+@app.route('/phone-connect', methods=['POST'])
+def phone_connect():
+    """Endpoint for phone to announce connection"""
+    try:
+        data = request.get_json() or {}
+        phone_id = data.get('phone_id', str(uuid.uuid4()))
+        device_info = data.get('device_info', {})
+        
+        # Extract device name from device_info
+        device_model = device_info.get('model', 'Unknown Device')
+        device_manufacturer = device_info.get('manufacturer', '')
+        device_name = f"{device_manufacturer} {device_model}".strip() if device_manufacturer else device_model
+        
+        # Store connection info
+        phone_connections[phone_id] = {
+            'phone_id': phone_id,
+            'device_name': device_name,
+            'device_info': device_info,
+            'connected_at': datetime.now(),
+            'last_seen': datetime.now(),
+            'ip': request.remote_addr
+        }
+        
+        print(f"📱 Phone connected: {device_name} ({phone_id})")
+        print(f"   Device info: {device_info}")
+        
+        return jsonify({
+            'success': True,
+            'phone_id': phone_id,
+            'message': 'Phone connected successfully',
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        print(f"Phone connection error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Failed to connect: {str(e)}'
+        }), 500
+    
+
+@app.route('/phone-heartbeat', methods=['POST'])
+def phone_heartbeat():
+    """Endpoint for phone to send periodic heartbeat"""
+    try:
+        data = request.get_json() or {}
+        phone_id = data.get('phone_id')
+        
+        if phone_id and phone_id in phone_connections:
+            phone_connections[phone_id]['last_seen'] = datetime.now()
+            return jsonify({
+                'success': True,
+                'message': 'Heartbeat received'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Phone not registered'
+            }), 404
+    except Exception as e:
+        print(f"Heartbeat error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Heartbeat failed: {str(e)}'
+        }), 500
+
+@app.route('/phone-disconnect', methods=['POST'])
+def phone_disconnect():
+    """Endpoint for phone to announce disconnection"""
+    try:
+        data = request.get_json() or {}
+        phone_id = data.get('phone_id')
+        
+        if phone_id and phone_id in phone_connections:
+            device_name = phone_connections[phone_id].get('device_name', 'Unknown')
+            del phone_connections[phone_id]
+            print(f"📱 Phone disconnected: {device_name} ({phone_id})")
+            return jsonify({
+                'success': True,
+                'message': 'Phone disconnected successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Phone not found'
+            }), 404
+    except Exception as e:
+        print(f"Disconnect error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Disconnect failed: {str(e)}'
+        }), 500
+    
 
 @app.route('/phone/register', methods=['POST'])
 def register_phone():
@@ -244,41 +338,58 @@ def phone_ping():
 
 @app.route('/connection-status', methods=['GET'])
 def connection_status():
-    """Check if any phone is connected"""
+    """Check if any phone is currently connected"""
     try:
         # Clean up old connections
         current_time = datetime.now()
         expired_phones = []
         
-        for phone_id, info in phone_connections.items():
-            time_diff = (current_time - info['last_ping']).total_seconds()
+        for phone_id, info in list(phone_connections.items()):
+            time_diff = (current_time - info['last_seen']).total_seconds()
             if time_diff > PHONE_TIMEOUT:
                 expired_phones.append(phone_id)
         
         for phone_id in expired_phones:
-            print(f"📱 Phone disconnected (timeout): {phone_id}")
+            device_name = phone_connections[phone_id].get('device_name', 'Unknown')
+            print(f"Phone disconnected (timeout): {device_name} ({phone_id})")
             del phone_connections[phone_id]
         
         active_connections = len(phone_connections)
         
-        return jsonify({
+        # Format connections for response
+        connections_list = []
+        for phone_id, info in phone_connections.items():
+            connections_list.append({
+                'phone_id': phone_id,
+                'device_name': info.get('device_name', 'Unknown Device'),
+                'device_info': info.get('device_info', {}),
+                'connected_at': info['connected_at'].isoformat(),
+                'last_seen': info['last_seen'].isoformat(),
+                'ip': info.get('ip', 'Unknown')
+            })
+        
+        response = {
             'success': True,
             'phoneConnected': active_connections > 0,
             'activeConnections': active_connections,
-            'connections': [
-                {
-                    'phone_id': phone_id,
-                    'device_name': info['device_name'],
-                    'connected_at': info['connected_at'].isoformat(),
-                    'ip': info['ip']
-                }
-                for phone_id, info in phone_connections.items()
-            ]
-        })
+            'connections': connections_list,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # DEBUG: Print the response being sent
+        print(f"Connection status check: {active_connections} active connections")
+        print(f"Sending response: phoneConnected={response['phoneConnected']}, connections={len(connections_list)}")
+        if connections_list:
+            print(f"   First connection: {connections_list[0]}")
+        
+        return jsonify(response)
     except Exception as e:
         print(f"Connection status error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
+            'phoneConnected': False,
             'message': f'Failed to get connection status: {str(e)}'
         }), 500
 
