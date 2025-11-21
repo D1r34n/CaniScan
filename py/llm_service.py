@@ -39,7 +39,7 @@ class CaniScanLLMService:
             print(f"Error initializing LLM model: {e}")
             self.model = None
     
-    def get_recommendation(self, diagnosis: str = "", confidence: float = 0, user_question: str = "") -> Dict[str, str]:
+    def get_recommendation(self, diagnosis: str = "", confidence: float = 0, user_question: str = "", breed: str = "", conversation_history: list = None) -> Dict[str, str]:
         """
         Get LLM recommendation - works as regular chatbot or with image analysis context
         
@@ -47,6 +47,8 @@ class CaniScanLLMService:
             diagnosis: The disease diagnosis from YOLO (optional, empty string if no image analysis)
             confidence: Confidence score (0-100, 0 if no image analysis)
             user_question: User's question or message
+            breed: Dog breed (optional, for breed-specific context)
+            conversation_history: List of previous messages in format [{"role": "user"/"assistant", "content": "..."}]
             
         Returns:
             Dict with recommendation and status
@@ -60,43 +62,75 @@ class CaniScanLLMService:
         try:
             # Check if we have image analysis data
             has_image_analysis = diagnosis and diagnosis.strip() and diagnosis.lower() != "no disease detected" and confidence > 0
+            has_breed = breed and breed.strip()
+            has_history = conversation_history and len(conversation_history) > 0
             
             # Debug: Print the values being passed
-            print(f"DEBUG: Chat LLM receiving - Diagnosis: {diagnosis}, Confidence: {confidence}, Question: {user_question}, Has Image Analysis: {has_image_analysis}")
+            print(f"DEBUG: Chat LLM receiving - Diagnosis: {diagnosis}, Confidence: {confidence}, Question: {user_question}, Breed: {breed}, Has Image Analysis: {has_image_analysis}, History Length: {len(conversation_history) if conversation_history else 0}")
+            
+            # Build breed context string
+            breed_context = ""
+            if has_breed:
+                breed_context = f"\n- Dog Breed: {breed}\n\nNote: Consider breed-specific characteristics, common health issues, and care recommendations for {breed} when providing your response."
+            
+            # Build conversation history context
+            history_context = ""
+            if has_history:
+                history_lines = []
+                for msg in conversation_history:
+                    role = msg.get('role', 'user')
+                    content = msg.get('content', '')
+                    if role == 'user':
+                        history_lines.append(f"User: {content}")
+                    elif role == 'assistant':
+                        history_lines.append(f"Assistant: {content}")
+                
+                if history_lines:
+                    history_context = f"\n\nPrevious Conversation:\n" + "\n".join(history_lines) + f"\n\nCurrent User Question: {user_question}"
             
             if has_image_analysis:
                 # Mode with image analysis - provide rational diagnosis reasoning
-                prompt = f"""You are CaniScan AI, a specialized veterinary assistant for canine skin disease analysis and recommendations.
+                base_prompt = f"""You are CaniScan AI, a specialized veterinary assistant for canine skin disease analysis and recommendations.
 
 An image analysis has been performed on a dog's skin condition, and the following results were obtained:
 - Diagnosis: {diagnosis}
-- Confidence Score: {confidence}%
+- Confidence Score: {confidence}%{breed_context}
 
 Your task is to provide rational reasoning for why the AI model thinks the dog has this type of skin disease, and then provide helpful recommendations.
 
 Guidelines:
 - Explain why this diagnosis makes sense based on the confidence level and the disease type
+- If a breed is provided, consider breed-specific predispositions, common health issues, and care needs for that breed
 - If confidence is high (>85%), provide more specific reasoning and care recommendations
 - If confidence is moderate (70-85%), explain the diagnosis but emphasize the need for professional confirmation
 - If confidence is low (<70%), suggest why the diagnosis might be uncertain and recommend additional observations or vet consultation
 - Always prioritize pet safety and professional veterinary care
 - Keep responses concise but informative
 - Use a friendly, professional tone
+- If there is previous conversation history, maintain context and answer follow-up questions based on what was discussed earlier"""
+                
+                if has_history:
+                    prompt = base_prompt + history_context + "\n\nProvide a helpful response that addresses the user's current question while maintaining context from the previous conversation."
+                else:
+                    prompt = base_prompt + f"""
 
 User Question: {user_question if user_question else "Please explain the diagnosis and provide recommendations"}
 
 Provide a helpful response that:
 1. First explains the rational reasoning for why the AI detected {diagnosis} with {confidence}% confidence
-2. Then provides practical care recommendations based on this diagnosis
+2. Then provides practical care recommendations based on this diagnosis{f" and the {breed} breed" if has_breed else ""}
 3. Always reminds the user to consult a veterinarian for proper treatment"""
             else:
                 # Regular chatbot mode - no image analysis
-                prompt = f"""You are CaniScan AI, a specialized veterinary assistant for canine skin disease analysis and recommendations.
+                breed_intro = f"\n\nDog Breed: {breed}\nNote: Consider breed-specific characteristics, common health issues, and care recommendations for {breed} when providing your response." if has_breed else ""
+                
+                base_prompt = f"""You are CaniScan AI, a specialized veterinary assistant for canine skin disease analysis and recommendations.
 
-You are a helpful chatbot that can answer questions about canine skin diseases, general pet care, and veterinary advice.
+You are a helpful chatbot that can answer questions about canine skin diseases, general pet care, and veterinary advice.{breed_intro}
 
 Guidelines:
 - Provide helpful, accurate information about canine skin diseases and general pet care
+- If a breed is provided, tailor your advice to consider breed-specific characteristics, common health issues, and care needs
 - Answer questions about symptoms, treatments, and when to seek veterinary care
 - Offer practical care tips and suggestions
 - Always recommend consulting a veterinarian for serious conditions or when in doubt
@@ -104,6 +138,12 @@ Guidelines:
 - Keep responses concise but informative
 - Use a friendly, professional tone
 - If the user asks about analyzing an image, remind them to upload an image and use the analyze feature
+- If there is previous conversation history, maintain context and answer follow-up questions based on what was discussed earlier"""
+                
+                if has_history:
+                    prompt = base_prompt + history_context + "\n\nProvide a helpful response to the user's current question while maintaining context from the previous conversation."
+                else:
+                    prompt = base_prompt + f"""
 
 User Question: {user_question if user_question else "How can I help you today?"}
 

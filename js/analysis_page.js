@@ -468,7 +468,7 @@ function resetAnalysisForm() {
     const modelSelect = document.getElementById('modelSelect');
 
     if (dogName) dogName.value = '';
-    if (dogBreed) dogBreed.selectedIndex = 0;
+    if (dogBreed) dogBreed.value = '';
     if (modelSelect) modelSelect.selectedIndex = 0;
 
     // Clear preview image & hide container
@@ -891,7 +891,7 @@ export function setupAnalysisButton() {
             return;
         }
 
-        const selectedBreed = dogBreedSelect.options[dogBreedSelect.selectedIndex].text;
+        const selectedBreed = dogBreedSelect.value.trim();
         const selectedModel = modelSelect.value;
 
         newAnalyzeBtn.disabled = true;
@@ -990,6 +990,9 @@ async function performRealAnalysis(imageSrc, modelName) {
     return await response.json();
 }
 
+// Global conversation history - stores messages for context
+window.conversationHistory = [];
+
 // Chat interface functionality
 function setupChatInterface() {
     window.showInitialRecommendation = showInitialRecommendation;
@@ -1017,8 +1020,9 @@ function setupChatInterface() {
         const message = currentChatInput.value.trim();
         if (!message) return;
         
-        // Add user message
+        // Add user message to UI and history
         addChatMessage(message, 'user');
+        window.conversationHistory.push({ role: 'user', content: message });
         currentChatInput.value = '';
         
         // Show typing indicator
@@ -1030,8 +1034,9 @@ function setupChatInterface() {
                 // Remove typing indicator
                 removeTypingIndicator(typingIndicator);
                 
-                // Add bot response
+                // Add bot response to UI and history
                 addChatMessage(response.response, 'bot');
+                window.conversationHistory.push({ role: 'assistant', content: response.response });
             })
             .catch(error => {
                 console.error('Error getting LLM response:', error);
@@ -1039,19 +1044,42 @@ function setupChatInterface() {
                 removeTypingIndicator(typingIndicator);
                 
                 // Add error message
-                addChatMessage("I apologize, but I'm having trouble processing your request right now. Please try again or consult a veterinarian for immediate assistance.", 'bot');
+                const errorMsg = "I apologize, but I'm having trouble processing your request right now. Please try again or consult a veterinarian for immediate assistance.";
+                addChatMessage(errorMsg, 'bot');
+                window.conversationHistory.push({ role: 'assistant', content: errorMsg });
             });
     }
     
     async function callLLMAPI(message) {
         // LLM works with or without analysis - if analysis exists, it enhances the response
-        const currentAnalysis = window.currentAnalysis || { diagnosis: '', confidence: 0 };
+        const currentAnalysis = window.currentAnalysis;
+        const hasAnalysis = currentAnalysis && currentAnalysis.detections && currentAnalysis.detections.length > 0;
+        
+        // Get breed from current analysis or from the input field
+        let breed = '';
+        if (currentAnalysis && currentAnalysis.dogBreed) {
+            breed = currentAnalysis.dogBreed;
+        } else {
+            // Try to get breed from the input field
+            const breedInput = document.getElementById('dogBreed-box');
+            if (breedInput && breedInput.value.trim()) {
+                breed = breedInput.value.trim();
+            }
+        }
+        
+        // Get conversation history (exclude the current message as it's being sent separately)
+        const conversationHistory = window.conversationHistory.filter((msg, idx) => {
+            // Exclude the last message if it's the current user message (it's being sent now)
+            return !(idx === window.conversationHistory.length - 1 && msg.role === 'user' && msg.content === message);
+        });
         
         // Debug: Log the data being sent to the API
         console.log('DEBUG: Sending to chat API:', {
             message: message,
-            diagnosis: currentAnalysis.diagnosis || 'None',
-            confidence: currentAnalysis.confidence || 0
+            hasAnalysis: hasAnalysis,
+            standalone: !hasAnalysis,
+            breed: breed || 'None',
+            conversationHistoryLength: conversationHistory.length
         });
         
         const response = await fetch('http://localhost:5000/chat', {
@@ -1062,8 +1090,9 @@ function setupChatInterface() {
             credentials: 'include',  // Include session cookie
             body: JSON.stringify({
                 message: message,
-                diagnosis: currentAnalysis.diagnosis || '',
-                confidence: currentAnalysis.confidence || 0
+                standalone: !hasAnalysis,  // Use standalone mode if no analysis available
+                breed: breed,  // Include breed as context
+                conversation_history: conversationHistory  // Include conversation history for context
             })
         });
         
@@ -1103,8 +1132,12 @@ function setupChatInterface() {
             chatMessages.appendChild(welcomeMessage);
         }
         
-        // Add the initial recommendation
+        // Reset conversation history for new analysis session
+        window.conversationHistory = [];
+        
+        // Add the initial recommendation to UI and history
         addChatMessage(recommendation, 'bot');
+        window.conversationHistory.push({ role: 'assistant', content: recommendation });
     }
     
     // Attach event listeners
@@ -1160,6 +1193,10 @@ function setupChatInterface() {
     }
 }
 
+// Global breeds array for autocomplete
+let allBreeds = [];
+let formattedBreeds = [];
+
 // Load and populate breeds from CSV
 async function loadBreeds() {
     try {
@@ -1167,7 +1204,8 @@ async function loadBreeds() {
         const csvText = await response.text();
         
         const lines = csvText.split('\n');
-        const breeds = [];
+        allBreeds = [];
+        formattedBreeds = [];
         
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
@@ -1175,29 +1213,125 @@ async function loadBreeds() {
                 const columns = line.split(',');
                 const breedName = columns[1];
                 if (breedName) {
-                    breeds.push(breedName);
+                    allBreeds.push(breedName);
+                    // Format breed name for display
+                    const formattedBreed = breedName.toLowerCase()
+                        .split(' ')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ');
+                    formattedBreeds.push(formattedBreed);
                 }
             }
         }
         
-        // Populate dropdown
-        const select = document.getElementById('dogBreed-box');
-        
-        breeds.forEach(breed => {
-            const option = document.createElement('option');
-            const formattedBreed = breed.toLowerCase()
-                .split(' ')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                .join(' ');
-            
-            option.value = breed.toLowerCase().replace(/\s+/g, '-');
-            option.textContent = formattedBreed;
-            select.appendChild(option);
-        });
+        // Setup autocomplete for breed input
+        setupBreedAutocomplete();
         
     } catch (error) {
         console.error('Error loading breeds:', error);
     }
+}
+
+// Setup autocomplete functionality for breed input
+function setupBreedAutocomplete() {
+    const breedInput = document.getElementById('dogBreed-box');
+    const dropdown = document.getElementById('breedAutocompleteDropdown');
+    
+    if (!breedInput || !dropdown) return;
+    
+    let selectedIndex = -1;
+    
+    // Filter and display breeds based on input
+    function filterBreeds(searchTerm) {
+        if (!searchTerm.trim()) {
+            dropdown.classList.remove('show');
+            return;
+        }
+        
+        const searchLower = searchTerm.toLowerCase();
+        const matches = [];
+        
+        for (let i = 0; i < allBreeds.length; i++) {
+            const breed = allBreeds[i];
+            const formatted = formattedBreeds[i];
+            
+            if (breed.toLowerCase().includes(searchLower) || 
+                formatted.toLowerCase().includes(searchLower)) {
+                matches.push({ original: breed, formatted: formatted, index: i });
+            }
+        }
+        
+        // Limit to 10 results for performance
+        const displayMatches = matches.slice(0, 10);
+        
+        if (displayMatches.length > 0) {
+            dropdown.innerHTML = '';
+            displayMatches.forEach((match, idx) => {
+                const item = document.createElement('div');
+                item.className = 'breed-autocomplete-item';
+                item.textContent = match.formatted;
+                item.dataset.breed = match.original;
+                item.dataset.index = idx;
+                
+                item.addEventListener('click', () => {
+                    breedInput.value = match.formatted;
+                    dropdown.classList.remove('show');
+                    selectedIndex = -1;
+                });
+                
+                dropdown.appendChild(item);
+            });
+            dropdown.classList.add('show');
+        } else {
+            dropdown.classList.remove('show');
+        }
+    }
+    
+    // Handle input events
+    breedInput.addEventListener('input', (e) => {
+        filterBreeds(e.target.value);
+        selectedIndex = -1;
+    });
+    
+    // Handle keyboard navigation
+    breedInput.addEventListener('keydown', (e) => {
+        const items = dropdown.querySelectorAll('.breed-autocomplete-item');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            updateSelection(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, -1);
+            updateSelection(items);
+        } else if (e.key === 'Enter' && selectedIndex >= 0 && items[selectedIndex]) {
+            e.preventDefault();
+            items[selectedIndex].click();
+        } else if (e.key === 'Escape') {
+            dropdown.classList.remove('show');
+            selectedIndex = -1;
+        }
+    });
+    
+    function updateSelection(items) {
+        items.forEach((item, idx) => {
+            if (idx === selectedIndex) {
+                item.classList.add('selected');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!breedInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.remove('show');
+            selectedIndex = -1;
+        }
+    });
 }
 
 // Call when page loads
