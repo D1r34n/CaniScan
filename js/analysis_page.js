@@ -62,6 +62,8 @@ function loadAnalysisHistory() {
     
 }
 
+let isHistoryView = false; 
+
 function addHistoryItem(imageSrc, diagnosis, confidence, timestamp = null) {
     const historyList = document.getElementById('historyList');
     if (!historyList) return;
@@ -86,21 +88,15 @@ function addHistoryItem(imageSrc, diagnosis, confidence, timestamp = null) {
         </div>
     `;
 
-    // ✅ Fixed click handler
     historyItem.addEventListener('click', () => {
-        // Get the stored history item from localStorage to retrieve detections
+        // ✅ GET historyEntry from localStorage
         const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
         const historyEntry = history.find(item => 
             item.timestamp === timestamp && item.diagnosis === diagnosis
         );
 
-        window.currentAnalysisSource = {
-            type: 'history',  // Mark as history, not gallery
-            timestamp: timestamp
-        };
-
-        const uploadArea = document.getElementById('imageUploadArea');
-        const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
+        // Display previous analysis
+        const uploadPlaceholder = document.getElementById('imageUploadArea')?.querySelector('.upload-placeholder');
         const imagePreview = document.getElementById('imagePreview');
         const previewImage = document.getElementById('previewImage');
         const overlayCanvas = document.getElementById('overlayCanvas');
@@ -109,71 +105,72 @@ function addHistoryItem(imageSrc, diagnosis, confidence, timestamp = null) {
         const analysisResults = document.getElementById('analysisResults');
         const selectImageMessage = document.getElementById('selectImageMessage');
 
-        // Show image preview
-        if (previewImage) {
-            previewImage.src = imageSrc;
-            previewImage.alt = 'Analysis Image';
-        }
-        
+        // Set preview image
+        if (previewImage) previewImage.src = imageSrc;
         if (uploadPlaceholder) uploadPlaceholder.style.display = 'none';
         if (imagePreview) imagePreview.style.display = 'block';
         
-        // Hide form, show results
+        // Show results, hide form
         if (analysisForm) analysisForm.style.display = 'none';
         if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'flex';
         if (analysisResults) analysisResults.style.display = 'block';
         if (selectImageMessage) selectImageMessage.style.display = 'none';
 
-        // Clear and redraw bounding boxes if detections exist
+        // Clear canvas first
         if (overlayCanvas) {
             const ctx = overlayCanvas.getContext('2d');
             ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         }
 
-        // Parse detections if available
+        // Draw bounding boxes if available
         const detections = historyEntry?.detections || [];
+        if (detections.length > 0 && overlayCanvas && previewImage) {
+            // Wait for image to load
+            if (previewImage.complete) {
+                drawBoundingBoxes(previewImage, overlayCanvas, detections);
+            } else {
+                previewImage.onload = () => {
+                    drawBoundingBoxes(previewImage, overlayCanvas, detections);
+                };
+            }
 
-        // Display results using your displayAnalysisResults function
-        if (detections.length > 0) {
+            // Display results
             displayAnalysisResults(
                 detections.map(det => ({
                     disease: det.disease,
                     confidence: det.confidence.toFixed ? det.confidence.toFixed(1) : det.confidence
                 })),
-                'N/A'
+                historyEntry.inferenceTime || 'N/A'
             );
-
-            // Draw bounding boxes
-            if (overlayCanvas && previewImage) {
-                // Wait for image to load before drawing
-                if (previewImage.complete) {
-                    drawBoundingBoxes(previewImage, overlayCanvas, detections);
-                } else {
-                    previewImage.onload = () => {
-                        drawBoundingBoxes(previewImage, overlayCanvas, detections);
-                    };
-                }
-            }
         } else {
-            // Fallback if no detections stored
+            // Fallback for old history items without detections
             displayAnalysisResults([
                 { disease: diagnosis, confidence: parseFloat(confidence) || confidence }
             ], 'N/A');
         }
 
-        // Store as current analysis
+        // Update current analysis
         window.currentAnalysis = {
-            diagnosis: diagnosis,
+            diagnosis: historyEntry?.diagnosis || diagnosis,
             confidence: parseFloat(confidence) || confidence,
-            detections: detections,
             dogName: historyEntry?.dogName || '',
-            dogBreed: historyEntry?.dogBreed || ''
+            dogBreed: historyEntry?.dogBreed || '',
+            detections: detections
         };
+
+        // Clear gallery source to prevent auto-analysis
+        window.currentAnalysisSource = null;
+
+        // Update analyze button
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        if (analyzeBtn) {
+            analyzeBtn.innerHTML = 'Analyze New Image';
+            isHistoryView = true;
+        }
     });
 
     historyList.insertBefore(historyItem, historyList.firstChild);
 }
-
 
 // ================================
 // DISPLAY ANALYSIS RESULTS (NEW)
@@ -212,7 +209,7 @@ function displayAnalysisResults(results, inferenceTime) {
 // ================================
 // ADD TO HISTORY
 // ================================
-function addToAnalysisHistory(imageSrc, diagnosis, confidence, filename) {
+function addToAnalysisHistory(imageSrc, diagnosis, confidence, filename, inferenceTime = 'N/A') {
     const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
 
     const newItem = {
@@ -221,21 +218,17 @@ function addToAnalysisHistory(imageSrc, diagnosis, confidence, filename) {
         confidence,
         dogName: window.currentAnalysis?.dogName || '',
         dogBreed: window.currentAnalysis?.dogBreed || '',
-        detections: window.currentAnalysis?.detections || [], // ✅ Add this
+        detections: window.currentAnalysis?.detections || [],
         filename: filename || 'Analysis Result',
+        inferenceTime,  // ✅ Save inference time
         timestamp: new Date().toISOString()
     };
 
     history.unshift(newItem);
-
-    if (history.length > 10) {
-        history.pop();
-    }
-
+    if (history.length > 10) history.pop();
     localStorage.setItem('analysisHistory', JSON.stringify(history));
     addHistoryItem(imageSrc, diagnosis, confidence, newItem.timestamp);
 }
-
 
 // ================================
 // CLEAR HISTORY FUNCTIONALITY
@@ -419,78 +412,111 @@ document.addEventListener('click', (e) => {
 });
 }
 
+function resetAnalysisForm() {
+    const analysisForm = document.getElementById('analysisForm');
+    const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
+    const selectImageMessage = document.getElementById('selectImageMessage');
+    const previewImage = document.getElementById('previewImage');
+    const imagePreviewContainer = document.getElementById('imagePreview');
+    const overlayCanvas = document.getElementById('overlayCanvas');
+
+    // Reset form visibility
+    if (analysisForm) analysisForm.style.display = 'block';
+    if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'none';
+    if (selectImageMessage) selectImageMessage.style.display = 'block';
+
+    // Clear form inputs
+    const dogName = document.getElementById('dogName');
+    const dogBreed = document.getElementById('dogBreed-box');
+    const modelSelect = document.getElementById('modelSelect');
+
+    if (dogName) dogName.value = '';
+    if (dogBreed) dogBreed.selectedIndex = 0;
+    if (modelSelect) modelSelect.selectedIndex = 0;
+
+    // Clear preview image & hide container
+    if (previewImage) previewImage.src = '';
+    if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+
+    // Clear canvas
+    if (overlayCanvas) {
+        const ctx = overlayCanvas.getContext('2d');
+        ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    }
+
+    // Reset state
+    window.currentAnalysis = null;
+    isHistoryView = false;
+
+    // Reset analyze button
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    if (analyzeBtn) analyzeBtn.innerHTML = 'Analyze';
+}
+
 export function setupImageUpload(preloadedImage = null) {
     const uploadArea = document.getElementById('imageUploadArea');
     const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
     const previewImage = document.getElementById('previewImage');
     const imagePreviewContainer = document.getElementById('imagePreview');
-    const analysisResults = document.getElementById('analysisResults');
+    const analysisForm = document.getElementById('analysisForm');
+    const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
+    const selectImageMessage = document.getElementById('selectImageMessage');
+    const analysisResults = document.getElementById('analysisResults');  // ✅ Container
+    const overlayCanvas = document.getElementById('overlayCanvas');
 
     if (!uploadArea || !uploadPlaceholder || !previewImage || !imagePreviewContainer) {
         console.error('Image upload components are missing');
         return;
     }
 
-    const displayPreview = (imageObj) => {
-        // Clear overlay canvas
-        const overlayCanvas = document.getElementById('overlayCanvas');
+    const clearCanvas = () => {
         if (overlayCanvas) {
             const ctx = overlayCanvas.getContext('2d');
             ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         }
+        const container = document.getElementById('imagePreview');
+        const existingBoxes = container?.querySelectorAll('.hover-box');
+        existingBoxes?.forEach(box => box.remove());
+    };
+
+    const displayPreview = (imageObj) => {
+        clearCanvas();
 
         previewImage.src = imageObj.src || imageObj.dataUrl;
         previewImage.alt = imageObj.filename || '';
         uploadPlaceholder.style.display = 'none';
         imagePreviewContainer.style.display = 'block';
 
+        // ✅ SHOW the analysis container, SHOW form, HIDE results
         if (analysisResults) analysisResults.style.display = 'block';
-
-        // Reset other UI elements...
-        const analysisForm = document.getElementById('analysisForm');
         if (analysisForm) analysisForm.style.display = 'block';
-
-        const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
         if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'none';
-
-        const selectImageMessage = document.getElementById('selectImageMessage');
         if (selectImageMessage) selectImageMessage.style.display = 'none';
 
+        // Reset form inputs
         const dogName = document.getElementById('dogName');
         const dogBreed = document.getElementById('dogBreed-box');
         const modelSelect = document.getElementById('modelSelect');
-
+        const inferenceTime = document.getElementById('resultInferenceTime');
         if (dogName) dogName.value = '';
         if (dogBreed) dogBreed.selectedIndex = 0;
         if (modelSelect) modelSelect.selectedIndex = 0;
-
-        // Reset results
-        ['resultDiagnosis', 'resultConfidence', 'resultInferenceTime'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = '-';
-        });
+        if(inferenceTime) inferenceTime.textContent = '';
 
         window.currentAnalysis = null;
         window.currentAnalysisSource = {
             type: 'gallery',
             filename: imageObj.filename,
-            disease: imageObj.disease || '',
-            confidence: imageObj.confidence || '',
-            breed: imageObj.breed || '',
-            analyzed: Boolean(imageObj.analyzed)
+            analyzed: false
         };
     };
 
-
-    // If a preloaded image is passed, just display it
     if (preloadedImage) {
         displayPreview(preloadedImage);
         return;
     }
 
-    // ------------------------------
-    // DRAG & DROP ONLY
-    // ------------------------------
+    // Drag & drop
     uploadArea.addEventListener('dragover', (e) => {
         e.preventDefault();
         uploadPlaceholder.style.borderColor = '#c4a484';
@@ -516,13 +542,10 @@ export function setupImageUpload(preloadedImage = null) {
                 reader.onerror = reject;
                 reader.readAsDataURL(file);
             });
-
             displayPreview({ dataUrl, filename: file.name });
         }
     });
 }
-
-
 
 function selectFromGallery({ event = null, autoLoad = true } = {}) {
     const galleryPage = document.getElementById("galleryPage");
@@ -547,8 +570,12 @@ function selectFromGallery({ event = null, autoLoad = true } = {}) {
         enterAnalyzeMode();
     }
 
-    // Show the dropdown
+    const actionsDropdown = document.getElementById('actionsDropdown');
+
+    // Show the 
+    if (actionsDropdown) {
     actionsDropdown.classList.add('show');
+    }
 }
 
 // Gallery selection functionality
@@ -777,15 +804,22 @@ async function getImageWithBoundingBoxes(previewImage, detections) {
     return canvas.toDataURL('image/jpeg');
 }
 
-function setupAnalysisButton() {
+
+export function setupAnalysisButton() {
     const analyzeBtn = document.getElementById('analyzeBtn');
+    const changeImageBtn = document.getElementById('changeImageBtn');
     const previewImage = document.getElementById('previewImage');
     const overlayCanvas = document.getElementById('overlayCanvas');
 
-    // Setup the resize observer once
+    if (!analyzeBtn || !previewImage || !overlayCanvas) return;
+
     setupBoundingBoxObserver(previewImage, overlayCanvas);
 
-    analyzeBtn.addEventListener('click', async () => {
+    // Remove old listeners
+    const newAnalyzeBtn = analyzeBtn.cloneNode(true);
+    analyzeBtn.parentNode.replaceChild(newAnalyzeBtn, analyzeBtn);
+
+    newAnalyzeBtn.addEventListener('click', async () => {
         const dogNameInput = document.getElementById('dogName');
         const dogBreedSelect = document.getElementById('dogBreed-box');
         const modelSelect = document.getElementById('modelSelect');
@@ -798,52 +832,24 @@ function setupAnalysisButton() {
         const selectedBreed = dogBreedSelect.options[dogBreedSelect.selectedIndex].text;
         const selectedModel = modelSelect.value;
 
-        // Show loading
-        analyzeBtn.disabled = true;
-        analyzeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
+        newAnalyzeBtn.disabled = true;
+        newAnalyzeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
 
         try {
             const analysisResult = await performRealAnalysis(previewImage.src, selectedModel);
 
-            // ✅ UI updates - do this ONCE
+            // Update UI - show results
             const analysisForm = document.getElementById('analysisForm');
             const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
-            const analysisResults = document.getElementById('analysisResults');
             const selectImageMessage = document.getElementById('selectImageMessage');
-            const resultsTitle = document.getElementById('resultsTitle');
-            
+
             if (analysisForm) analysisForm.style.display = 'none';
             if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'flex';
-            if (analysisResults) analysisResults.style.display = 'block';
             if (selectImageMessage) selectImageMessage.style.display = 'none';
-            if (resultsTitle) resultsTitle.textContent = dogNameInput?.value || 'Analysis Results';
 
             // Draw bounding boxes
             if (analysisResult.detections?.length) {
                 drawBoundingBoxes(previewImage, overlayCanvas, analysisResult.detections);
-            }
-
-            // Store current analysis
-            window.currentAnalysis = {
-                diagnosis: analysisResult.diagnosis,
-                confidence: analysisResult.confidence,
-                model: selectedModel,
-                dogName: dogNameInput?.value || '',
-                dogBreed: selectedBreed,
-                detections: analysisResult.detections || []
-            };
-
-            // Save image with bounding boxes
-            const imageWithBoxes = await getImageWithBoundingBoxes(previewImage, analysisResult.detections);
-            const savedFilename = await saveAnalyzedImageToGallery(
-                imageWithBoxes,
-                selectedBreed,
-                analysisResult.disease,
-                analysisResult.confidence
-            );
-
-            // Display results
-            if (analysisResult.detections?.length) {
                 displayAnalysisResults(
                     analysisResult.detections.map(det => ({
                         disease: det.disease,
@@ -853,12 +859,32 @@ function setupAnalysisButton() {
                 );
             }
 
+            // Store analysis
+            window.currentAnalysis = {
+                diagnosis: analysisResult.diagnosis,
+                confidence: analysisResult.confidence,
+                model: selectedModel,
+                dogName: dogNameInput?.value || '',
+                dogBreed: selectedBreed,
+                detections: analysisResult.detections || []
+            };
+
+            // Save to gallery
+            const imageWithBoxes = await getImageWithBoundingBoxes(previewImage, analysisResult.detections);
+            const savedFilename = await saveAnalyzedImageToGallery(
+                imageWithBoxes,
+                selectedBreed,
+                analysisResult.disease,
+                analysisResult.confidence
+            );
+
             // Add to history
             window.analysisPageFunctions.addToAnalysisHistory(
                 previewImage.src,
                 analysisResult.disease,
                 `${analysisResult.confidence}%`,
-                savedFilename
+                savedFilename,
+                analysisResult.inference_time
             );
 
             // Show LLM recommendation
@@ -867,14 +893,25 @@ function setupAnalysisButton() {
             }
 
             setTimeout(() => restoreChatInputClickability(), 200);
+
         } catch (error) {
             console.error('Analysis failed:', error);
             alert('Analysis failed. Please try again.');
         } finally {
-            analyzeBtn.disabled = false;
-            analyzeBtn.innerHTML = 'Analyze';
+            newAnalyzeBtn.disabled = false;
+            newAnalyzeBtn.innerHTML = 'Analyze';
         }
     });
+
+    // Change Image button - always opens gallery
+    if (changeImageBtn) {
+        const newChangeBtn = changeImageBtn.cloneNode(true);
+        changeImageBtn.parentNode.replaceChild(newChangeBtn, changeImageBtn);
+        
+        newChangeBtn.addEventListener('click', () => {
+            selectFromGallery();
+        });
+    }
 }
 
 async function performRealAnalysis(imageSrc, modelName) {
