@@ -529,9 +529,10 @@
                                     <div id="analysisForm">
                                         <div class="form-field">
                                             <label for="dogBreed">Breed:</label>
-                                            <select id="dogBreed-box">
-                                                <option value="" disabled selected>Select breed</option>
-                                            </select>
+                                            <div class="breed-autocomplete-container">
+                                                <input type="text" id="dogBreed-box" placeholder="Type to search breeds..." autocomplete="off">
+                                                <div class="breed-autocomplete-dropdown" id="breedAutocompleteDropdown"></div>
+                                            </div>
                                         </div>
 
                                         <div class="form-field">

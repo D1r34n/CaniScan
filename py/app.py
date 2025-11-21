@@ -566,7 +566,7 @@ def clear_analysis_history():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    """Handle chat messages with LLM recommendations."""
+    """Handle chat messages with LLM recommendations. Supports both standalone mode and analysis-based mode."""
     try:
         data = request.get_json()
         user_message = data.get('message', '').strip()
@@ -574,17 +574,30 @@ def chat():
         if not user_message:
             return jsonify({"success": False, "message": "Message is required"}), 400
         
-        # Get user email and latest analysis
-        user_email = session.get('email', 'anonymous')
-        latest_analysis = get_latest_analysis(user_email)
+        # Check if user wants to use standalone mode (no analysis context)
+        use_standalone = data.get('standalone', False)
         
-        # Extract diagnosis and confidence
-        disease_list = latest_analysis['detections'] if latest_analysis else []
-        disease_str = ", ".join([d['disease'] for d in disease_list]) if disease_list else "healthy"
-        confidence_list = [d['confidence'] for d in disease_list]  # list of all confidences
+        # Get breed from request (if provided)
+        breed = data.get('breed', '').strip()
         
-        # Get LLM response
-        llm_response = llm_service.get_recommendation(disease_str, confidence_list, user_message)
+        disease_str = ""
+        confidence = 0
+        
+        # Only get analysis data if not in standalone mode
+        if not use_standalone:
+            # Get user email and latest analysis
+            user_email = session.get('email', 'anonymous')
+            latest_analysis = get_latest_analysis(user_email)
+            
+            # Extract diagnosis and confidence
+            disease_list = latest_analysis['detections'] if latest_analysis else []
+            if disease_list:
+                disease_str = ", ".join([d['disease'] for d in disease_list])
+                # Use average confidence or highest confidence
+                confidence = max([d['confidence'] for d in disease_list]) if disease_list else 0
+        
+        # Get LLM response (works in standalone mode if disease_str is empty)
+        llm_response = llm_service.get_recommendation(disease_str, confidence, user_message, breed)
         
         return jsonify({
             "success": True,

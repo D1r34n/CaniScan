@@ -950,6 +950,53 @@
     color: #adb5bd;
 }
 
+/* Breed Autocomplete Styles */
+.breed-autocomplete-container {
+    position: relative;
+    width: 100%;
+}
+
+.breed-autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin-top: -2px;
+}
+
+.breed-autocomplete-dropdown.show {
+    display: block;
+}
+
+.breed-autocomplete-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.breed-autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.breed-autocomplete-item:hover {
+    background-color: #f8f9fa;
+}
+
+.breed-autocomplete-item.selected {
+    background-color: #d9b99b;
+    color: white;
+}
+
 /* * ----------------------------------------------------
  * 12. Responsive Adjustments (Media Queries)
  * ----------------------------------------------------
