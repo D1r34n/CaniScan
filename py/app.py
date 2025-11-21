@@ -459,7 +459,7 @@ def analyze():
         detected_list = []
         annotated_img = img.copy()
 
-        # Draw all detections regardless of confidence
+        # Draw all detections
         if boxes is not None and len(boxes) > 0:
             for box in boxes:
                 try:
@@ -476,7 +476,7 @@ def analyze():
                         "bbox": [x1, y1, x2, y2]
                     })
 
-                    # Draw bounding boxes on image
+                    # Draw bounding boxes
                     cv2.rectangle(annotated_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     cv2.putText(
                         annotated_img,
@@ -491,14 +491,21 @@ def analyze():
                     print(f"❌ Error processing box: {e}")
                     continue
 
-        # Create unique summary for LLM (highest confidence per disease)
+        # If no detections, mark as healthy
+        if not detected_list:
+            detected_list = [{"disease": "healthy", "confidence": 0, "bbox": []}]
+            confidence_list = [0]
+        else:
+            confidence_list = [det["confidence"] for det in detected_list]
+
+        # Unique summary for LLM
         unique_summary = {}
         for det in detected_list:
             disease = det["disease"]
             if disease not in unique_summary or det["confidence"] > unique_summary[disease]["confidence"]:
                 unique_summary[disease] = det
 
-        # Save analysis (all detections)
+        # Save analysis
         save_analysis_to_csv(user_email, detected_list)
 
         # Convert annotated image to base64
@@ -514,8 +521,7 @@ def analyze():
             llm_summary = "Summary not available."
 
         # For frontend
-        disease_str = ", ".join(unique_summary.keys()) if unique_summary else "No disease detected"
-        confidence_list = [det["confidence"] for det in detected_list]  # all confidences
+        disease_str = ", ".join(unique_summary.keys())
 
         print(f"✅ Multi-analysis complete ({len(detected_list)} detections)")
 
@@ -534,6 +540,7 @@ def analyze():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': 'Analysis failed'}), 500
+
 
 @app.route('/clear-analysis-history', methods=['POST'])
 def clear_analysis_history():
@@ -573,7 +580,7 @@ def chat():
         
         # Extract diagnosis and confidence
         disease_list = latest_analysis['detections'] if latest_analysis else []
-        disease_str = ", ".join([d['disease'] for d in disease_list])
+        disease_str = ", ".join([d['disease'] for d in disease_list]) if disease_list else "healthy"
         confidence_list = [d['confidence'] for d in disease_list]  # list of all confidences
         
         # Get LLM response
@@ -591,6 +598,59 @@ def chat():
             "success": False,
             "message": "Chat service unavailable"
         }), 500
+
+@app.route('/generate-insights', methods=['POST'])
+def generate_insights():
+    """
+    Generate insights based on current disease counts from frontend stat cards.
+    Expects JSON payload like:
+    {
+        "disease_counts": {
+            "hotspot": 2,
+            "mange": 1,
+            "fungal infection": 0,
+            "allergic dermatitis": 1
+        },
+        "user_message": "Optional question from user"
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data or 'disease_counts' not in data:
+            return jsonify({"success": False, "message": "disease_counts required"}), 400
+        
+        disease_counts = data['disease_counts']
+        user_message = data.get('user_message', '')
+
+        # Convert counts into a list of disease dicts
+        disease_list = [
+            {"disease": k, "count": v}
+            for k, v in disease_counts.items() if v > 0
+        ]
+
+        # If nothing detected
+        if not disease_list:
+            return jsonify({
+                "success": True,
+                "insights": "Your pet looks healthy!"
+            }), 200
+
+        # Call your LLM service
+        try:
+            # Summarize based on disease list and optional message
+            llm_summary = llm_service.summarize_from_counts(disease_list, user_message)
+        except AttributeError:
+            # fallback if method not implemented
+            llm_summary = "LLM insights not available."
+
+        return jsonify({
+            "success": True,
+            "insights": llm_summary
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Generate insights error: {e}")
+        return jsonify({"success": False, "message": "Failed to generate insights"}), 500
 
 # ========================================
 # HEALTH CHECK ROUTE

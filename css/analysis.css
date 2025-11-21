@@ -273,6 +273,19 @@
     margin-top: 1rem;
 }
 
+/* In your CSS file */
+.analyze-new-btn {
+    background-color: #198754;
+    color: white;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.analyze-new-btn:hover {
+    background-color: #157347 !important; /* slightly darker green on hover */
+    cursor: pointer;
+}
+
 
 /* * ----------------------------------------------------
  * 6. Recommendations / History Box (Right Column)

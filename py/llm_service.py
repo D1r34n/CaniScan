@@ -243,89 +243,135 @@ Provide a positive and supportive message to the pet owner about the healthy ski
             if len(detections) == 0:
                 return "No diseases detected."
             
-            if len(detections) == 1:
-                d = detections[0]
-                return f"The image detected {d['disease']} with a confidence score of {d['confidence']:.2f}%. Please consult a veterinarian for proper diagnosis and treatment."
-            
-            summary = "The image detected multiple skin conditions:\n"
+            summary = "Detected diseases:\n"
             for d in detections:
-                summary += f"- {d['disease']} with a confidence score of {d['confidence']:.2f}%\n"
+                summary += f"- {d['disease']} ({d['confidence']}%)\n"
             summary += "\nPlease consult a veterinarian for diagnosis and treatment."
             return summary
 
-        # Handle single detection
-        if len(detections) == 1:
-            d = detections[0]
-            prompt = f"""You are CaniScan AI. The YOLO model detected a skin disease in a dog's image.
+        # Build a list text for the LLM
+        detection_text = "\n".join(
+            [f"- {d['disease']} ({d['confidence']}%)" for d in detections]
+        )
 
-    Detection:
-    - Disease: {d['disease']}
-    - Confidence Score: {d['confidence']:.2f}%
+        prompt = f"""
+You are CaniScan AI. The YOLO model detected **multiple diseases** in a dog's skin image.
 
-    Write a natural, conversational summary in plain text (NO markdown formatting like ** or __).
+Here are the detections:
+{detection_text}
 
-    Start with: "The image detected {d['disease']} with a confidence score of {d['confidence']:.2f}%."
+Write a helpful explanation that:
+1. Summarizes all the diseases found
+2. Explains what each disease generally means
+3. Provides general care recommendations
+4. Reminds the owner to seek veterinary confirmation
 
-    Then briefly explain:
-    1. What {d['disease']} generally means
-    2. Common symptoms to look for
-    3. General care recommendations
-    4. Remind the owner to consult a veterinarian for proper diagnosis and treatment
-
-    Keep it informative, friendly, and safe. Use 3-5 sentences total.
-    DO NOT use any markdown formatting (no **, __, or other special characters).
-    """
-        else:
-            # Handle multiple detections
-            detection_list = "\n".join(
-                [f"- {d['disease']} with a confidence score of {d['confidence']:.2f}%" 
-                for d in detections]
-            )
-
-            prompt = f"""You are CaniScan AI. The YOLO model detected multiple skin diseases in a dog's image.
-
-    Detections:
-    {detection_list}
-
-    Write a natural, conversational summary in plain text (NO markdown formatting like ** or __).
-
-    Start with: "The image detected multiple skin conditions:"
-
-    Then:
-    1. List each disease naturally in a sentence
-    2. Provide a brief overview of what these conditions generally mean
-    3. Give general care recommendations
-    4. Remind the owner to seek veterinary confirmation for accurate diagnosis and treatment
-
-    Keep it informative, friendly, and safe. Use 4-6 sentences total.
-    DO NOT use any markdown formatting (no **, __, #, or other special characters).
-    Write in plain, natural English.
-    """
+Keep it informative, friendly, and safe.
+"""
 
         try:
             response = self.model.invoke(prompt)
             cleaned = self._clean_response(str(response))
-            
-            # Additional cleaning to remove any remaining markdown
-            cleaned = cleaned.replace('**', '').replace('__', '').replace('~~', '')
-            cleaned = re.sub(r'\*([^\*]+)\*', r'\1', cleaned)  # Remove single asterisks
-            cleaned = re.sub(r'_([^_]+)_', r'\1', cleaned)     # Remove underscores
-            
             return cleaned
         except Exception as e:
             print(f"Error in summarize_multiple_detections: {e}")
-            
-            # Better fallback message
-            if len(detections) == 1:
-                d = detections[0]
-                return f"The image detected {d['disease']} with a confidence score of {d['confidence']:.2f}%. Please consult a veterinarian for proper diagnosis and treatment."
-            
-            fallback = "The image detected multiple skin conditions:\n"
-            for d in detections:
-                fallback += f"- {d['disease']} with a confidence score of {d['confidence']:.2f}%\n"
-            fallback += "\nPlease consult a veterinarian for proper diagnosis and treatment."
+            fallback = "Detected diseases:\n" + detection_text + "\nPlease consult a veterinarian."
             return fallback
 
+    def summarize_from_counts(self, disease_list: List[Dict], user_message: str = "") -> str:
+        """
+        Summarize disease counts into friendly insights (1 sentence each) for the frontend.
+
+        Args:
+            disease_list: List of dicts like [{"disease": "Hotspot", "count": 2}, ...]
+            user_message: Optional user query from frontend
+
+        Returns:
+            str: Three single-sentence insights separated by newlines:
+                1. Health status
+                2. Top disease
+                3. Other/rare conditions
+        """
+        # No data case
+        if not disease_list:
+            return (
+                "No scans have been analyzed yet, please upload images to get health insights.\n"
+                "No disease data available to report.\n"
+                "Insights on common and rare conditions will appear once scans are analyzed."
+            )
+
+        total_scans = sum(d['count'] for d in disease_list)
+        healthy_count = next((d['count'] for d in disease_list if d['disease'].lower() == 'healthy'), 0)
+        diseases_only = [d for d in disease_list if d['disease'].lower() != 'healthy']
+
+        # All healthy case
+        if not diseases_only:
+            return (
+                f"All {total_scans} scans show healthy skin, keep up with routine care and hygiene.\n"
+                "No diseases were detected in the current gallery, preventive care is effective.\n"
+                "Continue regular monitoring to maintain optimal skin health."
+            )
+
+        # Most common disease
+        top_disease = max(diseases_only, key=lambda x: x['count'])
+        other_diseases = [d for d in diseases_only if d['count'] < top_disease['count']]
+
+        # Health insight
+        health_insight = (
+            f"No healthy scans were detected among {total_scans} analyzed, monitor closely and seek veterinary advice."
+            if healthy_count == 0
+            else f"{healthy_count} out of {total_scans} scans show healthy skin, continue preventive care."
+        )
+
+        # Top disease insight
+        top_insight = f"{top_disease['disease']} is the most frequent condition detected ({top_disease['count']} cases) and should be monitored with proper care."
+
+        # Other/rare conditions insight
+        if other_diseases:
+            other_names = ", ".join([d['disease'] for d in other_diseases[:2]])
+            other_insight = f"Other conditions like {other_names} were also detected and may require early veterinary consultation."
+        else:
+            other_insight = "No other significant conditions detected, maintain regular monitoring for all dogs."
+
+        # Use LLM if available
+        if self.model:
+            counts_text = "\n".join([f"- {d['disease']}: {d['count']} case(s)" for d in disease_list])
+            prompt = f"""
+    You are CaniScan AI, a friendly veterinary assistant.
+
+    ANALYSIS DATA:
+    {counts_text}
+    Total scans: {total_scans}
+    Healthy scans: {healthy_count}
+    Top condition: {top_disease['disease']} ({top_disease['count']} cases)
+    User Message: {user_message}
+
+    Provide EXACTLY 3 single-sentence insights separated by newlines.
+    Do NOT include any introductions, headings, or extra text.
+    The first insight must reflect the health status as defined above.
+    Second is top disease, third is other/rare conditions.
+    """
+            try:
+                response = self.model.invoke(prompt)
+                cleaned = self._clean_response(str(response))
+                lines = [line.strip() for line in cleaned.split('\n') if line.strip()]
+
+                # Force first insight to match health_insight if healthy_count == 0
+                if healthy_count == 0 and lines:
+                    lines[0] = health_insight
+
+                # Ensure exactly 3 lines
+                while len(lines) < 3:
+                    lines.append("No additional insights available.")
+                return '\n'.join(lines[:3])
+            except Exception as e:
+                print(f"Error in LLM summarize_from_counts: {e}")
+
+        # Fallback if no LLM
+        return f"{health_insight}\n{top_insight}\n{other_insight}"
+
+
+        
 # Global instance
 llm_service = CaniScanLLMService()
 

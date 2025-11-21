@@ -89,6 +89,7 @@ function addHistoryItem(imageSrc, diagnosis, confidence, timestamp = null) {
     `;
 
     historyItem.addEventListener('click', () => {
+        console.log("previewing history");
         // ✅ GET historyEntry from localStorage
         const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
         const historyEntry = history.find(item => 
@@ -162,11 +163,10 @@ function addHistoryItem(imageSrc, diagnosis, confidence, timestamp = null) {
         window.currentAnalysisSource = null;
 
         // Update analyze button
+        console.log("hiding button");
         const analyzeBtn = document.getElementById('analyzeBtn');
-        if (analyzeBtn) {
-            analyzeBtn.innerHTML = 'Analyze New Image';
-            isHistoryView = true;
-        }
+        if (analyzeBtn) analyzeBtn.style.display = 'none';
+
     });
 
     historyList.insertBefore(historyItem, historyList.firstChild);
@@ -230,54 +230,91 @@ function addToAnalysisHistory(imageSrc, diagnosis, confidence, filename, inferen
     addHistoryItem(imageSrc, diagnosis, confidence, newItem.timestamp);
 }
 
-// ================================
-// CLEAR HISTORY FUNCTIONALITY
-// ================================
 function setupClearHistoryButton() {
     const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
     clearHistoryBtn.addEventListener('click', async () => {
-        // Confirm before clearing
         const confirmed = confirm(
             'Are you sure you want to clear all analysis history? This will delete:\n\n' +
             '- All analysis history in the app\n' +
             '- All diagnosis records in the CSV file\n\n' +
             'This action cannot be undone.'
         );
-        
-        if (confirmed) {
-            try {                
-                // Clear localStorage
-                localStorage.removeItem('analysisHistory');
-                
-                // Clear from CSV via API
-                const response = await fetch('http://localhost:5000/clear-analysis-history', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include'
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    
-                    // Reload history display (will show empty state)
-                    loadAnalysisHistory();
-                    
-                    // Show success message
-                    alert('Analysis history has been cleared successfully.');
-                } else {
-                    throw new Error('Failed to clear history from server');
-                }
-            } catch (error) {
-                console.error('Error clearing history:', error);
-                alert('Error clearing history. Please try again.');
+
+        if (!confirmed) return;
+
+        try {
+            // 1️⃣ Clear localStorage
+            localStorage.removeItem('analysisHistory');
+
+            // 2️⃣ Clear server-side CSV
+            const response = await fetch('http://localhost:5000/clear-analysis-history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            });
+
+            if (!response.ok) throw new Error('Failed to clear history from server');
+            await response.json();
+
+            // 3️⃣ Reload history display
+            loadAnalysisHistory();
+
+            // 4️⃣ Reset image upload & analysis UI
+            const uploadPlaceholder = document.querySelector('#imageUploadArea .upload-placeholder');
+            const previewImage = document.getElementById('previewImage');
+            const imagePreviewContainer = document.getElementById('imagePreview');
+            const overlayCanvas = document.getElementById('overlayCanvas');
+            const analysisForm = document.getElementById('analysisForm');
+            const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
+            const analysisResults = document.getElementById('analysisResults');
+            const selectImageMessage = document.getElementById('selectImageMessage');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const changeImageBtn = document.getElementById('changeImageBtn');
+
+            // Show placeholder, hide preview
+            if (uploadPlaceholder) uploadPlaceholder.style.display = 'flex';
+            if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+            if (previewImage) previewImage.src = '';
+            
+            // Clear canvas
+            if (overlayCanvas) {
+                const ctx = overlayCanvas.getContext('2d');
+                ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
             }
+
+            // Show analysis form, hide results
+            if (analysisForm) analysisForm.style.display = 'block';
+            if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'none';
+            if (analysisResults) analysisResults.style.display = 'none';
+            if (selectImageMessage) selectImageMessage.style.display = 'flex';
+
+            // Reset buttons
+            if (analyzeBtn) {
+                analyzeBtn.style.display = 'inline-block';
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = 'Analyze';
+            }
+
+            if (changeImageBtn) {
+                changeImageBtn.textContent = 'Change Image';
+                changeImageBtn.classList.remove('analyze-new-btn');
+                changeImageBtn.style.backgroundColor = '';
+                changeImageBtn.style.color = '';
+            }
+
+            // Reset current analysis state
+            window.currentAnalysis = null;
+            window.currentAnalysisSource = null;
+
+            alert('Analysis history cleared and upload area reset.');
+        } catch (error) {
+            console.error('Error clearing history:', error);
+            alert('Error clearing history. Please try again.');
         }
     });
-    
 }
+
 
 //setup analysis page functions
 setupTabs();
@@ -423,7 +460,7 @@ function resetAnalysisForm() {
     // Reset form visibility
     if (analysisForm) analysisForm.style.display = 'block';
     if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'none';
-    if (selectImageMessage) selectImageMessage.style.display = 'block';
+    if (selectImageMessage) selectImageMessage.style.display = 'flex';
 
     // Clear form inputs
     const dogName = document.getElementById('dogName');
@@ -498,11 +535,25 @@ export function setupImageUpload(preloadedImage = null) {
         const dogBreed = document.getElementById('dogBreed-box');
         const modelSelect = document.getElementById('modelSelect');
         const inferenceTime = document.getElementById('resultInferenceTime');
+        const changeImageBtn = document.getElementById('changeImageBtn');
+        if (changeImageBtn) {
+            changeImageBtn.textContent = "Change Image";
+
+            // Remove 'analyze-new-btn' only if it exists
+            if (changeImageBtn.classList.contains('analyze-new-btn')) {
+                changeImageBtn.classList.remove('analyze-new-btn');
+            }
+
+            // Reset inline styles
+            changeImageBtn.style.backgroundColor = ""; // resets to default
+            changeImageBtn.style.color = "";           // resets to default
+        }
+
         if (dogName) dogName.value = '';
         if (dogBreed) dogBreed.selectedIndex = 0;
         if (modelSelect) modelSelect.selectedIndex = 0;
         if(inferenceTime) inferenceTime.textContent = '';
-
+        if (analyzeBtn) analyzeBtn.style.display = '';
         window.currentAnalysis = null;
         window.currentAnalysisSource = {
             type: 'gallery',
@@ -815,9 +866,20 @@ export function setupAnalysisButton() {
 
     setupBoundingBoxObserver(previewImage, overlayCanvas);
 
-    // Remove old listeners
+    // Clone analyze button to remove old listeners
     const newAnalyzeBtn = analyzeBtn.cloneNode(true);
     analyzeBtn.parentNode.replaceChild(newAnalyzeBtn, analyzeBtn);
+
+    // Clone change image button once and keep reference
+    let newChangeBtn;
+    if (changeImageBtn && changeImageBtn.parentNode) {
+        newChangeBtn = changeImageBtn.cloneNode(true);
+        changeImageBtn.parentNode.replaceChild(newChangeBtn, changeImageBtn);
+
+        newChangeBtn.addEventListener('click', () => {
+            selectFromGallery();
+        });
+    }
 
     newAnalyzeBtn.addEventListener('click', async () => {
         const dogNameInput = document.getElementById('dogName');
@@ -892,6 +954,18 @@ export function setupAnalysisButton() {
                 window.showInitialRecommendation(analysisResult.summary);
             }
 
+            // Hide the Analyze button
+            newAnalyzeBtn.style.display = 'none';
+
+            // Update Change Image button
+            if (newChangeBtn) {
+                newChangeBtn.textContent = "Analyze New Image";
+                newChangeBtn.classList.add('analyze-new-btn');
+                newChangeBtn.style.backgroundColor = "#198754"; // green
+                newChangeBtn.style.color = "white";
+                newChangeBtn.style.display = "inline-block"; // ensure it’s visible
+            }
+
             setTimeout(() => restoreChatInputClickability(), 200);
 
         } catch (error) {
@@ -902,17 +976,8 @@ export function setupAnalysisButton() {
             newAnalyzeBtn.innerHTML = 'Analyze';
         }
     });
-
-    // Change Image button - always opens gallery
-    if (changeImageBtn) {
-        const newChangeBtn = changeImageBtn.cloneNode(true);
-        changeImageBtn.parentNode.replaceChild(newChangeBtn, changeImageBtn);
-        
-        newChangeBtn.addEventListener('click', () => {
-            selectFromGallery();
-        });
-    }
 }
+
 
 async function performRealAnalysis(imageSrc, modelName) {
     const response = await fetch('http://localhost:5000/analyze', {
@@ -1167,7 +1232,7 @@ window.addEventListener("load", () => {
     // If no valid base64 image → hide analysis box
     if (!previewImage.src || !previewImage.src.includes("base64")) {
         if (analysisResults) analysisResults.style.display = 'none';
-        if (selectImageMessage) selectImageMessage.style.display = 'block';
+        if (selectImageMessage) selectImageMessage.style.display = 'flex';
     } else {
         if (analysisResults) analysisResults.style.display = 'block';
         if (selectImageMessage) selectImageMessage.style.display = 'none';

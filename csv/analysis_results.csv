@@ -1,7 +1,2 @@
 timestamp,email,diagnosis,confidence
-2025-11-21 13:51:47,anonymous,"[{""disease"": ""hotspot"", ""confidence"": 76.98, ""bbox"": [758, 257, 931, 551]}, {""disease"": ""mange"", ""confidence"": 38.08, ""bbox"": [96, 77, 433, 401]}, {""disease"": ""fungal infection"", ""confidence"": 25.26, ""bbox"": [158, 143, 446, 401]}]"
-2025-11-21 13:52:11,anonymous,"[{""disease"": ""hotspot"", ""confidence"": 65.36, ""bbox"": [325, 257, 504, 372]}, {""disease"": ""hotspot"", ""confidence"": 60.22, ""bbox"": [89, 188, 188, 292]}]"
-2025-11-21 13:59:07,anonymous,"[{""disease"": ""hotspot"", ""confidence"": 76.98, ""bbox"": [758, 257, 931, 551]}, {""disease"": ""mange"", ""confidence"": 38.08, ""bbox"": [96, 77, 433, 401]}, {""disease"": ""fungal infection"", ""confidence"": 25.26, ""bbox"": [158, 143, 446, 401]}]"
-2025-11-21 14:11:36,anonymous,"[{""disease"": ""hotspot"", ""confidence"": 81.26, ""bbox"": [325, 259, 507, 371]}, {""disease"": ""hotspot"", ""confidence"": 58.62, ""bbox"": [82, 185, 194, 287]}]"
-2025-11-21 14:19:02,anonymous,"[{""disease"": ""hotspot"", ""confidence"": 65.36, ""bbox"": [325, 257, 504, 372]}, {""disease"": ""hotspot"", ""confidence"": 60.22, ""bbox"": [89, 188, 188, 292]}]"
-2025-11-21 14:26:37,anonymous,"[{""disease"": ""hotspot"", ""confidence"": 76.98, ""bbox"": [758, 257, 931, 551]}, {""disease"": ""mange"", ""confidence"": 38.08, ""bbox"": [96, 77, 433, 401]}, {""disease"": ""fungal infection"", ""confidence"": 25.26, ""bbox"": [158, 143, 446, 401]}]"
+2025-11-21 18:43:08,anonymous,"[{""disease"": ""healthy"", ""confidence"": 0, ""bbox"": []}]"
