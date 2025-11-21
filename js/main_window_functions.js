@@ -67,6 +67,8 @@ if (!window._functionReloadProtected) {
     let fadeLocked = false;
     let listenersAttached = false;
     let currentIndex = 0;
+    let checkInterval = null;
+    let connectionCheckCount = 0;
 
     const avatars = [
         { id: 0, src: '../images/Earl.png', label: 'LABRADOR' },
@@ -749,19 +751,21 @@ if (!window._functionReloadProtected) {
     // QR GENERATION
     // -------------------------------
     async function generateQRCode() {
-        try {
-            const response = await fetch(`${serverUrl}/qr/generate`);
-            const data = await response.json();
+    try {
+        // Use serverIP variable instead of serverUrl
+        const response = await fetch(`http://${serverIP}/qr/generate`);
+        const data = await response.json();
 
-            if (!data.success) return showError("Failed to generate QR code.");
+        if (!data.success) return showError("Failed to generate QR code.");
 
-            qrImage.src = data.qr_code;
-            serverUrlLabel.textContent = data.server_url;
+        qrImage.src = data.qr_code;
+        serverUrlLabel.textContent = data.server_url;
 
-            showSection("qr");
-            startConnectionCheck();
+        showSection("qr");
+        startConnectionCheck();
 
         } catch (e) {
+            console.error("QR generation error:", e);
             showError("Cannot connect to server. Ensure it's running.");
         }
     }
@@ -776,23 +780,22 @@ if (!window._functionReloadProtected) {
     // -------------------------------
    function startConnectionCheck() {
     connectionCheckCount = 0;
-    const timeLimit = 60; // Check for 90 seconds (60 checks * 1.5 seconds)
+    const timeLimit = 60;
 
-    // Ensure any previous interval is cleared
     if (checkInterval) clearInterval(checkInterval);
 
     console.log("🔍 Starting connection check...");
 
-        checkInterval = setInterval(async () => {
-            connectionCheckCount++;
+    checkInterval = setInterval(async () => {
+        connectionCheckCount++;
 
             try {
-                const response = await fetch(`${serverUrl}/connection-status`);
+                // Use serverIP variable instead of serverUrl
+                const response = await fetch(`http://${serverIP}/connection-status`);
                 const data = await response.json();
 
-                console.log(`Connection check #${connectionCheckCount}:`, data); // Debug log
+                console.log(`Connection check #${connectionCheckCount}:`, data);
 
-                // Check if phone is connected
                 if (data.success && data.phoneConnected && data.connections && data.connections.length > 0) {
                     console.log("✅ Phone connected!", data.connections[0]);
                     stopConnectionCheck();
@@ -800,12 +803,10 @@ if (!window._functionReloadProtected) {
                     return;
                 }
 
-                // Update UI with check count
                 if (connectionStatusText) {
                     connectionStatusText.innerText = `Waiting for connection... (${connectionCheckCount}/${timeLimit})`;
                 }
 
-                // Timeout after reaching limit
                 if (connectionCheckCount >= timeLimit) {
                     console.warn("⏱️ Connection check timeout");
                     stopConnectionCheck();
@@ -814,7 +815,6 @@ if (!window._functionReloadProtected) {
             } catch (err) {
                 console.warn(`Connection check #${connectionCheckCount} failed:`, err);
 
-                // Update UI even on error
                 if (connectionStatusText) {
                     connectionStatusText.innerText = `Checking connection... (${connectionCheckCount}/${timeLimit})`;
                 }
@@ -825,7 +825,7 @@ if (!window._functionReloadProtected) {
                     showTimeoutMessage();
                 }
             }
-        }, 1500); // Check every 1.5 seconds
+        }, 1500);
     }
 
     function stopConnectionCheck() {
