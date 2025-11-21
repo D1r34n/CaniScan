@@ -580,6 +580,9 @@ def chat():
         # Get breed from request (if provided)
         breed = data.get('breed', '').strip()
         
+        # Get conversation history from request (if provided)
+        conversation_history = data.get('conversation_history', [])
+        
         disease_str = ""
         confidence = 0
         
@@ -597,7 +600,7 @@ def chat():
                 confidence = max([d['confidence'] for d in disease_list]) if disease_list else 0
         
         # Get LLM response (works in standalone mode if disease_str is empty)
-        llm_response = llm_service.get_recommendation(disease_str, confidence, user_message, breed)
+        llm_response = llm_service.get_recommendation(disease_str, confidence, user_message, breed, conversation_history)
         
         return jsonify({
             "success": True,

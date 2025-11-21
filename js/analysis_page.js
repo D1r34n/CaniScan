@@ -990,6 +990,9 @@ async function performRealAnalysis(imageSrc, modelName) {
     return await response.json();
 }
 
+// Global conversation history - stores messages for context
+window.conversationHistory = [];
+
 // Chat interface functionality
 function setupChatInterface() {
     window.showInitialRecommendation = showInitialRecommendation;
@@ -1017,8 +1020,9 @@ function setupChatInterface() {
         const message = currentChatInput.value.trim();
         if (!message) return;
         
-        // Add user message
+        // Add user message to UI and history
         addChatMessage(message, 'user');
+        window.conversationHistory.push({ role: 'user', content: message });
         currentChatInput.value = '';
         
         // Show typing indicator
@@ -1030,8 +1034,9 @@ function setupChatInterface() {
                 // Remove typing indicator
                 removeTypingIndicator(typingIndicator);
                 
-                // Add bot response
+                // Add bot response to UI and history
                 addChatMessage(response.response, 'bot');
+                window.conversationHistory.push({ role: 'assistant', content: response.response });
             })
             .catch(error => {
                 console.error('Error getting LLM response:', error);
@@ -1039,7 +1044,9 @@ function setupChatInterface() {
                 removeTypingIndicator(typingIndicator);
                 
                 // Add error message
-                addChatMessage("I apologize, but I'm having trouble processing your request right now. Please try again or consult a veterinarian for immediate assistance.", 'bot');
+                const errorMsg = "I apologize, but I'm having trouble processing your request right now. Please try again or consult a veterinarian for immediate assistance.";
+                addChatMessage(errorMsg, 'bot');
+                window.conversationHistory.push({ role: 'assistant', content: errorMsg });
             });
     }
     
@@ -1060,12 +1067,19 @@ function setupChatInterface() {
             }
         }
         
+        // Get conversation history (exclude the current message as it's being sent separately)
+        const conversationHistory = window.conversationHistory.filter((msg, idx) => {
+            // Exclude the last message if it's the current user message (it's being sent now)
+            return !(idx === window.conversationHistory.length - 1 && msg.role === 'user' && msg.content === message);
+        });
+        
         // Debug: Log the data being sent to the API
         console.log('DEBUG: Sending to chat API:', {
             message: message,
             hasAnalysis: hasAnalysis,
             standalone: !hasAnalysis,
-            breed: breed || 'None'
+            breed: breed || 'None',
+            conversationHistoryLength: conversationHistory.length
         });
         
         const response = await fetch('http://localhost:5000/chat', {
@@ -1077,7 +1091,8 @@ function setupChatInterface() {
             body: JSON.stringify({
                 message: message,
                 standalone: !hasAnalysis,  // Use standalone mode if no analysis available
-                breed: breed  // Include breed as context
+                breed: breed,  // Include breed as context
+                conversation_history: conversationHistory  // Include conversation history for context
             })
         });
         
@@ -1117,8 +1132,12 @@ function setupChatInterface() {
             chatMessages.appendChild(welcomeMessage);
         }
         
-        // Add the initial recommendation
+        // Reset conversation history for new analysis session
+        window.conversationHistory = [];
+        
+        // Add the initial recommendation to UI and history
         addChatMessage(recommendation, 'bot');
+        window.conversationHistory.push({ role: 'assistant', content: recommendation });
     }
     
     // Attach event listeners

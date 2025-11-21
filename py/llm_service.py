@@ -39,7 +39,7 @@ class CaniScanLLMService:
             print(f"Error initializing LLM model: {e}")
             self.model = None
     
-    def get_recommendation(self, diagnosis: str = "", confidence: float = 0, user_question: str = "", breed: str = "") -> Dict[str, str]:
+    def get_recommendation(self, diagnosis: str = "", confidence: float = 0, user_question: str = "", breed: str = "", conversation_history: list = None) -> Dict[str, str]:
         """
         Get LLM recommendation - works as regular chatbot or with image analysis context
         
@@ -48,6 +48,7 @@ class CaniScanLLMService:
             confidence: Confidence score (0-100, 0 if no image analysis)
             user_question: User's question or message
             breed: Dog breed (optional, for breed-specific context)
+            conversation_history: List of previous messages in format [{"role": "user"/"assistant", "content": "..."}]
             
         Returns:
             Dict with recommendation and status
@@ -62,18 +63,34 @@ class CaniScanLLMService:
             # Check if we have image analysis data
             has_image_analysis = diagnosis and diagnosis.strip() and diagnosis.lower() != "no disease detected" and confidence > 0
             has_breed = breed and breed.strip()
+            has_history = conversation_history and len(conversation_history) > 0
             
             # Debug: Print the values being passed
-            print(f"DEBUG: Chat LLM receiving - Diagnosis: {diagnosis}, Confidence: {confidence}, Question: {user_question}, Breed: {breed}, Has Image Analysis: {has_image_analysis}")
+            print(f"DEBUG: Chat LLM receiving - Diagnosis: {diagnosis}, Confidence: {confidence}, Question: {user_question}, Breed: {breed}, Has Image Analysis: {has_image_analysis}, History Length: {len(conversation_history) if conversation_history else 0}")
             
             # Build breed context string
             breed_context = ""
             if has_breed:
                 breed_context = f"\n- Dog Breed: {breed}\n\nNote: Consider breed-specific characteristics, common health issues, and care recommendations for {breed} when providing your response."
             
+            # Build conversation history context
+            history_context = ""
+            if has_history:
+                history_lines = []
+                for msg in conversation_history:
+                    role = msg.get('role', 'user')
+                    content = msg.get('content', '')
+                    if role == 'user':
+                        history_lines.append(f"User: {content}")
+                    elif role == 'assistant':
+                        history_lines.append(f"Assistant: {content}")
+                
+                if history_lines:
+                    history_context = f"\n\nPrevious Conversation:\n" + "\n".join(history_lines) + f"\n\nCurrent User Question: {user_question}"
+            
             if has_image_analysis:
                 # Mode with image analysis - provide rational diagnosis reasoning
-                prompt = f"""You are CaniScan AI, a specialized veterinary assistant for canine skin disease analysis and recommendations.
+                base_prompt = f"""You are CaniScan AI, a specialized veterinary assistant for canine skin disease analysis and recommendations.
 
 An image analysis has been performed on a dog's skin condition, and the following results were obtained:
 - Diagnosis: {diagnosis}
@@ -90,6 +107,12 @@ Guidelines:
 - Always prioritize pet safety and professional veterinary care
 - Keep responses concise but informative
 - Use a friendly, professional tone
+- If there is previous conversation history, maintain context and answer follow-up questions based on what was discussed earlier"""
+                
+                if has_history:
+                    prompt = base_prompt + history_context + "\n\nProvide a helpful response that addresses the user's current question while maintaining context from the previous conversation."
+                else:
+                    prompt = base_prompt + f"""
 
 User Question: {user_question if user_question else "Please explain the diagnosis and provide recommendations"}
 
@@ -101,7 +124,7 @@ Provide a helpful response that:
                 # Regular chatbot mode - no image analysis
                 breed_intro = f"\n\nDog Breed: {breed}\nNote: Consider breed-specific characteristics, common health issues, and care recommendations for {breed} when providing your response." if has_breed else ""
                 
-                prompt = f"""You are CaniScan AI, a specialized veterinary assistant for canine skin disease analysis and recommendations.
+                base_prompt = f"""You are CaniScan AI, a specialized veterinary assistant for canine skin disease analysis and recommendations.
 
 You are a helpful chatbot that can answer questions about canine skin diseases, general pet care, and veterinary advice.{breed_intro}
 
@@ -115,6 +138,12 @@ Guidelines:
 - Keep responses concise but informative
 - Use a friendly, professional tone
 - If the user asks about analyzing an image, remind them to upload an image and use the analyze feature
+- If there is previous conversation history, maintain context and answer follow-up questions based on what was discussed earlier"""
+                
+                if has_history:
+                    prompt = base_prompt + history_context + "\n\nProvide a helpful response to the user's current question while maintaining context from the previous conversation."
+                else:
+                    prompt = base_prompt + f"""
 
 User Question: {user_question if user_question else "How can I help you today?"}
 
