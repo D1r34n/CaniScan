@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, session, Response
 from flask_cors import CORS
 import os
 import uuid

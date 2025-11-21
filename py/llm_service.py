@@ -233,6 +233,145 @@ Provide a positive and supportive message to the pet owner about the healthy ski
             return f"Analysis complete: {diagnosis} detected with {confidence}% confidence. Please consult a veterinarian for proper treatment."
 
 
+    def summarize_multiple_detections(self, detections: List[Dict]) -> str:
+        """
+        Summarize multiple disease detections using the LLM.
+        Each item in detections is { 'disease': str, 'confidence': float, 'bbox': [...] }
+        """
+        if not self.model:
+            # Fallback (LLM not running)
+            if len(detections) == 0:
+                return "No diseases detected."
+            
+            summary = "Detected diseases:\n"
+            for d in detections:
+                summary += f"- {d['disease']} ({d['confidence']}%)\n"
+            summary += "\nPlease consult a veterinarian for diagnosis and treatment."
+            return summary
+
+        # Build a list text for the LLM
+        detection_text = "\n".join(
+            [f"- {d['disease']} ({d['confidence']}%)" for d in detections]
+        )
+
+        prompt = f"""
+You are CaniScan AI. The YOLO model detected **multiple diseases** in a dog's skin image.
+
+Here are the detections:
+{detection_text}
+
+Write a helpful explanation that:
+1. Summarizes all the diseases found
+2. Explains what each disease generally means
+3. Provides general care recommendations
+4. Reminds the owner to seek veterinary confirmation
+
+Keep it informative, friendly, and safe.
+"""
+
+        try:
+            response = self.model.invoke(prompt)
+            cleaned = self._clean_response(str(response))
+            return cleaned
+        except Exception as e:
+            print(f"Error in summarize_multiple_detections: {e}")
+            fallback = "Detected diseases:\n" + detection_text + "\nPlease consult a veterinarian."
+            return fallback
+
+    def summarize_from_counts(self, disease_list: List[Dict], user_message: str = "") -> str:
+        """
+        Summarize disease counts into friendly insights (1 sentence each) for the frontend.
+
+        Args:
+            disease_list: List of dicts like [{"disease": "Hotspot", "count": 2}, ...]
+            user_message: Optional user query from frontend
+
+        Returns:
+            str: Three single-sentence insights separated by newlines:
+                1. Health status
+                2. Top disease
+                3. Other/rare conditions
+        """
+        # No data case
+        if not disease_list:
+            return (
+                "No scans have been analyzed yet, please upload images to get health insights.\n"
+                "No disease data available to report.\n"
+                "Insights on common and rare conditions will appear once scans are analyzed."
+            )
+
+        total_scans = sum(d['count'] for d in disease_list)
+        healthy_count = next((d['count'] for d in disease_list if d['disease'].lower() == 'healthy'), 0)
+        diseases_only = [d for d in disease_list if d['disease'].lower() != 'healthy']
+
+        # All healthy case
+        if not diseases_only:
+            return (
+                f"All {total_scans} scans show healthy skin, keep up with routine care and hygiene.\n"
+                "No diseases were detected in the current gallery, preventive care is effective.\n"
+                "Continue regular monitoring to maintain optimal skin health."
+            )
+
+        # Most common disease
+        top_disease = max(diseases_only, key=lambda x: x['count'])
+        other_diseases = [d for d in diseases_only if d['count'] < top_disease['count']]
+
+        # Health insight
+        health_insight = (
+            f"No healthy scans were detected among {total_scans} analyzed, monitor closely and seek veterinary advice."
+            if healthy_count == 0
+            else f"{healthy_count} out of {total_scans} scans show healthy skin, continue preventive care."
+        )
+
+        # Top disease insight
+        top_insight = f"{top_disease['disease']} is the most frequent condition detected ({top_disease['count']} cases) and should be monitored with proper care."
+
+        # Other/rare conditions insight
+        if other_diseases:
+            other_names = ", ".join([d['disease'] for d in other_diseases[:2]])
+            other_insight = f"Other conditions like {other_names} were also detected and may require early veterinary consultation."
+        else:
+            other_insight = "No other significant conditions detected, maintain regular monitoring for all dogs."
+
+        # Use LLM if available
+        if self.model:
+            counts_text = "\n".join([f"- {d['disease']}: {d['count']} case(s)" for d in disease_list])
+            prompt = f"""
+    You are CaniScan AI, a friendly veterinary assistant.
+
+    ANALYSIS DATA:
+    {counts_text}
+    Total scans: {total_scans}
+    Healthy scans: {healthy_count}
+    Top condition: {top_disease['disease']} ({top_disease['count']} cases)
+    User Message: {user_message}
+
+    Provide EXACTLY 3 single-sentence insights separated by newlines.
+    Do NOT include any introductions, headings, or extra text.
+    The first insight must reflect the health status as defined above.
+    Second is top disease, third is other/rare conditions.
+    """
+            try:
+                response = self.model.invoke(prompt)
+                cleaned = self._clean_response(str(response))
+                lines = [line.strip() for line in cleaned.split('\n') if line.strip()]
+
+                # Force first insight to match health_insight if healthy_count == 0
+                if healthy_count == 0 and lines:
+                    lines[0] = health_insight
+
+                # Ensure exactly 3 lines
+                while len(lines) < 3:
+                    lines.append("No additional insights available.")
+                return '\n'.join(lines[:3])
+            except Exception as e:
+                print(f"Error in LLM summarize_from_counts: {e}")
+
+        # Fallback if no LLM
+        return f"{health_insight}\n{top_insight}\n{other_insight}"
+
+
+        
 # Global instance
 llm_service = CaniScanLLMService()
 

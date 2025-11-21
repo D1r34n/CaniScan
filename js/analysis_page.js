@@ -13,34 +13,25 @@ import {
 // ================================
 function setupTabs() {
     const tabButtons = document.querySelectorAll('.tab-btn');
-    const recommendationsTab = document.getElementById('recommendationsTab');
-    const historyTab = document.getElementById('historyTab');
-    
-    
-    tabButtons.forEach((button) => {
-        button.addEventListener('click', () => {
-            const tabName = button.getAttribute('data-tab');
-                        
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
             // Remove active class from all buttons
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            
-            // Add active class to clicked button
-            button.classList.add('active');
-            
-            // Show/hide appropriate tab content
-            if (tabName === 'recommendations') {
-                recommendationsTab.classList.add('active');
-                historyTab.classList.remove('active');
-            } else if (tabName === 'history') {
-                historyTab.classList.add('active');
-                recommendationsTab.classList.remove('active');
-                // Reload history when switching to history tab
-                loadAnalysisHistory();
-            }
+            tabButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Hide all tab contents
+            tabContents.forEach(tc => tc.classList.remove('active'));
+
+            // Show the clicked tab's content
+            const targetId = btn.dataset.tab + "Tab" || btn.dataset.tab;
+            const targetContent = document.getElementById(targetId) || document.getElementById(btn.dataset.tab);
+            if (targetContent) targetContent.classList.add('active');
         });
     });
-    
 }
+
 
 // ================================
 // ANALYSIS HISTORY FUNCTIONALITY
@@ -71,22 +62,21 @@ function loadAnalysisHistory() {
     
 }
 
+let isHistoryView = false; 
+
 function addHistoryItem(imageSrc, diagnosis, confidence, timestamp = null) {
     const historyList = document.getElementById('historyList');
     if (!historyList) return;
-    
-    // Remove empty state if it exists
+
     const emptyState = historyList.querySelector('.empty-state');
-    if (emptyState) {
-        emptyState.remove();
-    }
-    
+    if (emptyState) emptyState.remove();
+
     const historyItem = document.createElement('div');
     historyItem.className = 'history-item';
     historyItem.style.cursor = 'pointer';
-    
+
     const displayDate = timestamp ? new Date(timestamp).toLocaleDateString() : new Date().toLocaleDateString();
-    
+
     historyItem.innerHTML = `
         <div class="history-image">
             <img src="${imageSrc}" alt="Analysis Image" class="history-img">
@@ -97,157 +87,234 @@ function addHistoryItem(imageSrc, diagnosis, confidence, timestamp = null) {
             <div class="history-confidence">${confidence}</div>
         </div>
     `;
-    
-    // Add click event to show details popup
+
     historyItem.addEventListener('click', () => {
-        showAnalysisDetailsPopup(imageSrc, diagnosis, confidence, timestamp);
+        console.log("previewing history");
+        // ✅ GET historyEntry from localStorage
+        const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+        const historyEntry = history.find(item => 
+            item.timestamp === timestamp && item.diagnosis === diagnosis
+        );
+
+        // Display previous analysis
+        const uploadPlaceholder = document.getElementById('imageUploadArea')?.querySelector('.upload-placeholder');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImage = document.getElementById('previewImage');
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const analysisForm = document.getElementById('analysisForm');
+        const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
+        const analysisResults = document.getElementById('analysisResults');
+        const selectImageMessage = document.getElementById('selectImageMessage');
+
+        // Set preview image
+        if (previewImage) previewImage.src = imageSrc;
+        if (uploadPlaceholder) uploadPlaceholder.style.display = 'none';
+        if (imagePreview) imagePreview.style.display = 'block';
+        
+        // Show results, hide form
+        if (analysisForm) analysisForm.style.display = 'none';
+        if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'flex';
+        if (analysisResults) analysisResults.style.display = 'block';
+        if (selectImageMessage) selectImageMessage.style.display = 'none';
+
+        // Clear canvas first
+        if (overlayCanvas) {
+            const ctx = overlayCanvas.getContext('2d');
+            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
+
+        // Draw bounding boxes if available
+        const detections = historyEntry?.detections || [];
+        if (detections.length > 0 && overlayCanvas && previewImage) {
+            // Wait for image to load
+            if (previewImage.complete) {
+                drawBoundingBoxes(previewImage, overlayCanvas, detections);
+            } else {
+                previewImage.onload = () => {
+                    drawBoundingBoxes(previewImage, overlayCanvas, detections);
+                };
+            }
+
+            // Display results
+            displayAnalysisResults(
+                detections.map(det => ({
+                    disease: det.disease,
+                    confidence: det.confidence.toFixed ? det.confidence.toFixed(1) : det.confidence
+                })),
+                historyEntry.inferenceTime || 'N/A'
+            );
+        } else {
+            // Fallback for old history items without detections
+            displayAnalysisResults([
+                { disease: diagnosis, confidence: parseFloat(confidence) || confidence }
+            ], 'N/A');
+        }
+
+        // Update current analysis
+        window.currentAnalysis = {
+            diagnosis: historyEntry?.diagnosis || diagnosis,
+            confidence: parseFloat(confidence) || confidence,
+            dogName: historyEntry?.dogName || '',
+            dogBreed: historyEntry?.dogBreed || '',
+            detections: detections
+        };
+
+        // Clear gallery source to prevent auto-analysis
+        window.currentAnalysisSource = null;
+
+        // Update analyze button
+        console.log("hiding button");
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        if (analyzeBtn) analyzeBtn.style.display = 'none';
+
     });
-    
-    // Add to top of list
+
     historyList.insertBefore(historyItem, historyList.firstChild);
 }
 
-function showAnalysisDetailsPopup(imageSrc, diagnosis, confidence, timestamp) {
-    const displayDate = timestamp ? new Date(timestamp).toLocaleString() : new Date().toLocaleString();
-    
-    const popup = document.createElement('div');
-    popup.className = 'analysis-details-popup';
-    popup.innerHTML = `
-        <div class="popup-overlay"></div>
-        <div class="popup-content">
-            <div class="popup-header">
-                <h4>Analysis Details</h4>
-                <button class="popup-close-btn">&times;</button>
+// ================================
+// DISPLAY ANALYSIS RESULTS (NEW)
+// ================================
+function displayAnalysisResults(results, inferenceTime) {
+    const resultsContainer = document.getElementById('analysisResultsDisplay');
+    resultsContainer.innerHTML = ''; // clear previous cards
+
+    results.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'result-card';
+
+        card.innerHTML = `
+            <div class="result-info">
+                <span class="result-label">Disease</span>
+                <span class="result-value">${item.disease}</span>
             </div>
-            <div class="popup-body">
-                <div class="popup-image">
-                    <img src="${imageSrc}" alt="Analysis Image">
-                </div>
-                <div class="popup-details">
-                    <div class="detail-row">
-                        <span class="detail-label">Date & Time:</span>
-                        <span class="detail-value">${displayDate}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Diagnosis:</span>
-                        <span class="detail-value diagnosis-value">${diagnosis}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Confidence Score:</span>
-                        <span class="detail-value confidence-value">${confidence}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Status:</span>
-                        <span class="detail-value status-value">Completed</span>
-                    </div>
-                </div>
+            <div class="result-info">
+                <span class="result-label">Confidence</span>
+                <span class="result-value result-confidence">${item.confidence}%</span>
             </div>
-            <div class="popup-footer">
-                <button class="btn btn-secondary" id="closePopupBtn">Close</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(popup);
-    
-    // Close functionality
-    const closePopup = () => {
-        if (popup && popup.parentNode) {
-            document.body.removeChild(popup);
-        }
-        // Ensure chat input is clickable after popup closes
-        setTimeout(() => {
-            restoreChatInputClickability();
-        }, 50);
-    };
-    
-    popup.querySelector('.popup-close-btn').addEventListener('click', closePopup);
-    popup.querySelector('#closePopupBtn').addEventListener('click', closePopup);
-    popup.querySelector('.popup-overlay').addEventListener('click', closePopup);
+        `;
+
+        resultsContainer.appendChild(card);
+    });
+
+    const inferenceEl = document.getElementById('resultInferenceTime');
+    if (inferenceEl) {
+        inferenceEl.textContent = `Inference Time: ${inferenceTime}`;
+    }
+
+    resultsContainer.style.display = 'flex';
 }
+
 
 // ================================
 // ADD TO HISTORY
 // ================================
-function addToAnalysisHistory(imageSrc, diagnosis, confidence, filename) {
-    // Get existing history from localStorage
+function addToAnalysisHistory(imageSrc, diagnosis, confidence, filename, inferenceTime = 'N/A') {
     const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
 
-    // Use values from window.currentAnalysis instead of DOM elements
     const newItem = {
         imageSrc,
         diagnosis,
         confidence,
         dogName: window.currentAnalysis?.dogName || '',
-        dogBreed: window.currentAnalysis?.dogBreed || '', // human-readable breed
+        dogBreed: window.currentAnalysis?.dogBreed || '',
+        detections: window.currentAnalysis?.detections || [],
         filename: filename || 'Analysis Result',
+        inferenceTime,  // ✅ Save inference time
         timestamp: new Date().toISOString()
     };
 
-    // Add to beginning of array
     history.unshift(newItem);
-
-    // Keep only last 10 items
-    if (history.length > 10) {
-        history.pop();
-    }
-
-    // Save back to localStorage
+    if (history.length > 10) history.pop();
     localStorage.setItem('analysisHistory', JSON.stringify(history));
-
-    // Update the display
     addHistoryItem(imageSrc, diagnosis, confidence, newItem.timestamp);
 }
 
-
-// ================================
-// CLEAR HISTORY FUNCTIONALITY
-// ================================
 function setupClearHistoryButton() {
     const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
     clearHistoryBtn.addEventListener('click', async () => {
-        // Confirm before clearing
         const confirmed = confirm(
             'Are you sure you want to clear all analysis history? This will delete:\n\n' +
             '- All analysis history in the app\n' +
             '- All diagnosis records in the CSV file\n\n' +
             'This action cannot be undone.'
         );
-        
-        if (confirmed) {
-            try {                
-                // Clear localStorage
-                localStorage.removeItem('analysisHistory');
-                
-                // Clear from CSV via API
-                const response = await fetch('http://localhost:5000/clear-analysis-history', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include'
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    
-                    // Reload history display (will show empty state)
-                    loadAnalysisHistory();
-                    
-                    // Show success message
-                    alert('Analysis history has been cleared successfully.');
-                } else {
-                    throw new Error('Failed to clear history from server');
-                }
-            } catch (error) {
-                console.error('Error clearing history:', error);
-                alert('Error clearing history. Please try again.');
+
+        if (!confirmed) return;
+
+        try {
+            // 1️⃣ Clear localStorage
+            localStorage.removeItem('analysisHistory');
+
+            // 2️⃣ Clear server-side CSV
+            const response = await fetch('http://localhost:5000/clear-analysis-history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            });
+
+            if (!response.ok) throw new Error('Failed to clear history from server');
+            await response.json();
+
+            // 3️⃣ Reload history display
+            loadAnalysisHistory();
+
+            // 4️⃣ Reset image upload & analysis UI
+            const uploadPlaceholder = document.querySelector('#imageUploadArea .upload-placeholder');
+            const previewImage = document.getElementById('previewImage');
+            const imagePreviewContainer = document.getElementById('imagePreview');
+            const overlayCanvas = document.getElementById('overlayCanvas');
+            const analysisForm = document.getElementById('analysisForm');
+            const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
+            const analysisResults = document.getElementById('analysisResults');
+            const selectImageMessage = document.getElementById('selectImageMessage');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const changeImageBtn = document.getElementById('changeImageBtn');
+
+            // Show placeholder, hide preview
+            if (uploadPlaceholder) uploadPlaceholder.style.display = 'flex';
+            if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+            if (previewImage) previewImage.src = '';
+            
+            // Clear canvas
+            if (overlayCanvas) {
+                const ctx = overlayCanvas.getContext('2d');
+                ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
             }
+
+            // Show analysis form, hide results
+            if (analysisForm) analysisForm.style.display = 'block';
+            if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'none';
+            if (analysisResults) analysisResults.style.display = 'none';
+            if (selectImageMessage) selectImageMessage.style.display = 'flex';
+
+            // Reset buttons
+            if (analyzeBtn) {
+                analyzeBtn.style.display = 'inline-block';
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = 'Analyze';
+            }
+
+            if (changeImageBtn) {
+                changeImageBtn.textContent = 'Change Image';
+                changeImageBtn.classList.remove('analyze-new-btn');
+                changeImageBtn.style.backgroundColor = '';
+                changeImageBtn.style.color = '';
+            }
+
+            // Reset current analysis state
+            window.currentAnalysis = null;
+            window.currentAnalysisSource = null;
+
+            alert('Analysis history cleared and upload area reset.');
+        } catch (error) {
+            console.error('Error clearing history:', error);
+            alert('Error clearing history. Please try again.');
         }
     });
-    
 }
+
 
 //setup analysis page functions
 setupTabs();
@@ -382,102 +449,125 @@ document.addEventListener('click', (e) => {
 });
 }
 
-// Shared image handling function
-function handleImageFile(file) {
-    if (!file || !file.type.startsWith('image/')) {
-        console.error('Invalid file type');
-        return;
-    }
-    
-    const uploadArea = document.getElementById('imageUploadArea');
-    const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
-    const imagePreview = document.getElementById('imagePreview');
+function resetAnalysisForm() {
+    const analysisForm = document.getElementById('analysisForm');
+    const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
+    const selectImageMessage = document.getElementById('selectImageMessage');
     const previewImage = document.getElementById('previewImage');
-    
-    if (!uploadArea || !uploadPlaceholder || !imagePreview || !previewImage) {
-        console.error('Required elements not found');
-        return;
+    const imagePreviewContainer = document.getElementById('imagePreview');
+    const overlayCanvas = document.getElementById('overlayCanvas');
+
+    // Reset form visibility
+    if (analysisForm) analysisForm.style.display = 'block';
+    if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'none';
+    if (selectImageMessage) selectImageMessage.style.display = 'flex';
+
+    // Clear form inputs
+    const dogName = document.getElementById('dogName');
+    const dogBreed = document.getElementById('dogBreed-box');
+    const modelSelect = document.getElementById('modelSelect');
+
+    if (dogName) dogName.value = '';
+    if (dogBreed) dogBreed.selectedIndex = 0;
+    if (modelSelect) modelSelect.selectedIndex = 0;
+
+    // Clear preview image & hide container
+    if (previewImage) previewImage.src = '';
+    if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+
+    // Clear canvas
+    if (overlayCanvas) {
+        const ctx = overlayCanvas.getContext('2d');
+        ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
     }
-    
-    console.log('Processing image file:', file.name);
-    
-    // Check if this is a different image
-    const isDifferentImage = !window.currentAnalysisSource || 
-                            window.currentAnalysisSource.filename !== file.name;
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        previewImage.src = e.target.result;
-        uploadPlaceholder.style.display = 'none';
-        imagePreview.style.display = 'block';
-        previewImage.dataset.sourceFilename = '';
-        window.currentAnalysisSource = {
-            type: 'upload',
-            filename: file.name || 'uploaded-image'
-        };
-        console.log('Image loaded successfully');
-        
-        // If it's a different image, hide results and show form
-        if (isDifferentImage) {
-            const analysisResults = document.getElementById('analysisResults');
-            const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
-            const analysisForm = document.getElementById('analysisForm');
-            
-            if (analysisResults) {
-                analysisResults.style.display = 'none';
-            }
-            
-            if (analysisResultsDisplay) {
-                analysisResultsDisplay.style.display = 'none';
-            }
-            
-            if (analysisForm) {
-                analysisForm.style.display = 'block';
-            }
-            
-            // Reset form fields to default when image changes
-            const dogName = document.getElementById('dogName');
-            const dogBreed = document.getElementById('dogBreed-box');
-            const modelSelect = document.getElementById('modelSelect');
-            
-            if (dogName) {
-                dogName.value = '';
-            }
-            
-            if (dogBreed) {
-                dogBreed.selectedIndex = 0; // Reset to "Select breed"
-            }
-            
-            if (modelSelect) {
-                modelSelect.selectedIndex = 0; // Reset to "Select model"
-            }
-            
-            // Scroll to form after a short delay
-            setTimeout(() => {
-                if (analysisForm) {
-                    analysisForm.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'start' 
-                    });
-                }
-            }, 100);
-        }
-    };
-    reader.onerror = (e) => {
-        console.error('Error reading file:', e);
-        alert('Error loading image. Please try again.');
-    };
-    reader.readAsDataURL(file);
+
+    // Reset state
+    window.currentAnalysis = null;
+    isHistoryView = false;
+
+    // Reset analyze button
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    if (analyzeBtn) analyzeBtn.innerHTML = 'Analyze';
 }
 
-function setupImageUpload() {
+export function setupImageUpload(preloadedImage = null) {
     const uploadArea = document.getElementById('imageUploadArea');
-    const uploadPlaceholder = uploadArea.querySelector('.upload-placeholder');
-    const imagePreview = document.getElementById('imagePreview');
+    const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
     const previewImage = document.getElementById('previewImage');
-    const changeImageBtn = document.getElementById('changeImageBtn');
+    const imagePreviewContainer = document.getElementById('imagePreview');
+    const analysisForm = document.getElementById('analysisForm');
+    const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
+    const selectImageMessage = document.getElementById('selectImageMessage');
+    const analysisResults = document.getElementById('analysisResults');  // ✅ Container
+    const overlayCanvas = document.getElementById('overlayCanvas');
 
-    // Drag and drop functionality
+    if (!uploadArea || !uploadPlaceholder || !previewImage || !imagePreviewContainer) {
+        console.error('Image upload components are missing');
+        return;
+    }
+
+    const clearCanvas = () => {
+        if (overlayCanvas) {
+            const ctx = overlayCanvas.getContext('2d');
+            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
+        const container = document.getElementById('imagePreview');
+        const existingBoxes = container?.querySelectorAll('.hover-box');
+        existingBoxes?.forEach(box => box.remove());
+    };
+
+    const displayPreview = (imageObj) => {
+        clearCanvas();
+
+        previewImage.src = imageObj.src || imageObj.dataUrl;
+        previewImage.alt = imageObj.filename || '';
+        uploadPlaceholder.style.display = 'none';
+        imagePreviewContainer.style.display = 'block';
+
+        // ✅ SHOW the analysis container, SHOW form, HIDE results
+        if (analysisResults) analysisResults.style.display = 'block';
+        if (analysisForm) analysisForm.style.display = 'block';
+        if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'none';
+        if (selectImageMessage) selectImageMessage.style.display = 'none';
+
+        // Reset form inputs
+        const dogName = document.getElementById('dogName');
+        const dogBreed = document.getElementById('dogBreed-box');
+        const modelSelect = document.getElementById('modelSelect');
+        const inferenceTime = document.getElementById('resultInferenceTime');
+        const changeImageBtn = document.getElementById('changeImageBtn');
+        if (changeImageBtn) {
+            changeImageBtn.textContent = "Change Image";
+
+            // Remove 'analyze-new-btn' only if it exists
+            if (changeImageBtn.classList.contains('analyze-new-btn')) {
+                changeImageBtn.classList.remove('analyze-new-btn');
+            }
+
+            // Reset inline styles
+            changeImageBtn.style.backgroundColor = ""; // resets to default
+            changeImageBtn.style.color = "";           // resets to default
+        }
+
+        if (dogName) dogName.value = '';
+        if (dogBreed) dogBreed.selectedIndex = 0;
+        if (modelSelect) modelSelect.selectedIndex = 0;
+        if(inferenceTime) inferenceTime.textContent = '';
+        if (analyzeBtn) analyzeBtn.style.display = '';
+        window.currentAnalysis = null;
+        window.currentAnalysisSource = {
+            type: 'gallery',
+            filename: imageObj.filename,
+            analyzed: false
+        };
+    };
+
+    if (preloadedImage) {
+        displayPreview(preloadedImage);
+        return;
+    }
+
+    // Drag & drop
     uploadArea.addEventListener('dragover', (e) => {
         e.preventDefault();
         uploadPlaceholder.style.borderColor = '#c4a484';
@@ -490,76 +580,22 @@ function setupImageUpload() {
         uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
     });
 
-    uploadArea.addEventListener('drop', (e) => {
+    uploadArea.addEventListener('drop', async (e) => {
         e.preventDefault();
         uploadPlaceholder.style.borderColor = '#d9b99b';
         uploadPlaceholder.style.background = 'rgba(217, 185, 155, 0.05)';
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleImageFile(files[0]);
+
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const dataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+            displayPreview({ dataUrl, filename: file.name });
         }
     });
-
-    // File input functionality (click on placeholder)
-    uploadPlaceholder.addEventListener('click', (e) => {
-        selectFromGallery();
-    });
-
-    if (changeImageBtn) {
-        changeImageBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Reset analysis results when changing image
-            const analysisResults = document.getElementById('analysisResults');
-            if (analysisResults) {
-                analysisResults.style.display = 'none';
-            }
-            
-            // Clear previous analysis data
-            window.currentAnalysis = null;
-            window.currentAnalysisSource = null;
-            
-            // Create a new file input each time
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'image/*';
-            fileInput.style.display = 'none';
-            
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                    handleImageFile(e.target.files[0]);
-                    
-                    // Scroll back to the analysis form after successful image change
-                    const analysisForm = document.getElementById('analysisForm');
-                    if (analysisForm) {
-                        analysisForm.scrollIntoView({ 
-                            behavior: 'smooth', 
-                            block: 'start' 
-                        });
-                    }
-                }
-                // If no files selected (user cancelled), don't scroll
-                
-                // Clean up immediately after use
-                    if (fileInput.parentNode) {
-                        fileInput.parentNode.removeChild(fileInput);
-                    }
-            });
-            
-            // Add to DOM, trigger click, then remove
-            document.body.appendChild(fileInput);
-            fileInput.click();
-            
-            // Clean up after a short delay to ensure the file dialog has opened
-            setTimeout(() => {
-                if (fileInput.parentNode) {
-                    fileInput.parentNode.removeChild(fileInput);
-                }
-            }, 100);
-        });
-    }
 }
 
 function selectFromGallery({ event = null, autoLoad = true } = {}) {
@@ -585,16 +621,27 @@ function selectFromGallery({ event = null, autoLoad = true } = {}) {
         enterAnalyzeMode();
     }
 
-    // Show the dropdown
+    const actionsDropdown = document.getElementById('actionsDropdown');
+
+    // Show the 
+    if (actionsDropdown) {
     actionsDropdown.classList.add('show');
+    }
 }
 
 // Gallery selection functionality
 function setupGallerySelection() {
     const selectFromGalleryBtn = document.getElementById('selectFromGalleryBtn');
+    const changeImageBtn = document.getElementById('changeImageBtn');
 
-    selectFromGalleryBtn.addEventListener('click', (e) => {
-        selectFromGallery();
+[selectFromGalleryBtn, changeImageBtn].forEach(btn => {
+    if (btn) {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            selectFromGallery(); // This handles showing the gallery and enabling analyze mode
+        });
+        }
     });
 }
 
@@ -619,22 +666,20 @@ window.fetchImageAsDataURL = fetchImageAsDataURL;
 // Save analyzed image to gallery with metadata
 async function saveAnalyzedImageToGallery(imageSrc, dogBreed, disease, confidence) {
     try {
-        // Convert data URL to blob
         const response = await fetch(imageSrc);
         const blob = await response.blob();
         
-        // Create FormData
         const formData = new FormData();
         formData.append('image', blob, 'analyzed_image.jpg');
         formData.append('analyzed', 'true');
-        formData.append('breed', dogBreed);
-        formData.append('disease', disease);
-        formData.append('confidence', confidence.toString());
+        formData.append('breed', dogBreed || 'unknown');
+        formData.append('disease', disease || 'unknown');
+        formData.append('confidence', String(confidence || 0));
+
         if (window.currentAnalysisSource?.type === 'gallery' && window.currentAnalysisSource.filename) {
             formData.append('source_filename', window.currentAnalysisSource.filename);
         }
 
-        // Upload to desktop server
         const uploadResponse = await fetch('http://localhost:5001/upload', {
             method: 'POST',
             body: formData
@@ -646,13 +691,10 @@ async function saveAnalyzedImageToGallery(imageSrc, dogBreed, disease, confidenc
         
         const result = await uploadResponse.json();
         console.log('Image saved to gallery:', result);
-        
-        // Refresh gallery if on gallery page
+
         const galleryPage = document.getElementById('galleryPage');
         if (galleryPage && galleryPage.style.display !== 'none') {
-            setTimeout(() => {
-                loadGalleryImages();
-            }, 500);
+            setTimeout(() => loadGalleryImages(), 500);
         }
         
         return result.filename;
@@ -662,119 +704,295 @@ async function saveAnalyzedImageToGallery(imageSrc, dogBreed, disease, confidenc
     }
 }
 
-// Analysis button functionality
-function setupAnalysisButton() {
+function drawBoundingBoxes(previewImage, overlayCanvas, detections) {
+    if (!previewImage || !overlayCanvas || !detections) return;
+
+    const container = document.getElementById('imagePreview');
+    if (!container) return;
+
+    // Clear existing hover boxes
+    const existingBoxes = container.querySelectorAll('.hover-box');
+    existingBoxes.forEach(box => box.remove());
+
+    const rect = previewImage.getBoundingClientRect();
+    overlayCanvas.width = rect.width;
+    overlayCanvas.height = rect.height;
+
+    const imgAspect = previewImage.naturalWidth / previewImage.naturalHeight;
+    let displayWidth, displayHeight, offsetX, offsetY;
+
+    if (rect.width / rect.height > imgAspect) {
+        displayHeight = rect.height;
+        displayWidth = displayHeight * imgAspect;
+        offsetX = (rect.width - displayWidth) / 2;
+        offsetY = 0;
+    } else {
+        displayWidth = rect.width;
+        displayHeight = displayWidth / imgAspect;
+        offsetX = 0;
+        offsetY = (rect.height - displayHeight) / 2;
+    }
+
+    const scaleX = displayWidth / previewImage.naturalWidth;
+    const scaleY = displayHeight / previewImage.naturalHeight;
+
+    const ctx = overlayCanvas.getContext('2d');
+    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    // Define a color map for diseases
+    const diseaseColors = {
+        'hotspot': 'lime',
+        'allergic dermatitis': 'orange',
+        'fungal infection': 'cyan',
+        'mange': 'magenta'
+        // add more diseases/colors here as needed
+    };
+
+    detections.forEach(det => {
+        const color = diseaseColors[det.disease.toLowerCase()] || 'yellow'; // fallback color
+
+        const [x1, y1, x2, y2] = det.bbox;
+        const scaledX1 = x1 * scaleX + offsetX;
+        const scaledY1 = y1 * scaleY + offsetY;
+        const scaledX2 = x2 * scaleX + offsetX;
+        const scaledY2 = y2 * scaleY + offsetY;
+
+        // Draw bounding box on canvas
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(scaledX1, scaledY1, scaledX2 - scaledX1, scaledY2 - scaledY1);
+
+        // Draw label on canvas
+        const text = `${det.disease} ${det.confidence.toFixed(1)}%`;
+        ctx.font = '16px Arial';
+        const textWidth = ctx.measureText(text).width;
+        const textHeight = 16;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(scaledX1, scaledY1 - textHeight, textWidth + 6, textHeight);
+        ctx.fillStyle = color;
+        ctx.fillText(text, scaledX1 + 3, scaledY1 - 2);
+
+        // Create hoverable div
+        const hoverDiv = document.createElement('div');
+        hoverDiv.className = 'hover-box';
+        hoverDiv.style.position = 'absolute';
+        hoverDiv.style.left = `${scaledX1}px`;
+        hoverDiv.style.top = `${scaledY1}px`;
+        hoverDiv.style.width = `${scaledX2 - scaledX1}px`;
+        hoverDiv.style.height = `${scaledY2 - scaledY1}px`;
+        hoverDiv.style.border = `2px solid ${color}`;
+        hoverDiv.style.pointerEvents = 'auto';
+        hoverDiv.style.cursor = 'pointer';
+        hoverDiv.style.background = 'rgba(0,0,0,0)'; // transparent
+
+        container.appendChild(hoverDiv);
+    });
+}
+
+let boundingBoxObserver;
+
+function setupBoundingBoxObserver(previewImage, overlayCanvas) {
+    if (!previewImage || !overlayCanvas) return;
+
+    // Disconnect previous observer if exists
+    if (boundingBoxObserver) boundingBoxObserver.disconnect();
+
+    boundingBoxObserver = new ResizeObserver(() => {
+        if (window.currentAnalysis?.detections?.length) {
+            drawBoundingBoxes(previewImage, overlayCanvas, window.currentAnalysis.detections);
+        } else {
+            // Clear canvas if no detections
+            const ctx = overlayCanvas.getContext('2d');
+            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
+    });
+
+    boundingBoxObserver.observe(previewImage);
+}
+
+async function getImageWithBoundingBoxes(previewImage, detections) {
+    if (!previewImage || !detections) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = previewImage.naturalWidth;
+    canvas.height = previewImage.naturalHeight;
+    const ctx = canvas.getContext('2d');
+
+    // Draw the original image
+    ctx.drawImage(previewImage, 0, 0, canvas.width, canvas.height);
+
+    // Define disease colors
+    const diseaseColors = {
+        'hotspot': 'lime',
+        'allergic dermatitis': 'orange',
+        'fungal infection': 'cyan',
+        'mange': 'magenta'
+    };
+
+    // Draw bounding boxes
+    detections.forEach(det => {
+        const color = diseaseColors[det.disease.toLowerCase()] || 'yellow';
+        const [x1, y1, x2, y2] = det.bbox;
+
+        // Box
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+        // Label background
+        const text = `${det.disease} ${det.confidence.toFixed(1)}%`;
+        ctx.font = '20px Arial';
+        const textWidth = ctx.measureText(text).width;
+        const textHeight = 22;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(x1, y1 - textHeight, textWidth + 6, textHeight);
+
+        // Label text
+        ctx.fillStyle = color;
+        ctx.fillText(text, x1 + 3, y1 - 4);
+    });
+
+    return canvas.toDataURL('image/jpeg');
+}
+
+
+export function setupAnalysisButton() {
     const analyzeBtn = document.getElementById('analyzeBtn');
+    const changeImageBtn = document.getElementById('changeImageBtn');
+    const previewImage = document.getElementById('previewImage');
+    const overlayCanvas = document.getElementById('overlayCanvas');
 
-    analyzeBtn.addEventListener('click', async () => {
-        const previewImage = document.getElementById('previewImage');
-        if (!previewImage.src) return;
+    if (!analyzeBtn || !previewImage || !overlayCanvas) return;
 
+    setupBoundingBoxObserver(previewImage, overlayCanvas);
+
+    // Clone analyze button to remove old listeners
+    const newAnalyzeBtn = analyzeBtn.cloneNode(true);
+    analyzeBtn.parentNode.replaceChild(newAnalyzeBtn, analyzeBtn);
+
+    // Clone change image button once and keep reference
+    let newChangeBtn;
+    if (changeImageBtn && changeImageBtn.parentNode) {
+        newChangeBtn = changeImageBtn.cloneNode(true);
+        changeImageBtn.parentNode.replaceChild(newChangeBtn, changeImageBtn);
+
+        newChangeBtn.addEventListener('click', () => {
+            selectFromGallery();
+        });
+    }
+
+    newAnalyzeBtn.addEventListener('click', async () => {
         const dogNameInput = document.getElementById('dogName');
         const dogBreedSelect = document.getElementById('dogBreed-box');
-        const selectedBreed = dogBreedSelect.options[dogBreedSelect.selectedIndex].text;
         const modelSelect = document.getElementById('modelSelect');
 
-        if (!modelSelect || !modelSelect.value) {
+        if (!modelSelect?.value) {
             alert('Please select a model first');
             return;
         }
 
+        const selectedBreed = dogBreedSelect.options[dogBreedSelect.selectedIndex].text;
         const selectedModel = modelSelect.value;
 
-        // Show loading state
-        analyzeBtn.disabled = true;
-        analyzeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
+        newAnalyzeBtn.disabled = true;
+        newAnalyzeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
 
         try {
-            // Call the real YOLO analysis API
             const analysisResult = await performRealAnalysis(previewImage.src, selectedModel);
 
-            // Store current analysis BEFORE saving to gallery
+            // Update UI - show results
+            const analysisForm = document.getElementById('analysisForm');
+            const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
+            const selectImageMessage = document.getElementById('selectImageMessage');
+
+            if (analysisForm) analysisForm.style.display = 'none';
+            if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'flex';
+            if (selectImageMessage) selectImageMessage.style.display = 'none';
+
+            // Draw bounding boxes
+            if (analysisResult.detections?.length) {
+                drawBoundingBoxes(previewImage, overlayCanvas, analysisResult.detections);
+                displayAnalysisResults(
+                    analysisResult.detections.map(det => ({
+                        disease: det.disease,
+                        confidence: det.confidence.toFixed(1)
+                    })),
+                    analysisResult.inference_time
+                );
+            }
+
+            // Store analysis
             window.currentAnalysis = {
                 diagnosis: analysisResult.diagnosis,
                 confidence: analysisResult.confidence,
                 model: selectedModel,
                 dogName: dogNameInput?.value || '',
-                dogBreed: selectedBreed
+                dogBreed: selectedBreed,
+                detections: analysisResult.detections || []
             };
 
-            // Save analyzed image to gallery (will now include dog_name and dog_breed)
+            // Save to gallery
+            const imageWithBoxes = await getImageWithBoundingBoxes(previewImage, analysisResult.detections);
             const savedFilename = await saveAnalyzedImageToGallery(
-                previewImage.src,
-                selectedBreed,  // Pass human-readable name
+                imageWithBoxes,
+                selectedBreed,
                 analysisResult.disease,
                 analysisResult.confidence
             );
 
-            // Hide form and show results
-            const analysisForm = document.getElementById('analysisForm');
-            const analysisResultsDisplay = document.getElementById('analysisResultsDisplay');
-            const resultsTitle = document.getElementById('resultsTitle');
-
-            if (analysisForm) analysisForm.style.display = 'none';
-            if (analysisResultsDisplay) analysisResultsDisplay.style.display = 'flex';
-            if (resultsTitle) resultsTitle.textContent = dogNameInput?.value || 'Analysis Results';
-
-            // Update result elements
-            const resultDiagnosis = document.getElementById('resultDiagnosis');
-            const resultConfidence = document.getElementById('resultConfidence');
-            const resultInferenceTime = document.getElementById('resultInferenceTime');
-
-            if (resultDiagnosis) resultDiagnosis.textContent = analysisResult.disease;
-            if (resultConfidence) resultConfidence.textContent = `${analysisResult.confidence}%`;
-            if (resultInferenceTime && analysisResult.inference_time !== undefined) {
-                resultInferenceTime.textContent = `${analysisResult.inference_time}s`;
-            }
-
-            // Add to localStorage history
+            // Add to history
             window.analysisPageFunctions.addToAnalysisHistory(
                 previewImage.src,
                 analysisResult.disease,
                 `${analysisResult.confidence}%`,
-                savedFilename
+                savedFilename,
+                analysisResult.inference_time
             );
 
-            // Show initial LLM recommendation
-            if (window.showInitialRecommendation) {
-                window.showInitialRecommendation(analysisResult.recommendation);
+            // Show LLM recommendation
+            if (window.showInitialRecommendation && analysisResult.summary) {
+                window.showInitialRecommendation(analysisResult.summary);
             }
 
-            setTimeout(() => {
-                restoreChatInputClickability();
-            }, 200);
+            // Hide the Analyze button
+            newAnalyzeBtn.style.display = 'none';
+
+            // Update Change Image button
+            if (newChangeBtn) {
+                newChangeBtn.textContent = "Analyze New Image";
+                newChangeBtn.classList.add('analyze-new-btn');
+                newChangeBtn.style.backgroundColor = "#198754"; // green
+                newChangeBtn.style.color = "white";
+                newChangeBtn.style.display = "inline-block"; // ensure it’s visible
+            }
+
+            setTimeout(() => restoreChatInputClickability(), 200);
 
         } catch (error) {
             console.error('Analysis failed:', error);
             alert('Analysis failed. Please try again.');
         } finally {
-            // Reset button
-            analyzeBtn.disabled = false;
-            analyzeBtn.innerHTML = 'Analyze';
+            newAnalyzeBtn.disabled = false;
+            newAnalyzeBtn.innerHTML = 'Analyze';
         }
     });
-
-    async function performRealAnalysis(imageSrc, modelName) {
-        try {
-            const response = await fetch('http://localhost:5000/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ frame: imageSrc, model: modelName })
-            });
-
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-            return await response.json();
-        } catch (error) {
-            console.error('Error calling analysis API:', error);
-            throw error;
-        }
-    }
 }
 
 
+async function performRealAnalysis(imageSrc, modelName) {
+    const response = await fetch('http://localhost:5000/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frame: imageSrc, model: modelName })
+    });
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+}
+
 // Chat interface functionality
 function setupChatInterface() {
+    window.showInitialRecommendation = showInitialRecommendation;
     const chatInput = document.getElementById('chatInput');
     const sendMessageBtn = document.getElementById('sendMessageBtn');
     const chatMessages = document.getElementById('chatMessages');
@@ -942,66 +1160,6 @@ function setupChatInterface() {
     }
 }
 
-function autoAnalyzeSelectedImage() {
-    if (window.currentAnalysisSource?.type !== 'gallery') return;
-
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    const previewImage = document.getElementById('previewImage');
-    if (!analyzeBtn || !previewImage || !previewImage.src) return;
-
-    if (!analyzeBtn.disabled) {
-        analyzeBtn.click();
-    }
-}
-
-async function displayImageFromGallery(image) {
-    if (!image || !image.filename) {
-        throw new Error('Invalid image data provided.');
-    }
-
-    const uploadArea = document.getElementById('imageUploadArea');
-    const uploadPlaceholder = uploadArea?.querySelector('.upload-placeholder');
-    const imagePreview = document.getElementById('imagePreview');
-    const previewImage = document.getElementById('previewImage');
-    const analysisResults = document.getElementById('analysisResults');
-
-    if (!uploadArea || !uploadPlaceholder || !imagePreview || !previewImage) {
-        throw new Error('Analysis components are not available.');
-    }
-
-    const imageUrl = `http://localhost:5001/images/${image.filename}`;
-    const dataUrl = await fetchImageAsDataURL(imageUrl);
-
-    previewImage.src = dataUrl;
-    previewImage.alt = image.filename;
-    previewImage.dataset.sourceFilename = image.filename;
-    uploadPlaceholder.style.display = 'none';
-    imagePreview.style.display = 'block';
-    if (analysisResults) {
-        analysisResults.style.display = 'none';
-    }
-    const resultDiagnosis = document.getElementById('resultDiagnosis');
-    const resultConfidence = document.getElementById('resultConfidence');
-    const resultInferenceTime = document.getElementById('resultInferenceTime');
-    if (resultDiagnosis) {
-        resultDiagnosis.textContent = '-';
-    }
-    if (resultConfidence) {
-        resultConfidence.textContent = '-';
-    }
-    if (resultInferenceTime) {
-        resultInferenceTime.textContent = '-';
-    }
-
-    window.currentAnalysisSource = {
-        type: 'gallery',
-        filename: image.filename,
-        disease: image.disease || '',
-        confidence: image.confidence || '',
-        analyzed: Boolean(image.analyzed)
-    };
-}
-
 // Load and populate breeds from CSV
 async function loadBreeds() {
     try {
@@ -1048,6 +1206,7 @@ document.addEventListener('DOMContentLoaded', loadBreeds);
 //setup image upload functionality
 loadBreeds();
 setupImageUpload();
+window.setupImageUpload = setupImageUpload;
 setupGallerySelection();
 
 
@@ -1058,11 +1217,27 @@ if (document.readyState === 'loading') {
         setupChatInterface();
         setupAnalysisButton();
     });
+
 } else {
     // DOM already loaded
     setupChatInterface();
     setupAnalysisButton();
 }
+
+window.addEventListener("load", () => {
+    const previewImage = document.getElementById('previewImage');
+    const selectImageMessage = document.getElementById('selectImageMessage');
+    const analysisResults = document.getElementById('analysisResults');
+
+    // If no valid base64 image → hide analysis box
+    if (!previewImage.src || !previewImage.src.includes("base64")) {
+        if (analysisResults) analysisResults.style.display = 'none';
+        if (selectImageMessage) selectImageMessage.style.display = 'flex';
+    } else {
+        if (analysisResults) analysisResults.style.display = 'block';
+        if (selectImageMessage) selectImageMessage.style.display = 'none';
+    }
+});
 
 // ================================
 // EXPORT FUNCTIONS FOR USE IN OTHER FILES
@@ -1074,9 +1249,7 @@ window.analysisPageFunctions = {
     setupTabs,
     setupClearHistoryButton,
     restoreChatInputClickability,
-    handleImageFile,
     setupImageUpload,
     setupAnalysisButton,
-    setupChatInterface,
-    autoAnalyzeSelectedImage
+    setupChatInterface
 };

@@ -58,7 +58,6 @@ if (!window._functionReloadProtected) {
 
     const statsRetryDelay = 5000;
     const retryDelay = 5000;
-    const serverUrl = "http://127.0.0.1:5001";
 
     let isOnline = navigator.onLine;
     let serverConnected = false;
@@ -68,8 +67,6 @@ if (!window._functionReloadProtected) {
     let fadeLocked = false;
     let listenersAttached = false;
     let currentIndex = 0;
-    let checkInterval = null;
-    let connectionCheckCount = 0;
 
     const avatars = [
         { id: 0, src: '../images/Earl.png', label: 'LABRADOR' },
@@ -426,6 +423,108 @@ if (!window._functionReloadProtected) {
     'Mange': mangeBtn
     };
 
+    // ================================
+    // LLM INSIGHTS
+    // ================================
+    async function fetchLLMInsights(diseaseCounts) {
+        try {
+            const response = await fetch('http://localhost:5000/generate-insights', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ disease_counts: diseaseCounts }) // send counts directly
+            });
+
+            if (!response.ok) throw new Error('Failed to get LLM insights');
+
+            const result = await response.json();
+            return result.insights || "No insights available.";
+        } catch (err) {
+            console.error("Error fetching LLM insights:", err);
+            return "Unable to fetch insights at the moment. Please consult a veterinarian.";
+        }
+    }
+
+    async function updateInsights(diseaseCounts) {
+        const healthyCard = document.getElementById("healthyInsight");
+        const topDiseaseCard = document.getElementById("topDisease");
+        const otherCard = document.getElementById("lowestInsight");
+
+        // Fetch LLM-generated insights
+        const llmText = await fetchLLMInsights(diseaseCounts);
+
+        // Split LLM output into exactly 3 insights
+        const insights = llmText.split('\n').map(s => s.trim()).filter(Boolean);
+
+        // Ensure exactly 3 insights
+        while (insights.length < 3) {
+            insights.push("Please consult a veterinarian for professional advice.");
+        }
+
+        // ------------------------------
+        // 1. Health Status Insight
+        // ------------------------------
+        if (healthyCard) {
+            const icon = healthyCard.querySelector('i');
+            const textEl = healthyCard.querySelector('.insight-text strong');
+
+            textEl.textContent = insights[0] || "Health status unavailable.";
+
+            if (!diseaseCounts['Healthy'] || diseaseCounts['Healthy'] === 0) {
+                icon.classList.remove("bi-arrow-up-circle");
+                icon.classList.add("bi-arrow-down-circle");
+                healthyCard.classList.add("decline");
+            } else {
+                icon.classList.remove("bi-arrow-down-circle");
+                icon.classList.add("bi-arrow-up-circle");
+                healthyCard.classList.remove("decline");
+            }
+        }
+
+        // ------------------------------
+        // 2. Top Disease Insight
+        // ------------------------------
+        if (topDiseaseCard) {
+            topDiseaseCard.textContent = insights[1] || "Top disease information unavailable.";
+        }
+
+        // ------------------------------
+        // 3. Other/Rare Conditions Insight
+        // ------------------------------
+        if (otherCard) {
+            const textEl = otherCard.querySelector('.insight-text strong');
+            const icon = otherCard.querySelector('i');
+
+            textEl.textContent = insights[2] || "Other condition insights unavailable.";
+
+            const lowerText = insights[2].toLowerCase();
+
+            if (lowerText.includes("no") && lowerText.includes("disease")) {
+                // No major diseases
+                icon.classList.remove("bi-exclamation-circle", "bi-search");
+                icon.classList.add("bi-hand-thumbs-up");
+                otherCard.classList.remove("alert");
+            } else if (lowerText.includes("rare") || lowerText.includes("single") || lowerText.includes("monitor")) {
+                // Rare conditions
+                icon.classList.remove("bi-exclamation-circle", "bi-hand-thumbs-up");
+                icon.classList.add("bi-search");
+                otherCard.classList.remove("alert");
+            } else if (lowerText.includes("concern") || lowerText.includes("attention")) {
+                // Needs attention
+                icon.classList.remove("bi-search", "bi-hand-thumbs-up");
+                icon.classList.add("bi-exclamation-circle");
+                otherCard.classList.add("alert");
+            } else {
+                // Default monitoring
+                icon.classList.remove("bi-exclamation-circle", "bi-hand-thumbs-up");
+                icon.classList.add("bi-search");
+                otherCard.classList.remove("alert");
+            }
+        }
+
+        console.log("%c✅ LLM Insights updated successfully", "color: limegreen;");
+    }
+
+
     async function loadStatsCards() {
     try {
         const res = await fetch('http://127.0.0.1:5001/images');
@@ -455,17 +554,19 @@ if (!window._functionReloadProtected) {
             if (!img.analyzed) {
                 rawCount++;
             } else if (img.disease) {
-                const diseaseName = img.disease.toLowerCase();
-                switch(diseaseName) {
-                    case 'allergic dermatitis': diseaseCounts['Allergic Dermatitis']++; break;
-                    case 'fungal infection': diseaseCounts['Fungal Infection']++; break;
-                    case 'hotspot': diseaseCounts['Hotspot']++; break;
-                    case 'mange': diseaseCounts['Mange']++; break;
-                    case 'healthy': diseaseCounts['Healthy']++; break;
-                    default: break; // ignore unknown diseases
-                }
+                img.disease.split(',').forEach(d => {
+                    const diseaseName = d.trim().toLowerCase();
+                    switch(diseaseName) {
+                        case 'allergic dermatitis': diseaseCounts['Allergic Dermatitis']++; break;
+                        case 'fungal infection': diseaseCounts['Fungal Infection']++; break;
+                        case 'hotspot': diseaseCounts['Hotspot']++; break;
+                        case 'mange': diseaseCounts['Mange']++; break;
+                        case 'healthy': diseaseCounts['Healthy']++; break;
+                    }
+                });
             }
         });
+
 
         // ===========================
         // Update numbers in existing stats cards 🚀
@@ -516,115 +617,8 @@ if (!window._functionReloadProtected) {
             }
         });
 
-        // ===========================
-        // Insight 1: Healthy scans
-        // ===========================
-        const healthyInsightCard = document.getElementById("healthyInsight");
-        if (healthyInsightCard) {
-            const totalOther = Object.entries(diseaseCounts)
-                .filter(([disease]) => disease !== 'Healthy')
-                .reduce((sum, [, count]) => sum + count, 0);
-
-            const healthyIcon = healthyInsightCard.querySelector('i');
-            const healthyText = healthyInsightCard.querySelector('.insight-text strong');
-
-            if (diseaseCounts['Healthy'] === 0) {
-                healthyIcon.classList.remove("bi-arrow-up-circle");
-                healthyIcon.classList.add("bi-arrow-down-circle");
-                healthyText.textContent = 'No Healthy scans detected yet.';
-                healthyInsightCard.classList.add("decline");
-            } else if (diseaseCounts['Healthy'] < totalOther) {
-                healthyIcon.classList.remove("bi-arrow-up-circle");
-                healthyIcon.classList.add("bi-arrow-down-circle");
-                healthyText.textContent = 'Healthy scans decreased, showing overall decline.';
-                healthyInsightCard.classList.add("decline");
-            } else {
-                healthyIcon.classList.remove("bi-arrow-down-circle");
-                healthyIcon.classList.add("bi-arrow-up-circle");
-                healthyText.textContent = 'Healthy scans increased, showing overall improvement.';
-                healthyInsightCard.classList.remove("decline");
-            }
-        }
-
-        // ===========================
-        // Insight 2: Top Disease
-        // ===========================
-        const topDiseaseEl = document.getElementById('topDisease');
-        if (topDiseaseEl) {
-            const sorted = Object.entries(diseaseCounts)
-                .filter(([disease]) => disease !== 'Healthy')
-                .sort((a, b) => b[1] - a[1]);
-
-            if (sorted.length > 0 && sorted[0][1] > 0) {
-                topDiseaseEl.textContent = sorted[0][0];
-            } else {
-                topDiseaseEl.parentElement.textContent = "No disease detected in the gallery.";
-            }
-        }
-
-        // ===========================
-        // Insight 3: Lowest Disease
-        // ===========================
-        const lowestInsightCard = document.getElementById("lowestInsight");
-        if (lowestInsightCard) {
-            const mainDiseases = ['Allergic Dermatitis', 'Fungal Infection', 'Hotspot', 'Mange'];
-            const normalizedCounts = {};
-            mainDiseases.forEach(disease => normalizedCounts[disease] = diseaseCounts[disease] ?? 0);
-
-            // filteredCounts contains only the diseases that have a count > 0
-            const filteredCounts = Object.entries(normalizedCounts).filter(([_, count]) => count > 0);
-
-            const lowestText = lowestInsightCard.querySelector('.insight-text strong');
-            const lowestIcon = lowestInsightCard.querySelector('i');
-
-            if (filteredCounts.length > 0) {
-                filteredCounts.sort((a, b) => a[1] - b[1]);
-                const [lowestDisease, lowestCount] = filteredCounts[0];
-                const totalAnalyzed = Object.values(normalizedCounts).reduce((sum, c) => sum + c, 0);
-
-                // --- NEW CHECK FOR ONLY ONE DISEASE PRESENT ---
-                if (filteredCounts.length === 1) {
-                    lowestText.textContent = `Only ${lowestDisease} detected. No other major diseases found!`;
-                    
-                    // Set a neutral/positive style for this unique scenario
-                    lowestIcon.classList.remove("bi-exclamation-circle", "bi-search");
-                    lowestIcon.classList.add("bi-lightbulb"); // Use a "lightbulb" or "info" icon
-                    lowestInsightCard.classList.remove("alert");
-                    
-                } else {
-                    // --- Original logic for multiple diseases present ---
-                    const percentage = ((lowestCount / totalAnalyzed) * 100).toFixed(1);
-
-                    lowestText.textContent = `${lowestDisease} accounts for ${percentage}% of all analyzed images.`;
-
-                    if (percentage < 10) {
-                        lowestIcon.classList.remove("bi-search");
-                        lowestIcon.classList.add("bi-exclamation-circle");
-                        lowestInsightCard.classList.add("alert");
-                    } else {
-                        lowestIcon.classList.add("bi-search");
-                        lowestIcon.classList.remove("bi-exclamation-circle");
-                        lowestInsightCard.classList.remove("alert");
-                    }
-                }
-            } else {
-                // --- Logic for ZERO diseases detected ---
-                // This check is the same as the solution in the previous step
-                
-                const totalDiseases = mainDiseases.reduce((sum, disease) => sum + diseaseCounts[disease], 0);
-
-                if (totalDiseases === 0) {
-                    lowestText.textContent = "Great news! No major diseases detected in analyzed images.";
-                    
-                    lowestIcon.classList.remove("bi-exclamation-circle", "bi-search");
-                    lowestIcon.classList.add("bi-hand-thumbs-up");
-                    lowestInsightCard.classList.remove("alert");
-                } else {
-                    // Fallback (Should only happen if logic is flawed or if there's only 'Healthy' count)
-                    lowestText.textContent = "No disease detected yet.";
-                }
-            }
-        }
+        // After you update diseaseCounts
+        updateInsights(diseaseCounts);
 
         // ===========================
         // Optional: chart update

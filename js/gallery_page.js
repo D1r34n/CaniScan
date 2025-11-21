@@ -385,6 +385,7 @@ function clearSelection() {
     lastSelectedFilename = null;
     lastSelectedIndex = null;
     lastActiveFilename = null;
+    updateAnalyzeButtonState();
 }
 
 // ================================
@@ -649,34 +650,21 @@ export function exitAnalyzeMode(options = { clearSelection: true }) {
 if (dropdownAnalyzeBtn) {
     dropdownAnalyzeBtn.addEventListener('click', async (event) => {
         event.stopPropagation();
-        
-        // Close dropdown when action is clicked
-        if (actionsDropdown) {
-            actionsDropdown.classList.remove('show');
-        }
 
-        if (!selectedImageFilenames.size) {
-            alert('Please select at least one image to analyze.');
-            return;
-        }
+        // Close dropdown
+        if (actionsDropdown) actionsDropdown.classList.remove('show');
 
-        const filenames = Array.from(selectedImageFilenames);
-        const imagesToAnalyze = filenames
-            .map(filename => filteredGalleryImages.find(img => img.filename === filename) || allGalleryImages.find(img => img.filename === filename))
-            .filter(Boolean);
+        const filename = Array.from(selectedImageFilenames)[0];
+        const image = filteredGalleryImages.find(img => img.filename === filename) || 
+                    allGalleryImages.find(img => img.filename === filename);
 
-        if (!imagesToAnalyze.length) {
-            alert('Selected images are no longer available.');
+        if (!image) {
+            alert('Selected image is no longer available.');
             exitAnalyzeMode();
             return;
         }
 
-        if (imagesToAnalyze.length > 1) {
-            console.warn('Multiple images selected; only the first image will be prepared for analysis.');
-        }
-
-        const targetImage = imagesToAnalyze[0];
-
+        // proceed with analysis
         exitAnalyzeMode();
 
         // Function to open analysis page and run callback
@@ -719,60 +707,72 @@ if (dropdownAnalyzeBtn) {
                 }, 300);
             }
         }
-        
+
         openAnalysisPage(async () => {
             try {
-                // Wait a bit longer to ensure analysis page is fully rendered
-                await new Promise(resolve => setTimeout(resolve, 200));
-                
-                // Verify analysis page elements exist before proceeding
-                const uploadArea = document.getElementById('imageUploadArea');
-                const previewImage = document.getElementById('previewImage');
-                
-                if (!uploadArea || !previewImage) {
-                    throw new Error('Analysis page elements not ready. Please try again.');
-                }
-                
-                await displayImageFromGallery(targetImage);
-                
-                // Ensure a model is selected before auto-analyzing
-                if (!window.selectedModel) {
-                    // Set default model to YoloV8n if none selected
-                    window.selectedModel = 'YoloV8n';
-                    const dropdownButton = document.getElementById('dropdownButton');
-                    if (dropdownButton) {
-                        dropdownButton.innerHTML = `YoloV8n <span>▼</span>`;
-                    }
-                    console.log('No model selected, defaulting to YoloV8n');
-                }
-                
-                // Wait for image to load before auto-analyzing
-                await new Promise((resolve) => {
-                    const img = document.getElementById('previewImage');
-                    if (img.complete) {
-                        resolve();
-                    } else {
-                        img.onload = resolve;
-                        img.onerror = () => {
-                            console.error('Image failed to load');
-                            resolve(); // Continue anyway
-                        };
-                        // Timeout after 5 seconds
-                        setTimeout(resolve, 5000);
-                    }
+                const dataUrl = await fetchImageAsDataURL(`http://localhost:5001/images/${image.filename}`);
+                window.setupImageUpload({
+                    src: dataUrl,
+                    filename: image.filename,
+                    disease: image.disease,
+                    confidence: image.confidence,
+                    breed: image.breed,
+                    analyzed: image.analyzed
                 });
-                
-                // Small delay to ensure everything is ready
-                setTimeout(() => {
-                    autoAnalyzeSelectedImage();
-                }, 300);
+
+                if (!window.selectedModel) window.selectedModel = 'YoloV8n';
+                const img = document.getElementById('previewImage');
+                if (img.complete) autoAnalyzeSelectedImage();
+                else img.onload = autoAnalyzeSelectedImage;
+
             } catch (error) {
-                console.error('Failed to prepare selected image for analysis:', error);
-                alert(`Unable to load the selected image for analysis: ${error.message || 'Unknown error'}. Please try again.`);
+                console.error('Failed to prepare image for analysis:', error);
+                alert(`Unable to load the selected image: ${error.message}`);
             }
         });
     });
 }
+
+function updateAnalyzeButtonState() {
+    if (!dropdownAnalyzeBtn) return;
+
+    const selectedFilenames = Array.from(selectedImageFilenames);
+    const firstDropdownItem = document.querySelector('.actions-dropdown-content div:first-child');
+
+    let disabled = false;
+    let title = 'Analyze selected image';
+
+    if (selectedFilenames.length === 0) {
+        disabled = true;
+        title = 'Select an image to analyze';
+    } else if (selectedFilenames.length > 1) {
+        disabled = true;
+        title = 'Cannot analyze multiple images at once';
+    } else {
+        const filename = selectedFilenames[0];
+        const image = filteredGalleryImages.find(img => img.filename === filename) || 
+                      allGalleryImages.find(img => img.filename === filename);
+
+        if (image?.analyzed) {
+            disabled = true;
+            title = 'This image has already been analyzed';
+        }
+    }
+
+    // Update button state
+    dropdownAnalyzeBtn.disabled = disabled;
+    dropdownAnalyzeBtn.title = title;
+
+    // Update first dropdown item styling
+    if (firstDropdownItem) {
+        if (disabled) firstDropdownItem.classList.add('disabled');
+        else firstDropdownItem.classList.remove('disabled');
+    }
+}
+
+
+updateAnalyzeButtonState();
+
 
 if (dropdownDeleteBtn) {
     dropdownDeleteBtn.addEventListener('click', async (event) => {
@@ -925,6 +925,7 @@ function selectImage(e, imageDataOverride = null) {
     }
 
     syncSelectedState();
+    updateAnalyzeButtonState();
 
     const selectedElements = Array.from(imageGrid.querySelectorAll('.image-item.selected'));
     if (selectedElements.length === 1) {
