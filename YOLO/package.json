@@ -1,5 +1,7 @@
 {
-  "name": "electron-yolo",
+  "name": "caniscan",
+  "productName": "CaniScan",
+  "author": "Proxies",
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {

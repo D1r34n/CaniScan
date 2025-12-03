@@ -1,22 +1,33 @@
 {
-  "name": "dog-skin-disease-desktop-app",
+  "name": "CaniScan",
   "version": "1.0.0",
-  "description": "",
+  "description": "Skin disease detection using YOLOv8 with LLM recommendation using Llama 3.2",
   "main": "js/index.js",
   "scripts": {
-    "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "electron-forge start",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
   },
   "keywords": [],
-  "author": "",
+  "author": "Proxies",
   "license": "ISC",
   "devDependencies": {
+    "@electron-forge/cli": "^7.10.2",
+    "@electron-forge/maker-deb": "^7.10.2",
+    "@electron-forge/maker-rpm": "^7.10.2",
+    "@electron-forge/maker-squirrel": "^7.10.2",
+    "@electron-forge/maker-zip": "^7.10.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
+    "@electron-forge/plugin-fuses": "^7.10.2",
+    "@electron/fuses": "^1.8.0",
     "electron": "^38.3.0"
   },
   "dependencies": {
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
     "chokidar": "^4.0.3",
+    "electron-squirrel-startup": "^1.0.1",
     "watchdog": "^0.8.17"
   }
 }

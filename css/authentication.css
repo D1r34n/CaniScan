@@ -33,6 +33,23 @@
   }
 }
 
+/* Invisible draggable region */
+.drag-bar {
+    width: 100%;
+    height: 28px; /* adjust if needed */
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    -webkit-app-region: drag;
+    background: transparent;
+}
+
+/* Ensure buttons remain clickable */
+.window-controls button {
+    -webkit-app-region: no-drag;
+}
+
 /* Window Controls */
 .window-controls {
   position: absolute;
@@ -73,6 +90,10 @@ html, body {
     margin: 0;
     overflow: hidden;
     background-color: #000;
+    user-select: none; /* prevents text highlighting */
+    -webkit-user-select: none; /* Safari/Chrome */
+    -moz-user-select: none;    /* Firefox */
+    -ms-user-select: none;     /* IE/Edge */
 }
 
 /* Unified message box - Default (Error) */
