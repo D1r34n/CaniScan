@@ -4,9 +4,9 @@
   flex-direction: column;
   width: 100%;
   height: calc(100vh - 125px);
-  padding: 1rem 1rem 0 1rem; /* top, right, bottom, left */          
+  padding: 1rem 1rem 0 1rem; /* top, right, bottom, left */
   box-sizing: border-box;
-  gap: 0;                   
+  gap: 0;
   overflow: hidden;
 }
 
@@ -41,7 +41,7 @@
   border-radius: 30px !important;
   padding: 0.5rem 1rem !important;
   font-weight: 500;
-  text-align: left !important;             /* text left so arrow shows */
+  text-align: left !important; /* text left so arrow shows */
   transition: all 0.3s ease !important;
   white-space: nowrap;
 }
@@ -69,16 +69,15 @@
   transform: scale(0.95);
 }
 
-
 .refresh-button:hover {
   background-color: #f0e2d2 !important; /* light beige hover */
   color: #282624 !important;
   transform: translateY(-4px) !important;
 }
 .actions-dropdown {
-    position: relative;
-    display: inline-block;
-    user-select: none;
+  position: relative;
+  display: inline-block;
+  user-select: none;
 }
 
 .actions-dropdown-button {
@@ -112,17 +111,20 @@
 
 .actions-dropdown-content {
   opacity: 0;
-  visibility: hidden;          /* Prevent interaction when hidden */
+  visibility: hidden; /* Prevent interaction when hidden */
   transform: translateY(-5px); /* Slight upward offset for slide effect */
   margin-top: 0.5rem;
   position: absolute;
   background-color: white;
   min-width: 200px;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   z-index: 15;
-  pointer-events: none;        /* Disable clicks when hidden */
-  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+  pointer-events: none; /* Disable clicks when hidden */
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease,
+    visibility 0.3s;
 }
 
 .actions-dropdown-content div {
@@ -143,39 +145,38 @@
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
-  pointer-events: auto;        /* Enable clicks when visible */
+  pointer-events: auto; /* Enable clicks when visible */
 }
 
 /* First item: Analyze Selected */
 .actions-dropdown-content div:first-child {
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    color: #2e7d32;             /* darker green text/icon */
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  color: #2e7d32; /* darker green text/icon */
 }
 
 /* Hover effect for first item */
 .actions-dropdown-content div:first-child:hover {
-    background-color: #c8e6c9;   /* slightly darker green on hover */
+  background-color: #c8e6c9; /* slightly darker green on hover */
 }
 
 .actions-dropdown-content div:first-child.disabled {
-    color: #9e9e9e;
-    pointer-events: none;
-    background-color: #f5f5f5;
+  color: #9e9e9e;
+  pointer-events: none;
+  background-color: #f5f5f5;
 }
 
 /* Second item: Delete Selected */
 .actions-dropdown-content div:last-child {
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
-    color: #c62828;             /* darker red text/icon */
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  color: #c62828; /* darker red text/icon */
 }
 
 /* Hover effect for second item */
 .actions-dropdown-content div:last-child:hover {
-    background-color: #f9d6d5;   /* slightly darker red on hover */
+  background-color: #f9d6d5; /* slightly darker red on hover */
 }
-
 
 /* Delete Selected Button - Same rounded style as Analyze button */
 .delete-selected-button {
@@ -244,11 +245,14 @@
   width: 150%;
   background-color: white;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   opacity: 0;
   visibility: hidden;
   transform: translateY(-10px);
-  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease,
+    visibility 0.3s;
   z-index: 30;
   padding: 0;
   max-height: 300px; /* ADD: Limit height for many items */
@@ -263,32 +267,32 @@
 }
 
 .sort-dropdown-item {
-    padding: 0.5rem 1rem; /* space around checkbox+label */
-    transition: background-color 0.2s ease;
+  padding: 0.5rem 1rem; /* space around checkbox+label */
+  transition: background-color 0.2s ease;
 }
 
 /* Rounded top for first item */
 .sort-dropdown-item:first-child {
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
 }
 
 /* Rounded bottom for last item */
 .sort-dropdown-item:last-child {
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 
 .sort-dropdown-item:hover {
-    background-color: #f0e2d2; /* highlight on hover */
+  background-color: #f0e2d2; /* highlight on hover */
 }
 
 /* Make the form-check itself display nicely inside */
 .sort-dropdown-item .form-check {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0; /* remove extra margins */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0; /* remove extra margins */
 }
 
 .sort-dropdown-menu .form-check:last-child {
@@ -303,7 +307,6 @@
   height: 1.1rem;
   border-radius: 8px !important;
 }
-
 
 .sort-dropdown-menu .form-check-input:hover {
   cursor: pointer; /* ADD: Cursor pointer on checkbox */
@@ -346,47 +349,49 @@
    Empty State Styles
    ============================== */
 .empty-state {
-    text-align: center;
-    padding: 2rem;
-    color: #5f606a !important;
+  text-align: center;
+  padding: 2rem;
+  color: #5f606a !important;
 }
 
 .empty-state img {
-    width: 250px;
-    margin: 1rem 0rem;
+  width: 250px;
+  margin: 1rem 0rem;
 }
 
 .empty-state div {
-    font-size: 1.5rem;
-    font-weight: 500;
+  font-size: 1.5rem;
+  font-weight: 500;
 }
 
 .upload-btn {
-    position: absolute;
-    bottom: 1rem; /* distance from bottom of left column */
-    right: 1rem;  /* distance from right edge of left column */
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 1rem;
-    padding: 0.75rem 2rem;
-    background-color: #28a745; 
-    color: white;
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    cursor: pointer;
-    transition: right 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-    
+  position: absolute;
+  bottom: 1rem; /* distance from bottom of left column */
+  right: 1rem; /* distance from right edge of left column */
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  padding: 0.75rem 2rem;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition:
+    right 0.3s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .upload-btn:hover {
-    transform: scale(1.05);
-    background-color: #218838;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+  transform: scale(1.05);
+  background-color: #218838;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
-
 
 /* Image Grid */
 .image-grid {
@@ -406,7 +411,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* Everything transitions smoothly */
   position: relative;
   will-change: width, height; /* Optimize for smooth resizing */
@@ -421,7 +426,7 @@
 
 .image-item:hover {
   transform: scale(1.05);
-  box-shadow: 0 8px 18px rgba(0,0,0,0.2);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
 }
 
 /* High light items normal */
@@ -434,7 +439,12 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.4) !important; /* lighter overlay for normal mode */
+  background: rgba(
+    0,
+    0,
+    0,
+    0.4
+  ) !important; /* lighter overlay for normal mode */
   border-radius: 4px;
   z-index: 1;
   pointer-events: none;
@@ -451,7 +461,9 @@
 /* Highlight items when in Analyze mode */
 .image-item.selectable {
   position: relative;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 /* Add a top-right Bootstrap icon when selectable */
@@ -511,7 +523,6 @@
   box-shadow: 0 10px 22px rgba(0, 0, 255, 0.25);
 }
 
-
 .image-item img {
   width: 100%;
   height: 100%;
@@ -519,7 +530,7 @@
   border-radius: inherit; /* Optional if you want img to explicitly follow parent's radius */
 
   -webkit-user-drag: none; /* Specifically prevent image drag */
-  pointer-events: none;    /* Optional if you want only the container clickable */
+  pointer-events: none; /* Optional if you want only the container clickable */
 }
 
 .image-item {
@@ -528,16 +539,16 @@
 
 .analyzed-badge {
   position: absolute;
-  bottom: 8px;      /* bottom-right */
+  bottom: 8px; /* bottom-right */
   left: 8px;
-  color: #4caf50;   /* green */
+  color: #4caf50; /* green */
   font-size: 1.4rem;
   width: 1.4rem;
   height: 1.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 20;      /* above image, below selection overlay if needed */
+  z-index: 20; /* above image, below selection overlay if needed */
   pointer-events: none; /* so clicks pass through */
 }
 
@@ -545,7 +556,9 @@
 .image-item.analyzed {
   border: 2px solid rgba(40, 167, 69, 0.5);
   box-shadow: 0 0 8px rgba(40, 167, 69, 0.7);
-  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  transition:
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
   animation: glow-green 2s infinite alternate;
 }
 
@@ -560,7 +573,6 @@
     box-shadow: 0 0 5px rgba(40, 167, 69, 0.5);
   }
 }
-
 
 /* ===============================
    RIGHT PANE (Detail Panel)
@@ -765,13 +777,12 @@
 }
 
 .analyze-floating-button {
-    position: absolute;
-    bottom: 1rem; /* Aligns with the 1rem padding of .gallery-columns */
-    right: 1.5rem; /* Pushes it slightly inward from the 1rem padding for a better look */
-    z-index: 100;
-    padding: 10px 20px;
-    font-size: 16px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    display: none;
+  position: absolute;
+  bottom: 1rem; /* Aligns with the 1rem padding of .gallery-columns */
+  right: 1.5rem; /* Pushes it slightly inward from the 1rem padding for a better look */
+  z-index: 100;
+  padding: 10px 20px;
+  font-size: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  display: none;
 }
-

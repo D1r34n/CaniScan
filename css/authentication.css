@@ -1,22 +1,46 @@
 /* Animations */
 @keyframes slideInRight {
-  from { opacity: 0; transform: translateX(30px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes slideOutLeft {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(-30px); }
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
 }
 
 @keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-30px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes slideOutRight {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(30px); }
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(30px);
+  }
 }
 
 @keyframes bounceIn {
@@ -35,19 +59,19 @@
 
 /* Invisible draggable region */
 .drag-bar {
-    width: 100%;
-    height: 28px; /* adjust if needed */
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 9999;
-    -webkit-app-region: drag;
-    background: transparent;
+  width: 100%;
+  height: 28px; /* adjust if needed */
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  -webkit-app-region: drag;
+  background: transparent;
 }
 
 /* Ensure buttons remain clickable */
 .window-controls button {
-    -webkit-app-region: no-drag;
+  -webkit-app-region: no-drag;
 }
 
 /* Window Controls */
@@ -79,21 +103,22 @@
   background: #ff4d4d;
   color: white;
 }
-    
+
 * {
-    font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
 }
 
 /* Body */
-html, body {
-    height: 100%;
-    margin: 0;
-    overflow: hidden;
-    background-color: #000;
-    user-select: none; /* prevents text highlighting */
-    -webkit-user-select: none; /* Safari/Chrome */
-    -moz-user-select: none;    /* Firefox */
-    -ms-user-select: none;     /* IE/Edge */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background-color: #000;
+  user-select: none; /* prevents text highlighting */
+  -webkit-user-select: none; /* Safari/Chrome */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE/Edge */
 }
 
 /* Unified message box - Default (Error) */
@@ -104,7 +129,7 @@ html, body {
   border-radius: 10px;
   font-size: 0.9rem;
   font-weight: 500;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
 
   /* Always occupy space, collapse with max-height */
   opacity: 0;
@@ -113,7 +138,7 @@ html, body {
   margin-bottom: 0;
 
   overflow: hidden;
-  transition: 
+  transition:
     opacity 0.4s ease,
     max-height 0.4s ease,
     margin-bottom 0.4s ease,
@@ -176,31 +201,35 @@ html, body {
 
 /* Container */
 .main-container {
-    height: 100vh;
+  height: 100vh;
 }
 
-#login-form, #register-form, #form-title {
-    opacity: 1;
-    transition: opacity 0.4s ease, transform 0.3s ease;
+#login-form,
+#register-form,
+#form-title {
+  opacity: 1;
+  transition:
+    opacity 0.4s ease,
+    transform 0.3s ease;
 }
 
 .hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(10px);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
 }
 
 /* Left login side */
 .login-section {
-    background: white;
-    color: #282624;
-    padding: 3rem;
+  background: white;
+  color: #282624;
+  padding: 3rem;
 }
 
 .login-section h2 {
-    font-weight: 600 !important;
-    margin-bottom: 2rem;
-    text-align: center;
+  font-weight: 600 !important;
+  margin-bottom: 2rem;
+  text-align: center;
 }
 
 /* Password eye */
@@ -240,7 +269,9 @@ input::-webkit-credentials-auto-fill-button {
   line-height: 1;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease, color 0.2s ease;
+  transition:
+    opacity 0.25s ease,
+    color 0.2s ease;
 }
 
 .toggle-eye:hover {
@@ -255,14 +286,16 @@ input::-webkit-credentials-auto-fill-button {
 
 /* Forms */
 .form-label {
-    font-weight: 600 !important;
+  font-weight: 600 !important;
 }
 
 .form-control {
   border: none;
   border-bottom: 2px solid #444;
   color: #fff;
-  transition: transform 0.2s ease, border-color 0.3s ease !important;
+  transition:
+    transform 0.2s ease,
+    border-color 0.3s ease !important;
   transform-origin: center;
 }
 
@@ -280,7 +313,9 @@ input::-webkit-credentials-auto-fill-button {
   border: none;
   padding: 0.75rem;
   font-weight: 600 !important;
-  transition: background-color 0.3s ease, transform 0.2s ease !important;
+  transition:
+    background-color 0.3s ease,
+    transform 0.2s ease !important;
   margin: 2rem 0 4rem 0;
 }
 
@@ -298,69 +333,131 @@ input::-webkit-credentials-auto-fill-button {
   display: inline-block; /* or block */
   color: #d9b99b;
   text-decoration: none;
-  transition: color 0.3s ease, transform 0.2s ease;
+  transition:
+    color 0.3s ease,
+    transform 0.2s ease;
   cursor: pointer;
 }
 
-
 .form-links:hover {
-    color: #2f3035;
-    transform: scale(1.03);
+  color: #2f3035;
+  transform: scale(1.03);
 }
 
-
 .subtext {
-    color: #2f3035;
-    text-decoration: none;
-    font-weight: 100 !important;
-    text-align: center;       /* centers text */
-    display: block;           /* ensures full width for centering */
+  color: #2f3035;
+  text-decoration: none;
+  font-weight: 100 !important;
+  text-align: center; /* centers text */
+  display: block; /* ensures full width for centering */
 }
 
 /* Right branding side */
 .brand-section {
-    background: #d9b99b;
-    /* background: url('images/ken.jpg') center center no-repeat; */
-    color: #fff;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden; /* Prevent any internal overflow */
-    padding: 2rem;
+  background: #d9b99b;
+  /* background: url('images/ken.jpg') center center no-repeat; */
+  color: #fff;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden; /* Prevent any internal overflow */
+  padding: 2rem;
 }
 
 .login_icon {
-width: 200px;              /* Scales nicely with CANISCAN text */
-height: auto;              /* Keeps proportions */
-margin-bottom: 1rem;       /* Space below logo */
-user-select: none;         /* Prevent highlight on click-drag */
-pointer-events: none;      /* Avoid accidental interactions */
+  width: 200px; /* Scales nicely with CANISCAN text */
+  height: auto; /* Keeps proportions */
+  margin-bottom: 1rem; /* Space below logo */
+  user-select: none; /* Prevent highlight on click-drag */
+  pointer-events: none; /* Avoid accidental interactions */
 }
 
 @media (min-width: 768px) {
-.login_icon {
-    width: 200px;            /* Slightly larger on desktop */
+  .login_icon {
+    width: 200px; /* Slightly larger on desktop */
     margin-bottom: 1.5rem;
-}
+  }
 }
 
 /* Make image responsive inside brand-section */
 .brand-section img {
-    max-width: 100%;
-    height: auto;
-    object-fit: contain;
-    margin-bottom: 1.5rem;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 1.5rem;
 }
 
 .brand-section h1 {
-    font-size: 3rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    margin-bottom: 0.5rem;
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
 }
 
 .brand-section p {
-    font-weight: 300;
+  font-weight: 300;
+}
+
+/* Dark Mode Overrides */
+.dark-mode {
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+}
+
+.dark-mode .login-section {
+  background-color: #2a2a2a;
+  color: #f0f0f0;
+}
+
+.dark-mode .form-control {
+  border-bottom: 2px solid #888;
+  color: #2a2a2a;
+}
+
+.dark-mode .form-control:focus {
+  border-color: #d9b99b !important;
+}
+
+.dark-mode #error-box.alert-success {
+  background-color: #1f3d1f;
+  color: #d4edda;
+  border-color: #2e5532;
+}
+
+.dark-mode #error-box.alert-danger {
+  background-color: #4a1f1f;
+  color: #f8d7da;
+  border-color: #722121;
+}
+
+.dark-mode .btn-login {
+  background-color: #d9b99b !important;
+  color: #1e1e1e !important;
+}
+
+.dark-mode .btn-login:hover {
+  background-color: #3a3a3a !important;
+}
+
+.dark-mode .form-links {
+  color: #d9b99b;
+}
+
+.dark-mode .form-links:hover {
+  color: #f0f0f0;
+}
+
+.dark-mode .subtext {
+  color: #ccc;
+}
+
+/* Toggle eye icon */
+.dark-mode .toggle-eye {
+  color: #ccc;
+}
+
+.dark-mode .toggle-eye:hover {
+  color: #d9b99b;
 }

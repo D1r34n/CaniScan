@@ -8,3 +8,4 @@ timestamp,email,diagnosis,confidence
 2025-11-22 15:23:41,anonymous,"[{""disease"": ""allergic dermatitis"", ""confidence"": 28.38, ""bbox"": [2062, 1235, 2476, 1645]}]"
 2025-11-22 15:25:26,anonymous,"[{""disease"": ""hotspot"", ""confidence"": 37.24, ""bbox"": [2163, 1215, 2324, 1450]}]"
 2025-11-26 08:33:42,anonymous,"[{""disease"": ""fungal infection"", ""confidence"": 34.56, ""bbox"": [281, 261, 480, 450]}, {""disease"": ""fungal infection"", ""confidence"": 30.17, ""bbox"": [17, 19, 628, 540]}]"
+2025-12-14 12:49:26,anonymous,"[{""disease"": ""hotspot"", ""confidence"": 80.45, ""bbox"": [396, 150, 429, 218]}, {""disease"": ""hotspot"", ""confidence"": 66.46, ""bbox"": [405, 279, 435, 329]}, {""disease"": ""hotspot"", ""confidence"": 54.55, ""bbox"": [392, 148, 438, 221]}, {""disease"": ""hotspot"", ""confidence"": 34.41, ""bbox"": [383, 260, 439, 357]}]"

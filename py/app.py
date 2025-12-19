@@ -3,6 +3,7 @@ CaniScan Flask Backend
 Disease detection API with YOLO model and LLM recommendations
 """
 
+import sys
 import json
 import os
 import re
@@ -20,11 +21,23 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 from llm_service import llm_service
 
+#Load .env
+def resource_path(relative_path: str) -> str:
+    """
+    Get absolute path to resource.
+    Works for both DEV (python app.py) and PROD (PyInstaller onefile exe).
+    """
+    if hasattr(sys, "_MEIPASS"):
+        # PyInstaller onefile temp directory
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.dirname(__file__), relative_path)
+
 # ========================================
 # CONFIGURATION
 # ========================================
 
-load_dotenv()
+env_path = resource_path(".env")
+load_dotenv(env_path)
 
 # Supabase Configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -55,7 +68,13 @@ app.config['SESSION_COOKIE_SECURE'] = True  # Set to True in production with HTT
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 # File Paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if getattr(sys, 'frozen', False):
+    # EXE mode → PyInstaller temp folder
+    BASE_DIR = sys._MEIPASS
+else:
+    # Normal Python → project root
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 CSV_DIR = os.path.join(BASE_DIR, "csv")
 ANALYSIS_CSV = os.path.join(CSV_DIR, "analysis_results.csv")
 
@@ -64,7 +83,6 @@ os.makedirs(CSV_DIR, exist_ok=True)
 
 # YOLO Model
 MODEL_PATH = os.path.join(BASE_DIR, "runs", "v8", "n", "train_results2", "weights", "best.pt")
-model = YOLO(MODEL_PATH, verbose=False)
 
 # Initialize analysis CSV
 if not os.path.exists(ANALYSIS_CSV):
@@ -72,7 +90,7 @@ if not os.path.exists(ANALYSIS_CSV):
         writer = csv.writer(f)
         writer.writerow(["timestamp", "email", "disease", "confidence"])
 
-print("✅ Flask server initialized successfully")
+print("Flask server initialized successfully")
 
 # ========================================
 # VALIDATION PATTERNS
@@ -415,14 +433,33 @@ def update_user():
 # ========================================
 
 # ----------------------------
+# YOLO Paths
+# ----------------------------
+YOLO_V8_PATH = os.path.join(
+    BASE_DIR, "runs", "v8", "n", "train_results2", "weights", "best.pt"
+)
+
+YOLO_V11_PATH = os.path.join(
+    BASE_DIR, "runs", "11", "n", "train_results", "weights", "best.pt"
+)
+
+# ----------------------------
 # Load YOLO Model for Disease Detection
 # ----------------------------
-Yolov8 = YOLO(r"runs\v8\n\train_results2\weights\best.pt")  # Path to trained YOLOv8 weights
-print("Class names: ", Yolov8.names)
-Yolov11 = YOLO(r"runs\11\n\train_results\weights\best.pt")
-print("Class names: ", Yolov11.names)
-# actual path: C:\Users\Edrian\Documents\VSCodeProjects\CaniScan\runs\v8\n\train_results2\weights\best.pt
+Yolov8 = None
+Yolov11 = None
 
+def load_models():
+    global Yolov8, Yolov11
+
+    if Yolov8 is None:
+        print("Loading YOLOv8...")
+        Yolov8 = YOLO(YOLO_V8_PATH)
+
+    if Yolov11 is None:
+        print("Loading YOLOv11...")
+        Yolov11 = YOLO(YOLO_V11_PATH)
+# actual path: C:\Users\Edrian\Documents\VSCodeProjects\CaniScan\runs\v8\n\train_results2\weights\best.pt
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -442,6 +479,9 @@ def analyze():
             return jsonify({'success': False, 'message': 'Invalid image data'}), 400
         print(f"🔹 Image decoded: shape={img.shape}")
 
+        #Load YOLO models
+        load_models()
+        
         # Select model
         model_name = data.get('model', 'Yolov8')
         model = Yolov11 if model_name.lower() == 'yolov11n' else Yolov8
@@ -686,13 +726,4 @@ def health():
 # ========================================
 
 if __name__ == '__main__':
-    print("=" * 50)
-    print("Starting CaniScan Flask Server")
-    print("=" * 50)
-    print("Host: 127.0.0.1")
-    print("Port: 5000")
-    print(f"Database: Supabase")
-    print(f"Model: YOLOv8")
-    print("=" * 50)
-    
     app.run(host='127.0.0.1', port=5000, debug=True)

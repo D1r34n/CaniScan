@@ -8,7 +8,17 @@ import re
 from typing import Dict, List, Optional
 
 # Add the Llama directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'Llama'))
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and PyInstaller """
+    try:
+        base_path = sys._MEIPASS  # PyInstaller temp folder
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+llama_path = resource_path("Llama")
+if llama_path not in sys.path:
+    sys.path.append(llama_path)
 
 try:
     from langchain_ollama.llms import OllamaLLM
@@ -33,7 +43,7 @@ class CaniScanLLMService:
         
         try:
             self.model = OllamaLLM(model="llama3.2")
-            print("✅ CaniScan LLM Service initialized successfully")
+            print("\nCaniScan LLM Service initialized successfully")
             
         except Exception as e:
             print(f"Error initializing LLM model: {e}")

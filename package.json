@@ -1,8 +1,10 @@
 {
-  "name": "CaniScan",
+  "name": "caniscan",
+  "productName": "CaniScan",
   "version": "1.0.0",
   "description": "Skin disease detection using YOLOv8 with LLM recommendation using Llama 3.2",
   "main": "js/index.js",
+
   "scripts": {
     "start": "electron-forge start",
     "test": "echo \"Error: no test specified\" && exit 1",

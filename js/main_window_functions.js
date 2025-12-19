@@ -878,6 +878,28 @@ if (!window._functionReloadProtected) {
     closeBtnQR?.addEventListener("click", hideQRCode);
     doneQRBtn?.addEventListener("click", hideQRCode);
 
+
+    // ================================
+    // DARK MODE
+    // ================================
+    const appearanceToggle = document.getElementById('appearanceToggle');
+
+    // Load saved preference when main page loads
+    if (localStorage.getItem('darkMode') === 'enabled') {
+        document.body.classList.add('dark-mode');
+        appearanceToggle.checked = true;
+    }
+
+    appearanceToggle.addEventListener('change', () => {
+        if (appearanceToggle.checked) {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('darkMode', 'enabled');
+        } else {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('darkMode', 'disabled');
+        }
+    });
+
     // ================================
     // IMAGE UPLOAD HANDLER
     // ================================
