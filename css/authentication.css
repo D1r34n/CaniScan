@@ -400,7 +400,9 @@ input::-webkit-credentials-auto-fill-button {
   font-weight: 300;
 }
 
-/* Dark Mode Overrides */
+/* ================================
+   DARK MODE OVERRIDES
+  ================================ */
 .dark-mode {
   background-color: #1e1e1e;
   color: #f0f0f0;

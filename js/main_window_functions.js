@@ -619,16 +619,15 @@ if (!window._functionReloadProtected) {
             }
         });
 
-        // After you update diseaseCounts
-        updateInsights(diseaseCounts);
-
         // ===========================
         // Optional: chart update
         // ===========================
         if (typeof updateStatsChart === 'function') updateStatsChart();
 
         console.log("%c✅ Synced gallery overview with gallery server.", "color: limegreen;");
-
+        
+        // After you update diseaseCounts
+        updateInsights(diseaseCounts);
         } catch (err) {
             console.error("Error loading stats cards:", err);
             setTimeout(loadStatsCards, statsRetryDelay);
@@ -878,11 +877,11 @@ if (!window._functionReloadProtected) {
     closeBtnQR?.addEventListener("click", hideQRCode);
     doneQRBtn?.addEventListener("click", hideQRCode);
 
-
     // ================================
     // DARK MODE
     // ================================
     const appearanceToggle = document.getElementById('appearanceToggle');
+    const logoImg = document.getElementById('logoImg');
 
     // Load saved preference when main page loads
     if (localStorage.getItem('darkMode') === 'enabled') {
@@ -894,9 +893,12 @@ if (!window._functionReloadProtected) {
         if (appearanceToggle.checked) {
             document.body.classList.add('dark-mode');
             localStorage.setItem('darkMode', 'enabled');
+            logoImg.src = "../images/logo_only.svg";
         } else {
             document.body.classList.remove('dark-mode');
             localStorage.setItem('darkMode', 'disabled');
+            logoImg.src = "../images/logo_only_dark.svg";
+            
         }
     });
 

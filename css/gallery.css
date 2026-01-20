@@ -19,7 +19,7 @@
   background-color: #d9b99b;
   padding: 1rem;
   border-radius: 16px 16px 0 0;
-  border-bottom: 2px solid #e9ecef;
+  border-bottom: 2px solid transparent;
   flex-wrap: nowrap;
 }
 
@@ -46,7 +46,8 @@
   white-space: nowrap;
 }
 
-.minimize-detail:hover {
+.minimize-detail:hover,
+.dark-mode .minimize-detail:hover {
   background-color: #f0e2d2 !important;
   color: #282624 !important;
   transform: translateY(-4px);
@@ -69,7 +70,8 @@
   transform: scale(0.95);
 }
 
-.refresh-button:hover {
+.refresh-button:hover,
+.dark-mode .refresh-button:hover {
   background-color: #f0e2d2 !important; /* light beige hover */
   color: #282624 !important;
   transform: translateY(-4px) !important;
@@ -92,7 +94,8 @@
   text-align: center;
 }
 
-.actions-dropdown-button:hover {
+.actions-dropdown-button:hover,
+.dark-mode .actions-dropdown-button:hover {
   background-color: #f0e2d2 !important; /* light beige hover */
   color: #282624 !important;
   transform: translateY(-4px) !important;
@@ -226,14 +229,17 @@
   white-space: nowrap; /* ADD: Prevent text wrapping */
 }
 
-.sort-dropdown:hover {
+.sort-dropdown:hover,
+.dark-mode .sort-dropdown:hover {
   background-color: #f0e2d2 !important;
   transform: translateY(-4px); /* CHANGE: Match other buttons (was -2px) */
 }
 
 /* ADD: Active/focus state for consistency */
 .sort-dropdown:focus,
-.sort-dropdown-container.show .sort-dropdown {
+.sort-dropdown-container.show .sort-dropdown,
+.dark-mode .sort-dropdown:focus,
+.dark-mode .sort-dropdown-container.show .sort-dropdown {
   background-color: #f0e2d2 !important;
   outline: none;
 }
@@ -786,3 +792,39 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   display: none;
 }
+
+/* ================================
+   DARK MODE OVERRIDES
+  ================================ */
+
+  .dark-mode .gallery-columns {
+    background-color: #2f3035;
+    color: #f0f0f0;
+  }
+
+  .dark-mode .sort-dropdown,
+  .dark-mode .minimize-detail,
+  .dark-mode .detail-content,
+  .dark-mode .refresh-button,
+  .dark-mode .actions-dropdown-button,
+  .dark-mode .actions-dropdown-content {
+    background-color: #2f3035 !important;
+    color: white !important;
+  }
+
+  .dark-mode .actions-dropdown-content div:first-child.disabled {
+    background-color: #67686d !important;
+  }
+  .dark-mode .detail-content h3 {
+    color:  white;
+  }
+
+  .dark-mode .sort-dropdown-menu {
+    background-color: #2f3035;
+  }
+
+  .dark-mode .detail-row,
+  .dark-mode .detail-label {
+    background-color: #1e1e1e;
+    color: white;
+  }

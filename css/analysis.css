@@ -268,8 +268,9 @@
   color: #282624;
 }
 
-.result-confidence {
-  color: #198754; /* green accent */
+.result-confidence,
+.dark-mode .result-confidence {
+  color: #198754 !important; 
 }
 
 .inference-time {
@@ -301,10 +302,6 @@
   min-width: 400px;
   max-width: 400px;
   position: relative;
-}
-
-.recommendations-box * {
-  pointer-events: auto;
 }
 
 .box-header--recommendations {
@@ -1072,3 +1069,48 @@
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 }
+
+/* ================================
+   DARK MODE OVERRIDES
+  ================================ */
+
+  .dark-mode .box-content {
+    background-color: #2f3035;
+    color: #f0f0f0;
+  }
+
+  .dark-mode .form-field label,
+  .dark-mode .result-label,
+  .dark-mode .result-value,
+  .dark-mode .inference-time,
+  .dark-mode .history-name {
+    color: white;
+  }
+
+  .dark-mode .form-field input,
+  .dark-mode .form-field select,
+  .dark-mode .breed-autocomplete-dropdown {
+    background-color: rgb(96, 96, 96);
+    color: white !important;
+  }
+
+  .dark-mode .breed-autocomplete-item:hover {
+    background-color: black !important;
+  }
+  .dark-mode .result-card {
+    background-color: #2f3035;
+  }
+
+  .dark-mode .message-content,
+  .dark-mode .form-control {
+    background-color: rgb(96, 96, 96);
+    color: white !important;
+  }
+
+  .dark-mode .history-item {
+    background-color: #333439;
+  }
+
+  .dark-mode .history-header .btn-clear-history {
+    color: white;
+  }

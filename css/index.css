@@ -52,16 +52,27 @@
 
 html,
 body {
+  position: relative;
   overflow: hidden;
   height: 100%;
   margin: 0;
   padding: 0;
-  background: linear-gradient(to bottom right, #ffffff, #b8926d);
+  background-color: transparent;
+  transition: background-color 0.35s ease, color 0.35s ease;
 
-  user-select: none; /* prevents text highlighting */
-  -webkit-user-select: none; /* Safari/Chrome */
-  -moz-user-select: none; /* Firefox */
-  -ms-user-select: none; /* IE/Edge */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+body::before {
+  content: "";
+  position: absolute;
+  top:0; left:0; right:0; bottom:0;
+  background: linear-gradient(to bottom right, #ffffff, #b8926d);
+  transition: opacity 0.35s ease;
+  z-index: -1;
 }
 
 /* Navbar */
@@ -533,6 +544,7 @@ body {
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   z-index: 1000;
+  overflow: hidden;
 }
 
 .chart-dropdown-content div {
@@ -681,7 +693,6 @@ body {
 
 .dropdown-header {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e9ecef;
   background: linear-gradient(135deg, #d9b99b, #c4a484);
   color: white;
   max-width: 250px;
@@ -757,7 +768,7 @@ body {
 
 .dropdown-item:hover {
   background-color: rgba(217, 185, 155, 0.1);
-  color: #d9b99b;
+  color: #d9b99b !important;
 }
 
 .dropdown-item i {
@@ -778,11 +789,12 @@ body {
 
 .dropdown-item.logout:hover {
   background-color: rgba(220, 53, 69, 0.1);
-  color: #dc3545;
+  color: #dc3545 !important;
 }
 
 /* Slider for dark / light mode */
 #changeAppearanceBtn {
+  cursor: default;
   height: 100%; /* fill parent height if parent has set height */
 }
 
@@ -814,6 +826,7 @@ body {
   border-radius: 50px; /* fully pill-shaped */
   transition: 0.4s;
   padding: 0 0.25rem;
+  cursor: pointer;
 }
 
 /* Circle inside slider carrying the icon */
@@ -825,7 +838,7 @@ body {
   justify-content: center;
   position: absolute;
   height: 70%; /* slightly smaller than slider height */
-  width: 30%; /* circle width */
+  width: 40%; /* circle width */
   left: 5%;
   bottom: 15%; /* vertically center the circle */
   background-color: #ccc;
@@ -837,7 +850,7 @@ body {
 
 /* Move circle and switch icon on toggle */
 input:checked + .slider::before {
-  transform: translateX(200%);
+  transform: translateX(120%);
   content: "\F494"; /* moon icon unicode from Bootstrap Icons */
   color: #f1f1f1; /* moon color */
   background-color: #343a40;
@@ -1105,7 +1118,8 @@ input:checked + .slider {
   transition: color 0.2s ease;
 }
 
-.arrow-btn:hover {
+.arrow-btn:hover,
+.dark-mode .arrow-btn:hover {
   color: #4caf50;
 }
 
@@ -1189,4 +1203,75 @@ input:checked + .slider {
   .arrow-btn {
     font-size: 1.5rem;
   }
+}
+
+/* ================================
+   DARK MODE OVERRIDES
+================================ */
+body.dark-mode {
+  background: linear-gradient(to bottom right, #545454, #121212);
+  color: white;
+}
+
+body.dark-mode::before {
+  opacity: 0; /* fade overlay or adjust colors */
+  transition: opacity 0.35s ease;
+}
+
+.dark-mode .logo-img,
+.dark-mode .brand-text {
+  color: white;
+}
+
+.dark-mode .nav-buttons {
+  background-color: #2f3035 !important;
+}
+
+.dark-mode .nav-btn {
+  color: white;
+}
+
+.dark-mode .user-greeting {
+  background-color: #2f3035;
+  color: white;
+}
+
+.dark-mode .dropdown-menu-items {
+  background-color: #2f3035;
+  color: white;
+}
+
+.dark-mode #changeProfileBtn,
+.dark-mode #openQRCodeBtn,
+.dark-mode #changeAppearanceBtn {
+  color: white;
+}
+
+.dark-mode .account-modal-content {
+  background-color: #2f3035;
+}
+
+.dark-mode .account-modal-content h2,
+.dark-mode .avatar-display span,
+.dark-mode .name-inputs label {
+  color: white;
+}
+
+.dark-mode .arrow-btn {
+  color: white;
+}
+
+.dark-mode .trend-insights,
+.dark-mode .chart-dropdown-button,
+.dark-mode .chart-dropdown-content {
+  background-color: #2f3035;
+  color: white;
+}
+
+.dark-mode .insight-card {
+  background-color: #333439;
+}
+
+.dark-mode .chart-dropdown-content div:hover {
+  background-color: #333439;
 }
