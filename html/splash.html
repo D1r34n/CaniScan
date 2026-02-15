@@ -1,44 +1,240 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Loading...</title>
-<style>
-  html, body {
-    margin: 0;
-    height: 100%;
-    width: 100%;
-    background: transparent;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden; /* Prevent scrollbars */
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaniScan - Loading</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-  img {
-    width: 100vw;       /* Full viewport width */
-    height: 100vh;      /* Full viewport height */
-    max-width: 100%;    /* Never exceed container width */
-    max-height: 100%;   /* Never exceed viewport height */
-    object-fit: contain; /* Maintain aspect ratio */
-    opacity: 0;          /* Start invisible */
-    animation: fadeIn 1.5s forwards;
-  }
+        body {
+            font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+            overflow: hidden;
+            -webkit-app-region: drag;
+        }
 
-  @keyframes fadeIn {
-    to { opacity: 1; }
-  }
+        .splash-container {
+            width: 500px;
+            height: 300px;
+            background: linear-gradient(to bottom right, #ffffff, #b8926d);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
 
-  /* Extra small screens adjustment */
-  @media (max-width: 400px), (max-height: 400px) {
-    img {
-      width: 95vw;
-      height: 95vh;
-    }
-  }
-</style>
+        /* Animated background effect */
+        .splash-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(255, 255, 255, 0.1),
+                transparent
+            );
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            z-index: 1;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .app-name {
+            font-size: 32px;
+            font-weight: 700;
+            color: black;
+            margin-bottom: 10px;
+            z-index: 1;
+        }
+
+        .loading-container {
+            width: 80%;
+            z-index: 1;
+        }
+
+        .status-text {
+            color: white;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-align: center;
+            min-height: 20px;
+            font-weight: 400;
+            transition: all 0.3s ease;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #fff, #f0f0f0);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .loading-dots {
+            color: white;
+            font-size: 14px;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .version {
+            position: absolute;
+            bottom: 15px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 11px;
+            z-index: 1;
+        }
+
+        /* Spinner animation */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-  <img src="../images/logo.svg" alt="Logo">
+    <div class="splash-container">
+        <!-- Replace with your actual logo path -->
+        <img src="../images/logo_only_dark.svg" alt="CaniScan Logo" class="logo" onerror="this.style.display='none'">
+        
+        <div class="app-name">CaniScan</div>
+        
+        <div class="loading-container">
+            <div class="status-text" id="statusText">Initializing</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="loading-dots"></div>
+        </div>
+
+        <div class="version">v1.0.0</div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        const statusText = document.getElementById('statusText');
+        const progressBar = document.getElementById('progressBar');
+
+        // Fallback mapping (used if backend only sends stage)
+        const statusStages = {
+            starting: { text: 'Starting backend server', progress: 10 },
+            flask_ready: { text: 'Backend server started', progress: 30 },
+            loading_models: { text: 'Loading AI models', progress: 50 },
+            loading_yolov8: { text: 'Loading YOLOv8 model', progress: 60 },
+            loading_yolov11: { text: 'Loading YOLOv11 model', progress: 75 },
+            initializing_gpu: { text: 'Initializing GPU acceleration', progress: 85 },
+            models_ready: { text: 'AI models loaded', progress: 95 },
+            ready: { text: 'Ready!', progress: 100 }
+        };
+
+        let defaultInterval;
+        let defaultProgress = 0;
+
+        function startFallbackProgress() {
+            defaultInterval = setInterval(() => {
+            if (defaultProgress < 90) {
+                defaultProgress += 2;
+                progressBar.style.width = defaultProgress + '%';
+            }
+            }, 200);
+        }
+
+        startFallbackProgress();
+
+        ipcRenderer.on('loading-status', (event, data) => {
+            // Stop fake progress once real data arrives
+            if (defaultInterval) {
+            clearInterval(defaultInterval);
+            defaultInterval = null;
+            }
+
+            // If backend sends full object
+            if (typeof data === 'object' && data !== null) {
+                if (data.message) {
+                    statusText.textContent = data.message;
+                } else if (data.stage && statusStages[data.stage]) {
+                    statusText.textContent = statusStages[data.stage].text;
+                }
+
+                if (typeof data.progress === 'number') {
+                    progressBar.style.width = data.progress + '%';
+                }
+
+                if (data.stage === 'ready') {
+                    progressBar.style.width = '100%';
+                }
+
+            return;
+            }
+
+            // Fallback if backend sends only a string stage
+            const stage = statusStages[data] || { text: data, progress: 0 };
+            statusText.textContent = stage.text;
+            progressBar.style.width = stage.progress + '%';
+        });
+        </script>
+
 </body>
 </html>

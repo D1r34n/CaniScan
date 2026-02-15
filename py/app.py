@@ -9,6 +9,7 @@ import os
 import re
 import csv
 import base64
+import threading
 import bcrypt
 import time
 import numpy as np
@@ -83,6 +84,28 @@ os.makedirs(CSV_DIR, exist_ok=True)
 
 # YOLO Model
 MODEL_PATH = os.path.join(BASE_DIR, "runs", "v8", "n", "train_results2", "weights", "best.pt")
+
+
+# ========================================
+# STARTUP STATUS TRACKING
+# ========================================
+
+startup_status = {
+    "stage": "starting",
+    "flask_ready": False,
+    "models_loaded": False,
+    "yolov8_loaded": False,
+    "yolov11_loaded": False,
+    "message": "Starting backend server...",
+    "progress": 0
+}
+
+@app.route('/startup-status', methods=['GET'])
+def get_startup_status():
+    """Get current startup status for splash screen."""
+    return jsonify(startup_status), 200
+
+print("Flask server initialized successfully")
 
 # Initialize analysis CSV
 if not os.path.exists(ANALYSIS_CSV):
@@ -450,15 +473,36 @@ Yolov8 = None
 Yolov11 = None
 
 def load_models():
-    global Yolov8, Yolov11
+    global Yolov8, Yolov11, startup_status
 
     if Yolov8 is None:
+        startup_status.update({
+            "stage": "loading_yolov8",
+            "message": "Loading YOLOv8 model...",
+            "progress": 60
+        })
         print("Loading YOLOv8...")
         Yolov8 = YOLO(YOLO_V8_PATH)
+        startup_status["yolov8_loaded"] = True
+        print("✓ YOLOv8 loaded")
 
     if Yolov11 is None:
+        startup_status.update({
+            "stage": "loading_yolov11",
+            "message": "Loading YOLOv11 model...",
+            "progress": 75
+        })
         print("Loading YOLOv11...")
         Yolov11 = YOLO(YOLO_V11_PATH)
+        startup_status["yolov11_loaded"] = True
+        print("✓ YOLOv11 loaded")
+    
+    startup_status.update({
+        "stage": "models_ready",
+        "models_loaded": True,
+        "message": "AI models loaded successfully",
+        "progress": 95
+    })
 # actual path: C:\Users\Edrian\Documents\VSCodeProjects\CaniScan\runs\v8\n\train_results2\weights\best.pt
 
 @app.route('/analyze', methods=['POST'])
@@ -720,6 +764,39 @@ def health():
         "service": "CaniScan API",
         "timestamp": datetime.now().isoformat()
     }), 200
+
+# ========================================
+# STARTUP - PRE-LOAD MODELS
+# ========================================
+
+# Mark Flask as ready
+startup_status.update({
+    "stage": "flask_ready",
+    "flask_ready": True,
+    "message": "Backend server started",
+    "progress": 30
+})
+
+print("Flask server routes registered")
+
+# Pre-load models
+def preload_models_background():
+    startup_status.update({
+        "stage": "loading_models",
+        "message": "Loading AI models...",
+        "progress": 50
+    })
+    print("Pre-loading YOLO models in background...")
+    load_models()
+    startup_status.update({
+        "stage": "ready",
+        "message": "Ready!",
+        "progress": 100
+    })
+    print("✅ Models loaded in background!")
+
+# Start background loading
+threading.Thread(target=preload_models_background, daemon=True).start()
 
 # ========================================
 # START SERVER

@@ -75,8 +75,8 @@ async function handleExitRequest(win) {
 // ------------------- Window Creation Functions -------------------
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
-    width: 400,
-    height: 200,
+    width: 500,
+    height: 300,
     frame: false,
     resizable: false,
     alwaysOnTop: true,
@@ -246,7 +246,7 @@ app.whenReady().then(async () => {
     console.log("Backend starting in DEV mode");
   } else {
     // PROD → run bundled EXE
-    backendPath = path.join(process.resourcesPath, "CaniScanBackend.exe");
+    backendPath = path.join(process.resourcesPath, "backend", "backend.exe");
     console.log("Backend starting in PROD mode:", backendPath);
   }
 
@@ -259,49 +259,77 @@ app.whenReady().then(async () => {
   // Handle stdout/stderr without blocking terminal
   if (yoloProcess.stdout) {
     yoloProcess.stdout.on("data", (data) => {
-      console.log(`[YOLOv8] ${data.toString().trim()}`);
+      console.log(`[Backend] ${data.toString().trim()}`);
     });
   }
 
   if (yoloProcess.stderr) {
     yoloProcess.stderr.on("data", (data) => {
-      console.error(`[YOLOv8 Error] ${data.toString().trim()}`);
+      console.error(`[Backend Error] ${data.toString().trim()}`);
     });
   }
 
   yoloProcess.on("error", (err) => {
-    console.error("[YOLOv8] Process error:", err);
+    console.error("[Backend] Process error:", err);
   });
 
   // Create system tray
   createTray();
 
-  // Show splash window while waiting for Flask server
+  // Show splash window with loading status
   createSplashWindow();
 
-  const flaskURL = "http://127.0.0.1:5000/health";
-  let flaskConnected = false;
+  const statusURL = "http://127.0.0.1:5000/startup-status";
+  let backendReady = false;
+  let lastStage = "";
 
-  // Poll until Flask server is ready
-  let dotCount = 0;
-  process.stdout.write("Waiting for Flask server"); // no newline
-  while (!flaskConnected) {
+  console.log("Waiting for backend to be ready...");
+
+  // Poll backend status with detailed updates
+  while (!backendReady) {
     try {
-      const res = await axios.get(flaskURL);
-      if (res.status === 200) {
-        flaskConnected = true;
-        process.stdout.write("\rFlask server is ready!          \n");
+      const res = await axios.get(statusURL, { timeout: 2000 });
+      const status = res.data;
+
+      // Send status update to splash window
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.webContents.send('loading-status', {
+          stage: status.stage,
+          message: status.message,
+          progress: status.progress
+        });
       }
+
+      // Log status changes
+      if (status.stage !== lastStage) {
+        console.log(`[${status.progress}%] ${status.message}`);
+        lastStage = status.stage;
+      }
+
+      // Check if fully ready
+      if (status.stage === 'ready' && status.models_loaded) {
+        backendReady = true;
+        console.log("✅ Backend is fully ready!");
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Poll every 500ms
+
     } catch (err) {
-      dotCount = (dotCount % 3) + 1;
-      const dots = ".".repeat(dotCount) + " ".repeat(3 - dotCount);
-      process.stdout.write(`\rWaiting for Flask server${dots}`);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Backend not responding yet
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.webContents.send('loading-status', 'starting');
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1s before retry
     }
   }
 
   // Close splash and show login
-  if (splashWindow) splashWindow.close();
+  if (splashWindow) {
+    // Small delay to show "Ready!" message
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    splashWindow.close();
+  }
+  
   createLoginWindow();
 
   // ------------------- Uploads Folder Watcher -------------------
@@ -490,7 +518,7 @@ ipcMain.on("connect-desktop-server", async (event) => {
     desktopArgs = [path.join(__dirname, "..", "py", "desktop_server.py")];
     console.log("Desktop Server starting in DEV mode");
   } else {
-    desktopPath = path.join(process.resourcesPath, "DesktopServer.exe");
+    desktopPath = path.join(process.resourcesPath, "server.exe");
     console.log("Desktop Server starting in PROD mode:", desktopPath);
   }
 

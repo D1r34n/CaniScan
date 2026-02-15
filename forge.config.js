@@ -8,8 +8,8 @@ module.exports = {
 
     // ✅ REQUIRED: include Python backend + assets
     extraResource: [
-      'py/dist/CaniScanBackend.exe',
-      'py/dist/DesktopServer.exe',
+      'py/dist/backend',
+      'py/dist/server.exe',
       'runs',
       'csv',
       'py/.env',
@@ -21,20 +21,8 @@ module.exports = {
 
   makers: [
     {
-      name: '@electron-forge/maker-squirrel',
-      config: {},
-    },
-    {
       name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
-    },
-    {
-      name: '@electron-forge/maker-deb',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: {},
+      platforms: ['win32'],
     },
   ],
 
