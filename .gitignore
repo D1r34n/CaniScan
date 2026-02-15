@@ -1,2 +1,4 @@
 node_modules/
 out/
+py/build
+py/dist
